@@ -104,6 +104,10 @@ namespace Mantid
         {
           loadLogs(file, group_name, group_class, workspace);
         }
+        else if( group_class == "NXlog" ) // For Muon Nexus 
+        {
+           loadNXLog(file, group_name, group_class, workspace);
+        }
       }
       // Freddie Akeroyd 12/10/2011
       // current ISIS implementation contains an additional indirection between collected frames via an
@@ -265,11 +269,11 @@ namespace Mantid
       file.openGroup(entry_name, entry_class);
       // Validate the NX log class.
       std::map<std::string, std::string> entries = file.getEntries();
-      if ((entries.find("value") == entries.end()) ||
+      if (((entries.find("value") == entries.end() && entries.find("values") == entries.end())) ||
           (entries.find("time") == entries.end()) )
       {
         g_log.warning() << "Invalid NXlog entry " << entry_name 
-                        << " found. Did not contain 'value' and 'time'.\n";
+                        << " found. Did not contain 'value(s)' and 'time'.\n";
         file.closeGroup();
         return;
       }

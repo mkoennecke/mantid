@@ -398,9 +398,13 @@ std::string LoadTOFRawNexus::getEntryName(const std::string & filename)
   if (entries.size() == 0)
     throw std::runtime_error("No entries in the NXS file!");
 
+  // To make this work for ISIS Muon also look for "run"
+  if (entries.find("run") != entries.end())
+    entry_name = "run";  
+
   // name "entry" is normal, but "entry-state0" is the name of the real state for live nexus files.
-  if (entries.find(entry_name) == entries.end())
-    entry_name = "entry-state0";
+  if (entries.find(entry_name) == entries.end() && entries.find("run") == entries.end())
+    entry_name = "entry-state0";  
   // If that doesn't exist, just take the first entry.
   if (entries.find(entry_name) == entries.end())
     entry_name = entries.begin()->first;
