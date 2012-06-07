@@ -41,7 +41,7 @@ namespace MDEvents
    *
    * */
   TMDE_CLASS
-  class DLLExport MDBoxBase : public Mantid::Kernel::ISaveable
+  class DLLExport MDBoxBase : public Mantid::Kernel::ISaveable, public Mantid::API::IMDBox
   {
   public:
 

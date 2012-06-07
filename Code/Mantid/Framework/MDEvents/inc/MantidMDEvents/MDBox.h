@@ -169,6 +169,8 @@ namespace MDEvents
 
     void addEvent(const MDE & point);
 
+    void addEventWithoutLoggingSplits(const MDE & point);
+
     void addEventUnsafe(const MDE & point);
 
     size_t addEventsPart(const std::vector<MDE> & events, const size_t start_at, const size_t stop_at);

@@ -1084,6 +1084,33 @@ public:
   }
 };
 
+class MDBoxTestPerformance : public CxxTest::TestSuite
+{
+public:
+  void test_adding_events_without_splits_performance()
+  {
+    BoxController_sptr bc( new BoxController(1));
+    MDBox<MDLeanEvent<1>,1> b(bc);
+    MDLeanEvent<1> ev;
+    for(int i = 0; i < 10000000; ++i)
+    {
+      b.addEventWithoutLoggingSplits(ev);
+    }
+  }
+
+  void test_adding_events_with_splits_performance()
+  {
+    BoxController_sptr bc( new BoxController(1));
+    MDBox<MDLeanEvent<1>,1> b(bc);
+    MDLeanEvent<1> ev;
+    for(int i = 0; i < 10000000; ++i)
+    {
+      b.addEvent(ev);
+    }
+  }
+
+};
+
 
 #endif
 
