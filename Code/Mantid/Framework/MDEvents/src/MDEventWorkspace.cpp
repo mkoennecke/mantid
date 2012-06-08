@@ -557,11 +557,13 @@ namespace MDEvents
   void MDEventWorkspace)::splitTrackedBoxes(ThreadScheduler * ts)
   {
     // Get a COPY of the vector (to avoid thread-safety issues)
-    std::vector<Mantid::API::IMDBox*> boxes = this->getBoxController()->getBoxesToSplit();
+    Mantid::API::BoxController_sptr boxController = this->getBoxController();
+    std::set<Mantid::API::IMDBox*> boxes = boxController->getBoxesToSplit();
+    std::set<Mantid::API::IMDBox*>::iterator it;
     //PRAGMA_OMP( parallel for )
-    for (int i=0; i<int(boxes.size()); i++)
+    for (it=boxes.begin(); it != boxes.end(); it++)
     {
-      MDBox<MDE,nd> * box = dynamic_cast<MDBox<MDE,nd> *>(boxes[i]);
+      MDBox<MDE,nd> * box = dynamic_cast<MDBox<MDE,nd> *>(*it);
       if (box)
       {
         MDGridBox<MDE,nd> * parent = dynamic_cast<MDGridBox<MDE,nd> *>(box->getParent());
@@ -571,6 +573,8 @@ namespace MDEvents
         }
       }
     }
+    //These boxes do not need tracking any longer.
+    boxController->clearBoxesToSplit();
   }
 
   //-----------------------------------------------------------------------------------------------

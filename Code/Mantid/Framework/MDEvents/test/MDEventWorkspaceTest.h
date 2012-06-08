@@ -151,9 +151,8 @@ public:
 
   //-------------------------------------------------------------------------------------
   /** MDBox->addEvent() tracks when a box is too big.
-   * MDEventWorkspace->splitTrackedBoxes() splits them
    * */
-  void test_splitTrackedBoxes()
+  void test_trackBoxes()
   {
     MDEventWorkspace1Lean::sptr ew = MDEventsTestHelper::makeMDEW<1>(2, 0.0, 1.0, 0);
     BoxController_sptr bc = ew->getBoxController();
@@ -169,7 +168,7 @@ public:
     coord_t centers[1] = {0};
     for (size_t i=0; i<99; i++)
     {
-      centers[0] = coord_t(i)*0.001;
+      centers[0] = coord_t(i*0.001);
       ew->addEvent(MDEvent<1>(1.0, 1.0, centers) );
     }
     TS_ASSERT_EQUALS( bc->getBoxesToSplit().size(), 0);
@@ -177,6 +176,40 @@ public:
     // The 100th event triggers the adding to the list
     ew->addEvent(MDEvent<1>(1.0, 1.0, centers) );
     TS_ASSERT_EQUALS( bc->getBoxesToSplit().size(), 1);
+  }
+
+  void test_splitTrackedBoxes()
+  {
+    MDEventWorkspace1Lean::sptr ew = MDEventsTestHelper::makeMDEW<1>(2, 0.0, 1.0, 0);
+    BoxController_sptr bc = ew->getBoxController();
+    bc->setSplitThreshold(10);
+    ew->splitBox();
+
+    typedef MDGridBox<MDLeanEvent<1>,1> gbox_t;
+    typedef MDBox<MDLeanEvent<1>,1> box_t;
+    typedef MDBoxBase<MDLeanEvent<1>,1> ibox_t;
+
+    coord_t centers[1] = {0};
+    for (size_t i=0; i<10; i++)
+    {
+      centers[0] = coord_t(i*0.001);
+      ew->addEvent(MDEvent<1>(1.0, 1.0, centers) );
+    }
+
+    TS_ASSERT_EQUALS( bc->getBoxesToSplit().size(), 1);
+
+    const size_t nOriginalGriddedBoxes = bc->getTotalNumMDGridBoxes();
+    const size_t nOriginalMDBoxes = bc->getTotalNumMDBoxes();
+
+    TSM_ASSERT_THROWS_NOTHING("splitTrackedBoxes should not throw anything.", ew->splitTrackedBoxes(NULL));
+    TSM_ASSERT_EQUALS("Hit list of boxes to split should be cleared after splitting.", bc->getBoxesToSplit().size(), 0);
+
+    const size_t nCurrrentGriddedBoxes = bc->getTotalNumMDGridBoxes();
+    const size_t nCurrentMDBoxes = bc->getTotalNumMDBoxes();
+
+    //Splitting should lead to more boxes being generated than we had originally.
+    TS_ASSERT_LESS_THAN(nOriginalGriddedBoxes, nCurrrentGriddedBoxes);
+    TS_ASSERT_LESS_THAN(nOriginalMDBoxes, nCurrentMDBoxes);
   }
 
   //-------------------------------------------------------------------------------------
@@ -568,7 +601,8 @@ class MDEventWorkspaceTestPerformance :    public CxxTest::TestSuite
 
 private:
 
-  MDEventWorkspace3Lean::sptr m_ws;
+  MDEventWorkspace3Lean::sptr m_WidelyUnsplit;
+  MDEventWorkspace3Lean::sptr m_ConcentratedUnsplit;
 
 public:
 
@@ -577,12 +611,12 @@ public:
   static MDEventWorkspaceTestPerformance *createSuite() { return new MDEventWorkspaceTestPerformance(); }
   static void destroySuite( MDEventWorkspaceTestPerformance *suite ) { delete suite; }
 
-  MDEventWorkspaceTestPerformance()
+  void setUp()
   {    
     size_t dim_size = 100;
     size_t sq_dim_size = dim_size*dim_size;
-    m_ws = MDEventsTestHelper::makeMDEW<3>(10, 0.0, (Mantid::coord_t)dim_size, 10 /*event per box*/);
-    m_ws->getBoxController()->setSplitThreshold(10);
+    m_WidelyUnsplit = MDEventsTestHelper::makeMDEW<3>(10, 0.0, (Mantid::coord_t)dim_size, 10 /*event per box*/);
+    m_WidelyUnsplit->getBoxController()->setSplitThreshold(1);
     std::vector<MDLeanEvent<3> > vecEvents(dim_size*dim_size*dim_size);
     
     for(size_t i = 0; i < dim_size; ++i)
@@ -596,12 +630,22 @@ public:
         }
       }
     }
-    m_ws->addEvents(vecEvents);
+
+    m_ConcentratedUnsplit = MDEventWorkspace3Lean::sptr(new MDEventWorkspace3Lean(*m_WidelyUnsplit));
+    m_ConcentratedUnsplit->splitAllIfNeeded(NULL);
+   
+    //m_ConcentratedUnsplit->addEvent(MDLeanEvent<3>(1, 1, centers)
+
   }
 
   void test_splitting_performance_single_threaded()
   {
-    m_ws->splitAllIfNeeded(NULL);
+    m_WidelyUnsplit->splitAllIfNeeded(NULL);
+  }
+
+  void test_splitting_tracked_boxes_performance_single_threaded()
+  {
+    m_WidelyUnsplit->splitTrackedBoxes(NULL);
   }
 
   //void test_splitting_performance_parallel()

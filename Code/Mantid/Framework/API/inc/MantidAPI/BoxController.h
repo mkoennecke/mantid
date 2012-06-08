@@ -5,16 +5,18 @@
 #include "MantidKernel/MultiThreaded.h"
 #include "MantidKernel/System.h"
 #include "MantidKernel/ThreadPool.h"
+#include "MantidKernel/ISaveable.h"
 #include "MantidNexusCPP/NeXusFile.hpp"
 #include <boost/shared_ptr.hpp>
 #include <vector>
+#include <set>
 
 namespace Mantid
 {
 namespace API
 {
   //TODO: pull out into separate header.
-  class DLLExport IMDBox
+  class DLLExport IMDBox 
   {
   public:
     virtual ~IMDBox(){}
@@ -278,7 +280,12 @@ namespace API
         m_numMDBoxes[depth]--;
       }
       m_numMDGridBoxes[depth]++;
-      m_numMDBoxes[depth + 1] += m_numSplit;
+      const size_t newDepth = depth + 1;
+      if(depth >= m_maxDepth)
+      {
+        this->setMaxDepth(newDepth);
+      }
+      m_numMDBoxes[newDepth] += m_numSplit;
       m_mutexNumMDBoxes.unlock();
     }
 
@@ -411,7 +418,7 @@ namespace API
     void addBoxToSplit(Mantid::API::IMDBox * ptr)
     {
       m_boxesToSplitMutex.lock();
-      m_boxesToSplit.push_back(ptr);
+      m_boxesToSplit.insert(ptr);
       m_boxesToSplitMutex.unlock();
     }
 
@@ -419,7 +426,7 @@ namespace API
     /** Get a reference to the vector of boxes that must be split.
      * Not thread safe!
      */
-    std::vector<Mantid::API::IMDBox*> & getBoxesToSplit()
+    std::set<Mantid::API::IMDBox*> & getBoxesToSplit()
     {
       return m_boxesToSplit;
     }
@@ -513,7 +520,7 @@ namespace API
     bool m_useWriteBuffer;
 
     /// Vector of pointers to MDBoxes that have grown large enough to split them
-    std::vector<Mantid::API::IMDBox*> m_boxesToSplit;
+    std::set<Mantid::API::IMDBox*> m_boxesToSplit;
 
     /// Mutex for modifying the m_boxesToSplit member
     Mantid::Kernel::Mutex m_boxesToSplitMutex;

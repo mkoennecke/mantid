@@ -467,36 +467,6 @@ namespace MDEvents
 
   //-----------------------------------------------------------------------------------------------
   /** Add a MDLeanEvent to the box.
-   * This method does not track boxes to be split. It should be retired soon.
-   * @param event :: reference to a MDEvent to add.
-   * */
-  TMDE(
-  void MDBox)::addEventWithoutLoggingSplits( const MDE & event)
-  {
-    dataMutex.lock();
-    this->data.push_back(event);
-
-    // Yes, we added some data
-    this->m_dataAdded = true;
-
-#ifdef MDBOX_TRACK_SIGNAL_WHEN_ADDING
-    // Keep the running total of signal and error
-    signal_t signal = static_cast<signal_t>(event.getSignal());
-    this->m_signal += signal;
-    this->m_errorSquared += static_cast<signal_t>(event.getErrorSquared());
-#endif
-
-#ifdef MDBOX_TRACKCENTROID_WHENADDING
-    // Running total of the centroid
-    for (size_t d=0; d<nd; d++)
-      this->m_centroid[d] += event.getCenter(d) * signal;
-#endif
-
-    dataMutex.unlock();
-  }
-
-  //-----------------------------------------------------------------------------------------------
-  /** Add a MDLeanEvent to the box.
    * @param event :: reference to a MDEvent to add.
    * */
   TMDE(
