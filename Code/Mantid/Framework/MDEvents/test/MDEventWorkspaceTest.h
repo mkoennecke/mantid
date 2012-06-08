@@ -601,8 +601,30 @@ class MDEventWorkspaceTestPerformance :    public CxxTest::TestSuite
 
 private:
 
+  MDEventWorkspace3Lean::sptr m_WidelyUnsplit_Original;
+  MDEventWorkspace3Lean::sptr m_ConcentratedUnsplit_Original;
+
   MDEventWorkspace3Lean::sptr m_WidelyUnsplit;
   MDEventWorkspace3Lean::sptr m_ConcentratedUnsplit;
+
+  //Helper to create an event list.
+  std::vector<MDLeanEvent<3> > createEvents(const size_t& dimExtents)
+  {
+    std::vector<MDLeanEvent<3> > vecEvents(dimExtents*dimExtents*dimExtents);
+    for(size_t i = 0; i < dimExtents; ++i)
+    {
+      for(size_t j = 0; j < dimExtents; ++j)
+      {
+        for(size_t k = 0; k < dimExtents; ++k)
+        {
+          double centers[3] = {(double)i, (double)j, (double)k};
+          size_t index = i + j*dimExtents + k*dimExtents;
+          vecEvents[index] = MDLeanEvent<3>(1, 1, centers);
+        }
+      }
+    }
+    return vecEvents;
+  }
 
 public:
 
@@ -611,50 +633,47 @@ public:
   static MDEventWorkspaceTestPerformance *createSuite() { return new MDEventWorkspaceTestPerformance(); }
   static void destroySuite( MDEventWorkspaceTestPerformance *suite ) { delete suite; }
 
-  void setUp()
+
+  MDEventWorkspaceTestPerformance()
   {    
-    size_t dim_size = 100;
-    size_t sq_dim_size = dim_size*dim_size;
-    m_WidelyUnsplit = MDEventsTestHelper::makeMDEW<3>(10, 0.0, (Mantid::coord_t)dim_size, 10 /*event per box*/);
-    m_WidelyUnsplit->getBoxController()->setSplitThreshold(1);
-    std::vector<MDLeanEvent<3> > vecEvents(dim_size*dim_size*dim_size);
+    const size_t dim_size = 100;
+ 
+    //Create an MDWorkspace with new events scattered everywhere.
+    m_WidelyUnsplit_Original = MDEventsTestHelper::makeMDEW<3>(10, 0.0, (Mantid::coord_t)dim_size, 10 /*event per box*/);
+    m_WidelyUnsplit_Original->getBoxController()->setSplitThreshold(1);
+    m_WidelyUnsplit_Original->addEvents(createEvents(dim_size));
     
-    for(size_t i = 0; i < dim_size; ++i)
-    {
-      for(size_t j = 0; j < dim_size; ++j)
-      {
-        for(size_t k = 0; k < dim_size; ++k)
-        {
-          double centers[3] = {(double)i, (double)j, (double)k};
-          vecEvents[i + j*dim_size + k*sq_dim_size] = MDLeanEvent<3>(1, 1, centers);
-        }
-      }
-    }
-
-    m_ConcentratedUnsplit = MDEventWorkspace3Lean::sptr(new MDEventWorkspace3Lean(*m_WidelyUnsplit));
-    m_ConcentratedUnsplit->splitAllIfNeeded(NULL);
-   
-    //m_ConcentratedUnsplit->addEvent(MDLeanEvent<3>(1, 1, centers)
-
+    //Create a new workpace based on the original, but with a more concentrated distribution of events
+    m_ConcentratedUnsplit_Original = MDEventWorkspace3Lean::sptr(new MDEventWorkspace3Lean(*m_WidelyUnsplit_Original));
+    m_ConcentratedUnsplit_Original->splitAllIfNeeded(NULL);
+    m_ConcentratedUnsplit_Original->addEvents(createEvents(dim_size/2));
   }
 
-  void test_splitting_performance_single_threaded()
+  void setUp()
+  {
+    m_WidelyUnsplit = MDEventWorkspace3Lean::sptr(new MDEventWorkspace3Lean(*m_WidelyUnsplit_Original));
+    m_ConcentratedUnsplit = MDEventWorkspace3Lean::sptr(new MDEventWorkspace3Lean(*m_ConcentratedUnsplit_Original));
+  }
+
+  void test_splitting_performance_single_threaded_on_wide_distribution()
   {
     m_WidelyUnsplit->splitAllIfNeeded(NULL);
   }
 
-  void test_splitting_tracked_boxes_performance_single_threaded()
+  void test_splitting_performance_single_threaded_on_narrow_distribution()
+  {
+    m_ConcentratedUnsplit->splitAllIfNeeded(NULL);
+  }
+
+  void test_splitting_tracked_boxes_performance_single_threaded_on_wide_distribution()
   {
     m_WidelyUnsplit->splitTrackedBoxes(NULL);
   }
 
-  //void test_splitting_performance_parallel()
-  //{
-  //  auto ts_splitter = new ThreadSchedulerFIFO();
-  //  ThreadPool tp_splitter(ts_splitter);
-  //  m_ws->splitAllIfNeeded(ts_splitter);
-  //  tp_splitter.joinAll();
-  //}
+  void test_splitting_tracked_boxes_performance_single_threaded_on_narrow_distribution()
+  {
+    m_ConcentratedUnsplit->splitTrackedBoxes(NULL);
+  }
 };
 
 #endif
