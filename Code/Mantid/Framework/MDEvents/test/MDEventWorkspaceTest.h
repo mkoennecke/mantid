@@ -15,8 +15,6 @@
 #include "MantidMDEvents/MDEventWorkspace.h"
 #include "MantidMDEvents/MDGridBox.h"
 #include "MantidMDEvents/MDLeanEvent.h"
-#include "MantidMDEvents/CreateMDWorkspace.h"
-#include "MantidMDEvents/FakeMDEventData.h"
 #include "MantidTestHelpers/MDEventsTestHelper.h"
 #include <boost/random/linear_congruential.hpp>
 #include <boost/random/mersenne_twister.hpp>
@@ -185,10 +183,6 @@ public:
     bc->setSplitThreshold(10);
     ew->splitBox();
 
-    typedef MDGridBox<MDLeanEvent<1>,1> gbox_t;
-    typedef MDBox<MDLeanEvent<1>,1> box_t;
-    typedef MDBoxBase<MDLeanEvent<1>,1> ibox_t;
-
     coord_t centers[1] = {0};
     for (size_t i=0; i<10; i++)
     {
@@ -211,6 +205,78 @@ public:
     TS_ASSERT_LESS_THAN(nOriginalGriddedBoxes, nCurrrentGriddedBoxes);
     TS_ASSERT_LESS_THAN(nOriginalMDBoxes, nCurrentMDBoxes);
   }
+
+  //-------------------------------------------------------------------------------------
+  /** Test that splitTrackedBoxes does the same thing as the older splitAllIfNeeded */
+  void test_consistencySplitTrackedBoxes()
+  {
+    MDEventWorkspace1Lean::sptr A = MDEventsTestHelper::makeMDEW<1>(2, 0.0, 1.0, 0);
+    BoxController_sptr bc = A->getBoxController();
+    bc->setSplitThreshold(2);
+    A->splitBox();
+
+    coord_t centers[1] = {0};
+    for (size_t i=0; i<10; i++)
+    {
+      centers[0] = coord_t(i*0.001);
+      A->addEvent(MDEvent<1>(1.0, 1.0, centers) );
+    }
+
+    MDEventWorkspace1Lean::sptr cloneA = MDEventWorkspace1Lean::sptr(new MDEventWorkspace1Lean(*A));
+
+    A->splitAllIfNeeded(NULL);
+    cloneA->splitTrackedBoxes(NULL);
+
+    Mantid::API::BoxController_sptr ABoxController = A->getBoxController();
+    BoxController_sptr cloneABoxController = A->getBoxController();
+
+    //Splitting either way should yield the same results.
+    TS_ASSERT_EQUALS(ABoxController->getAverageDepth(), cloneABoxController->getAverageDepth());
+    TS_ASSERT_EQUALS(ABoxController->getMaxDepth(), cloneABoxController->getMaxDepth());
+    TS_ASSERT_EQUALS(ABoxController->getMaxId(), cloneABoxController->getMaxId());
+    TS_ASSERT_EQUALS(ABoxController->getTotalNumMDBoxes(), cloneABoxController->getTotalNumMDBoxes());
+    TS_ASSERT_EQUALS(ABoxController->getTotalNumMDGridBoxes(), cloneABoxController->getTotalNumMDGridBoxes());
+  }
+
+  //-------------------------------------------------------------------------------------
+  /** Runs in a multithreaded context, gets the same results as in the single threaded context. */
+  void test_spitTrackedBoxesParallel()
+  {
+    MDEventWorkspace1Lean::sptr A = MDEventsTestHelper::makeMDEW<1>(2, 0.0, 1.0, 0);
+    BoxController_sptr bc = A->getBoxController();
+    bc->setSplitThreshold(2);
+    A->splitBox();
+
+    coord_t centers[1] = {0};
+    for (size_t i=0; i<1000; i++)
+    {
+      centers[0] = coord_t(i*0.0001);
+      A->addEvent(MDEvent<1>(1.0, 1.0, centers) );
+    }
+
+    //Now we should have two identical input workspaces.
+    MDEventWorkspace1Lean::sptr cloneA = MDEventWorkspace1Lean::sptr(new MDEventWorkspace1Lean(*A));
+
+    //Split in single threaded context
+    A->splitTrackedBoxes(NULL);
+
+    //Split in multithreaded context
+    ThreadScheduler* tScheduler = new ThreadSchedulerFIFO();
+    ThreadPool tPool(tScheduler);
+    cloneA->splitTrackedBoxes(tScheduler);
+    tPool.joinAll();
+
+    //Get the respective box controllers prior to comparsison
+    Mantid::API::BoxController_sptr ABoxController = A->getBoxController();
+    BoxController_sptr cloneABoxController = A->getBoxController();
+  
+    //Compare via the box controller.
+    TS_ASSERT_EQUALS(ABoxController->getTotalNumMDBoxes(), cloneABoxController->getTotalNumMDBoxes());
+    TS_ASSERT_EQUALS(ABoxController->getTotalNumMDGridBoxes(), cloneABoxController->getTotalNumMDGridBoxes());
+    TS_ASSERT_EQUALS(ABoxController->getAverageDepth(), cloneABoxController->getAverageDepth());
+    TS_ASSERT_EQUALS(ABoxController->getMaxDepth(), cloneABoxController->getMaxDepth());
+  }
+
 
   //-------------------------------------------------------------------------------------
   /** Create an IMDIterator */

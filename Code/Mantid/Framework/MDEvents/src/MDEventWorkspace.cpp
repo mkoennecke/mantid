@@ -569,12 +569,27 @@ namespace MDEvents
         MDGridBox<MDE,nd> * parent = dynamic_cast<MDGridBox<MDE,nd> *>(box->getParent());
         if (parent)
         {
-          parent->splitContents(parent->getChildIndexFromID(box->getId()), ts);
+          if(ts)
+          {
+            ts->push(new FunctionTask(boost::bind(&MDGridBox<MDE,nd>::splitContents(parent->getChildIndexFromID(box->getId()), NULL)) ) );
+          }
+          else
+          {
+            parent->splitContents(parent->getChildIndexFromID(box->getId()), NULL);
+          }
         }
       }
     }
-    //These boxes do not need tracking any longer.
-    boxController->clearBoxesToSplit();
+    if (!ts)
+    {
+      /*
+       Note that i've just introduced a different behaviour in a multi-threaded context! however, clear boxes must be the last operation.
+       one option would be to dynamic cast the ts to a ThreadSchedulerFIFO, we could that way ensure that adding a task would get executed last?
+      */
+      //These boxes do not need tracking any longer.
+      boxController->clearBoxesToSplit();
+    }
+    
   }
 
   //-----------------------------------------------------------------------------------------------
