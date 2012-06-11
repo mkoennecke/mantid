@@ -16,9 +16,11 @@ namespace Mantid
 namespace API
 {
   //TODO: pull out into separate header.
-  class DLLExport IMDBox 
+  class DLLExport IMDBox : public Mantid::Kernel::ISaveable
   {
   public:
+    IMDBox(){}
+    IMDBox(const IMDBox& box) : ISaveable(box){}
     virtual ~IMDBox(){}
   };
 
@@ -426,7 +428,7 @@ namespace API
     /** Get a reference to the vector of boxes that must be split.
      * Not thread safe!
      */
-    std::set<Mantid::API::IMDBox*> & getBoxesToSplit()
+    const std::set<Mantid::API::IMDBox*> & getBoxesToSplit() const
     {
       return m_boxesToSplit;
     }

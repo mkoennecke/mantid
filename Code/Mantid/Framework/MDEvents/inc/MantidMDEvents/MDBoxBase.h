@@ -4,7 +4,6 @@
 #include "MantidAPI/IMDWorkspace.h"
 #include "MantidGeometry/MDGeometry/MDDimensionExtents.h"
 #include "MantidGeometry/MDGeometry/MDImplicitFunction.h"
-#include "MantidKernel/ISaveable.h"
 #include "MantidKernel/System.h"
 #include "MantidAPI/BoxController.h"
 #include "MantidAPI/CoordTransform.h"
@@ -41,7 +40,7 @@ namespace MDEvents
    *
    * */
   TMDE_CLASS
-  class DLLExport MDBoxBase : public Mantid::Kernel::ISaveable, public Mantid::API::IMDBox
+  class DLLExport MDBoxBase : public Mantid::API::IMDBox
   {
   public:
 

@@ -58,7 +58,7 @@ namespace MDEvents
    */
   TMDE(
   MDBoxBase)::MDBoxBase(const MDBoxBase<MDE,nd> & box)
-  : ISaveable(box),
+  : IMDBox(box),
     m_signal(box.m_signal), m_errorSquared(box.m_errorSquared), m_totalWeight(box.m_totalWeight),
     m_inverseVolume(box.m_inverseVolume), m_depth(box.m_depth),
     m_parent(box.m_parent)

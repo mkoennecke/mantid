@@ -59,6 +59,41 @@ namespace MDEvents
       data = new MDGridBox<MDE, nd>(*mdgridbox);
     else
       throw std::runtime_error("MDEventWorkspace::copy_ctor(): unexpected data box type found.");
+
+    class FindBoxById 
+    {
+    private:
+      const size_t m_id;
+    public:
+      FindBoxById(const size_t& _id): m_id(_id) 
+      {
+      }
+      bool operator()(IMDBox * const box) const
+      {
+        return box->getId() == m_id;
+      }
+    };
+
+    std::vector<MDBoxBase<MDE, nd>* > boxes;
+    this->data->getBoxes(boxes, this->getBoxController()->getMaxDepth(), false);
+
+    std::set<IMDBox*> otherSplit = other.getBoxController()->getBoxesToSplit();
+    std::set<IMDBox*>::iterator original_it;
+    size_t count = 0;
+    for(original_it = otherSplit.begin(); original_it != otherSplit.end(); ++original_it)
+    {
+      IMDBox* pBox = (*original_it);
+      //MDBox<MDE, nd> * z = dynamic_cast<MDBox<MDE, nd> *>(pBox);
+
+      size_t id = pBox->getId();
+      FindBoxById boxFinder(id);
+      std::vector<MDBoxBase<MDE, nd>* >::iterator found = std::find_if(boxes.begin(), boxes.end(), boxFinder);
+      if(found != boxes.end())
+      {
+        this->getBoxController()->addBoxToSplit(*found);
+      }
+      ++count;
+    }
   }
 
   //-----------------------------------------------------------------------------------------------
@@ -571,7 +606,7 @@ namespace MDEvents
         {
           if(ts)
           {
-            ts->push(new FunctionTask(boost::bind(&MDGridBox<MDE,nd>::splitContents(parent->getChildIndexFromID(box->getId()), NULL)) ) );
+            ts->push(new FunctionTask(boost::bind(&MDGridBox<MDE,nd>::splitContents, &*parent, parent->getChildIndexFromID(box->getId()) ) ) );
           }
           else
           {

@@ -702,6 +702,10 @@ public:
 
   MDEventWorkspaceTestPerformance()
   {    
+
+    int j;
+    std::cin >> j;
+
     const size_t dim_size = 100;
  
     //Create an MDWorkspace with new events scattered everywhere.

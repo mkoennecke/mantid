@@ -719,6 +719,32 @@ namespace MDEvents
   }
 
 
+  //-----------------------------------------------------------------------------------------------
+  /** Split a box that is contained in the GridBox, at the given index,
+   * into a MDGridBox.
+   *
+   * Thread-safe as long as 'index' is different for all threads.
+   *
+   * @param index :: index into the boxes vector.
+   *        Warning: No bounds check is made, don't give stupid values!
+   */
+  TMDE(
+  void MDGridBox)::splitContents(size_t index)
+  {
+    // You can only split it if it is a MDBox (not MDGridBox).
+    MDBox<MDE, nd> * box = dynamic_cast<MDBox<MDE, nd> *>(boxes[index]);
+    if (!box) return;
+    // Track how many MDBoxes there are in the overall workspace
+    this->m_BoxController->trackNumBoxes(box->getDepth());
+    // Construct the grid box. This should take the object out of the disk MRU
+    MDGridBox<MDE, nd> * gridbox = new MDGridBox<MDE, nd>(box);
+
+    // Delete the old ungridded box
+    delete boxes[index];
+    // And now we have a gridded box instead of a boring old regular box.
+    boxes[index] = gridbox;
+  }
+
 
   //-----------------------------------------------------------------------------------------------
   /** Split a box that is contained in the GridBox, at the given index,
