@@ -60,6 +60,9 @@ namespace MDEvents
     else
       throw std::runtime_error("MDEventWorkspace::copy_ctor(): unexpected data box type found.");
 
+    /*
+    Comparitor for finding IMD boxes with a given id.
+    */
     class FindBoxById 
     {
     private:
@@ -79,20 +82,20 @@ namespace MDEvents
 
     std::set<IMDBox*> otherSplit = other.getBoxController()->getBoxesToSplit();
     std::set<IMDBox*>::iterator original_it;
-    size_t count = 0;
+    std::set<IMDBox*>::iterator start_it = otherSplit.begin();
     for(original_it = otherSplit.begin(); original_it != otherSplit.end(); ++original_it)
     {
       IMDBox* pBox = (*original_it);
-      //MDBox<MDE, nd> * z = dynamic_cast<MDBox<MDE, nd> *>(pBox);
-
-      size_t id = pBox->getId();
-      FindBoxById boxFinder(id);
-      std::vector<MDBoxBase<MDE, nd>* >::iterator found = std::find_if(boxes.begin(), boxes.end(), boxFinder);
-      if(found != boxes.end())
+      if(pBox)
       {
-        this->getBoxController()->addBoxToSplit(*found);
+        size_t id = pBox->getId();
+        FindBoxById boxFinder(id);
+        std::vector<MDBoxBase<MDE, nd>* >::iterator found = std::find_if(boxes.begin(), boxes.end(), boxFinder);
+        if(found != boxes.end())
+        {
+          this->getBoxController()->addBoxToSplit(*found);
+        }
       }
-      ++count;
     }
   }
 
@@ -580,6 +583,7 @@ namespace MDEvents
   void MDEventWorkspace)::splitAllIfNeeded(Kernel::ThreadScheduler * ts)
   {
     data->splitAllIfNeeded(ts);
+    this->m_BoxController->clearBoxesToSplit();
   }
 
   //-----------------------------------------------------------------------------------------------

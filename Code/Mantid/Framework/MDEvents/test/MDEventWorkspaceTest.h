@@ -95,10 +95,13 @@ public:
   void test_copy_constructor()
   {
     MDEventWorkspace<MDLeanEvent<3>, 3> ew3;
+    ew3.getBoxController()->setSplitThreshold(1);
+    ew3.getBoxController()->setSplitInto(2);
     for (size_t i=0; i<3; i++)
       ew3.addDimension( MDHistoDimension_sptr(new MDHistoDimension("x","x","m",-1,1,0)) );
     ew3.initialize();
-    ew3.addEvent( MDLeanEvent<3>(1.23, 4.56) );
+    ew3.addEvent(MDLeanEvent<3>(1.0, 1.0));
+
     ExperimentInfo_sptr ei(new ExperimentInfo);
     TS_ASSERT_EQUALS( ew3.addExperimentInfo(ei), 0);
 
@@ -110,6 +113,15 @@ public:
     TSM_ASSERT_DIFFERS( "ExperimentInfo's were deep-copied", copy.getExperimentInfo(0), ew3.getExperimentInfo(0));
     TSM_ASSERT_DIFFERS( "BoxController was deep-copied", copy.getBoxController(), ew3.getBoxController());
     TSM_ASSERT_DIFFERS( "Dimensions were deep-copied", copy.getDimension(0), ew3.getDimension(0));
+
+    BoxController_sptr originalBoxController = ew3.getBoxController();
+    BoxController_sptr copyBoxController = copy.getBoxController();
+    auto originalBoxesToSplit = originalBoxController->getBoxesToSplit();
+    auto copyBoxesToSplit = copyBoxController->getBoxesToSplit();
+
+    TSM_ASSERT_EQUALS( "Should be same number of boxes to split.", originalBoxesToSplit.size(), copyBoxesToSplit.size());
+    TSM_ASSERT_EQUALS( "Should only be one box to split.", 1, copyBoxesToSplit.size());
+    TSM_ASSERT_EQUALS( "Box ids should match", (*originalBoxesToSplit.begin())->getId(),  (*copyBoxesToSplit.begin())->getId()) 
   }
 
   void test_initialize_throws()
@@ -668,10 +680,8 @@ class MDEventWorkspaceTestPerformance :    public CxxTest::TestSuite
 private:
 
   MDEventWorkspace3Lean::sptr m_WidelyUnsplit_Original;
-  MDEventWorkspace3Lean::sptr m_ConcentratedUnsplit_Original;
 
   MDEventWorkspace3Lean::sptr m_WidelyUnsplit;
-  MDEventWorkspace3Lean::sptr m_ConcentratedUnsplit;
 
   //Helper to create an event list.
   std::vector<MDLeanEvent<3> > createEvents(const size_t& dimExtents)
@@ -702,47 +712,42 @@ public:
 
   MDEventWorkspaceTestPerformance()
   {    
-
-    int j;
-    std::cin >> j;
-
-    const size_t dim_size = 100;
- 
-    //Create an MDWorkspace with new events scattered everywhere.
-    m_WidelyUnsplit_Original = MDEventsTestHelper::makeMDEW<3>(10, 0.0, (Mantid::coord_t)dim_size, 10 /*event per box*/);
-    m_WidelyUnsplit_Original->getBoxController()->setSplitThreshold(1);
-    m_WidelyUnsplit_Original->addEvents(createEvents(dim_size));
-    
-    //Create a new workpace based on the original, but with a more concentrated distribution of events
-    m_ConcentratedUnsplit_Original = MDEventWorkspace3Lean::sptr(new MDEventWorkspace3Lean(*m_WidelyUnsplit_Original));
-    m_ConcentratedUnsplit_Original->splitAllIfNeeded(NULL);
-    m_ConcentratedUnsplit_Original->addEvents(createEvents(dim_size/2));
   }
 
   void setUp()
   {
-    m_WidelyUnsplit = MDEventWorkspace3Lean::sptr(new MDEventWorkspace3Lean(*m_WidelyUnsplit_Original));
-    m_ConcentratedUnsplit = MDEventWorkspace3Lean::sptr(new MDEventWorkspace3Lean(*m_ConcentratedUnsplit_Original));
-  }
-
+    const size_t dim_size = 100;
+ 
+    //Create an MDWorkspace with new events scattered everywhere.
+    m_WidelyUnsplit = MDEventsTestHelper::makeMDEW<3>(10, 0.0, (Mantid::coord_t)dim_size, 10 /*event per box*/);
+    m_WidelyUnsplit->getBoxController()->setSplitThreshold(1);
+    m_WidelyUnsplit->addEvents(createEvents(dim_size));
+  }  
+  
   void test_splitting_performance_single_threaded_on_wide_distribution()
   {
     m_WidelyUnsplit->splitAllIfNeeded(NULL);
   }
 
-  void test_splitting_performance_single_threaded_on_narrow_distribution()
-  {
-    m_ConcentratedUnsplit->splitAllIfNeeded(NULL);
-  }
-
   void test_splitting_tracked_boxes_performance_single_threaded_on_wide_distribution()
   {
     m_WidelyUnsplit->splitTrackedBoxes(NULL);
+  }  
+  
+  void test_splitting_performance_multi_threaded_on_wide_distribution()
+  {
+    ThreadScheduler* ts = new ThreadSchedulerFIFO();
+    ThreadPool pool(ts);
+    m_WidelyUnsplit->splitAllIfNeeded(ts);
+    pool.joinAll();
   }
 
-  void test_splitting_tracked_boxes_performance_single_threaded_on_narrow_distribution()
+  void test_splitting_tracked_boxes_performance_multi_threaded_on_wide_distribution()
   {
-    m_ConcentratedUnsplit->splitTrackedBoxes(NULL);
+    ThreadScheduler* ts = new ThreadSchedulerFIFO();
+    ThreadPool pool(ts);
+    m_WidelyUnsplit->splitTrackedBoxes(ts);
+    pool.joinAll();
   }
 };
 

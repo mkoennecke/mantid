@@ -480,7 +480,7 @@ namespace MDEvents
 
     // When we reach the split threshold exactly, track that the MDBox is too small
     // We check on equality and not >= to only add a box once.
-    if (this->data.size() == this->m_BoxController->getSplitThreshold())
+    if (shouldSplit())
     {
       this->m_BoxController->addBoxToSplit(this);
     }
@@ -779,6 +779,15 @@ namespace MDEvents
     m_bIsMasked = false;
   }
 
+  /**
+  Flags up that the box should be split.
+  @return True if splitting should occur.
+  */
+  TMDE(
+    bool MDBox)::shouldSplit() const
+  {
+    return this->data.size() >= this->m_BoxController->getSplitThreshold();
+  }
 
 
 }//namespace MDEvents

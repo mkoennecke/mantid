@@ -48,8 +48,6 @@ namespace MDEvents
     MDBox(const MDBox & other);
 
     virtual ~MDBox() {}
-
-
     // ----------------------------- ISaveable Methods ------------------------------------------------------
 
     /// Save the data
@@ -82,6 +80,8 @@ namespace MDEvents
     size_t getNumDims() const;
 
     size_t getNumMDBoxes() const;
+
+    bool shouldSplit() const;
 
     /// Get the # of children MDBoxBase'es (non-recursive)
     size_t getNumChildren() const

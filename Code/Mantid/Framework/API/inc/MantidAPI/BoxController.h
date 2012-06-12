@@ -415,7 +415,7 @@ namespace API
      * Thread-safe for adding.
      * No duplicate checking is done!
      *
-     * @param ptr :: void ptr that casts to a particular MDBox<> * type.
+     * @param ptr :: IMDBox pointer.
      */
     void addBoxToSplit(Mantid::API::IMDBox * ptr)
     {
