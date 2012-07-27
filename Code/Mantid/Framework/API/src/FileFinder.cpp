@@ -14,7 +14,8 @@
 #include <Poco/Path.h>
 #include <Poco/File.h>
 #include <Poco/StringTokenizer.h>
-#include <Poco/RegularExpression.h>
+#include <Poco/Exception.h>
+#include <boost/regex.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include <cctype>
@@ -356,13 +357,14 @@ namespace Mantid
         std::string path = getFullPath(hint);
         if (!path.empty())
         {
-          if (Poco::File(path).exists() )
+          try
           {
-            g_log.information() << "found path = " << path << '\n';
-            return path;
-          }
-          else
-            return "";
+            if (Poco::File(path).exists() )
+            {
+              g_log.information() << "found path = " << path << '\n';
+              return path;
+            }
+          } catch (Poco::Exception &) { }
         } 
         else 
         {
@@ -497,6 +499,7 @@ namespace Mantid
      *  Only the beginning of a range can contain an instrument name.
      * @return A vector of full paths or empty vector
      * @throw std::invalid_argument if the argument is malformed
+     * @throw Exception::NotFoundError if a file could not be found
      */
     std::vector<std::string> FileFinderImpl::findRuns(const std::string& hint) const
     {
@@ -546,8 +549,8 @@ namespace Mantid
           runEnd.replace(runEnd.end() - range[1].size(), runEnd.end(), range[1]);
 
           // Throw if runEnd contains something else other than a digit.
-          Poco::RegularExpression digits("[0-9]+");
-          if (!digits.match(runEnd))
+          boost::regex digits("[0-9]+");
+          if (!boost::regex_match(runEnd, digits))
             throw std::invalid_argument("Malformed range of runs: Part of the run has a non-digit character in it.");
 
           int runEndNumber = boost::lexical_cast<int>(runEnd);
@@ -565,8 +568,11 @@ namespace Mantid
             {
               res.push_back(path);
             }
+            else
+            {
+              throw Kernel::Exception::NotFoundError("Unable to find file:", run);
+            }
           }
-
         }
         else
         {
@@ -574,6 +580,10 @@ namespace Mantid
           if (!path.empty())
           {
             res.push_back(path);
+          }
+          else
+          {
+            throw Kernel::Exception::NotFoundError("Unable to find file:", *h);
           }
         }
       }
@@ -622,14 +632,36 @@ namespace Mantid
       extensions.assign(exts.begin(),exts.end());
 
       // Remove wild cards.
-      extensions.erase(std::remove_if( // "Erase-remove" idiom.
+      extensions.erase(std::remove_if(
           extensions.begin(), extensions.end(),
           containsWildCard),
         extensions.end());
+      
+      const std::vector<std::string> & searchPaths =
+          Kernel::ConfigService::Instance().getDataSearchDirs();
 
-      std::vector<std::string>::const_iterator ext = extensions.begin();
+      // Before we try any globbing, make sure we exhaust all reasonable attempts at constructing the possible filename.
+      // Avoiding the globbing of getFullPath() for as long as possible will help performance when calling findRuns() 
+      // with a large range of files, especially when searchPaths consists of folders containing a large number of runs.
+      for(auto ext = extensions.begin(); ext != extensions.end(); ++ext)
+      {
+        for(auto filename = filenames.begin(); filename != filenames.end(); ++filename)
+        {
+          for(auto searchPath = searchPaths.begin(); searchPath != searchPaths.end(); ++searchPath)
+          {
+            try
+            {
+              Poco::Path path(*searchPath, *filename + *ext);
+              Poco::File file(path);
+              if (file.exists())
+                return path.toString();
 
-      for (; ext != extensions.end(); ++ext)
+            } catch (Poco::Exception &) { /* File does not exist, just carry on. */ }
+          }
+        }
+      }
+
+      for (auto ext = extensions.begin(); ext != extensions.end(); ++ext)
       {
         std::set<std::string>::const_iterator it = filenames.begin();
         for(; it!=filenames.end(); ++it)

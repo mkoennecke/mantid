@@ -1,8 +1,9 @@
 #ifndef MANTID_WORKFLOWALGORITHMS_DGSREDUCTION_H_
 #define MANTID_WORKFLOWALGORITHMS_DGSREDUCTION_H_
 
+#include "MantidKernel/PropertyManager.h"
 #include "MantidKernel/System.h"
-#include "MantidAPI/Algorithm.h"
+#include "MantidAPI/DataProcessorAlgorithm.h"
 
 namespace Mantid
 {
@@ -34,7 +35,7 @@ namespace WorkflowAlgorithms
     File change history is stored at: <https://svn.mantidproject.org/mantid/trunk/Code/Mantid>
     Code Documentation is available at: <http://doxygen.mantidproject.org>
   */
-  class DLLExport DgsReduction  : public API::Algorithm
+  class DLLExport DgsReduction  : public API::DataProcessorAlgorithm
   {
   public:
     DgsReduction();
@@ -48,7 +49,7 @@ namespace WorkflowAlgorithms
     virtual void initDocs();
     void init();
     void exec();
-
+    API::Workspace_sptr loadInputData(boost::shared_ptr<Kernel::PropertyManager> manager);
 
   };
 

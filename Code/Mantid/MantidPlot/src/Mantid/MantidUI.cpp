@@ -262,12 +262,28 @@ void MantidUI::showFitPropertyBrowser(bool on)
 */
 void MantidUI::shutdown()
 {
+  g_log.notice("MantidPlot is shutting down...");
+
+  // First we need to cancel any running algorithms otherwise bad things can happen if they call
+  // the logging framework after it's been shutdown. The cancel calls within cancelAll are not
+  // blocking, hence the loop to make sure they're all done before moving on. (N.B. Tried copying
+  // the wait/exit/wait business from the AlgorithmMonitor dtor, but that gave occasional crashes.)
+  if ( m_algMonitor )
+  {
+    m_algMonitor->cancelAll();
+    while ( m_algMonitor->count() > 0 )
+    {
+      Poco::Thread::sleep(100);
+    }
+  }
+
   Mantid::API::FrameworkManager::Instance().clear();
 }
 
 MantidUI::~MantidUI()
 {
-  if( m_algMonitor ) delete m_algMonitor;
+  delete m_algMonitor;
+
   Mantid::API::AnalysisDataService::Instance().notificationCenter.removeObserver(m_groupworkspacesObserver);
   Mantid::API::AnalysisDataService::Instance().notificationCenter.removeObserver(m_ungroupworkspaceObserver);
   Mantid::API::AnalysisDataService::Instance().notificationCenter.removeObserver(m_addObserver);
@@ -2182,11 +2198,6 @@ MantidMatrix* MantidUI::newMantidMatrix(const QString& wsName, int start, int en
   return importMatrixWorkspace(wsName, false, false, start, end);
 }
 
-void MantidUI::cancelAllRunningAlgorithms()
-{
-  if( m_algMonitor ) m_algMonitor->cancelAll();
-}
-
 bool MantidUI::createPropertyInputDialog(const QString & alg_name, const QString & preset_values,
   const QString & optional_msg,  const QStringList & enabled, const QStringList & disabled)
 {
@@ -2393,7 +2404,7 @@ void MantidUI::importNumSeriesLog(const QString &wsName, const QString &logname,
       try
       {
         f = dynamic_cast<Mantid::Kernel::TimeSeriesProperty<bool> *>(ws->run().getLogData("running"));
-        if (f) flt.addFilter(f);
+        if (f) flt.addFilter(*f);
         else
         {
           importNumSeriesLog(wsName,logname,0);
@@ -2416,7 +2427,7 @@ void MantidUI::importNumSeriesLog(const QString &wsName, const QString &logname,
           try
           {
             f = dynamic_cast<Mantid::Kernel::TimeSeriesProperty<bool> *>(*it);
-            if (f) flt.addFilter(f);
+            if (f) flt.addFilter(*f);
             else
             {
               importNumSeriesLog(wsName,logname,0);
@@ -2838,7 +2849,7 @@ void MantidUI::setUpSpectrumGraph(MultiLayer* ml, const QString& wsName)
 @param Name :: Name of the graph
 @param workspace :: The workspace
 */
-void MantidUI::setUpBinGraph(MultiLayer* ml, const QString& Name, Mantid::API::MatrixWorkspace_sptr workspace)
+void MantidUI::setUpBinGraph(MultiLayer* ml, const QString& Name, Mantid::API::MatrixWorkspace_const_sptr workspace)
 {
   Graph* g = ml->activeGraph();
   g->setTitle(tr("Workspace ")+Name);
@@ -3023,11 +3034,18 @@ MultiLayer* MantidUI::plotSpectraList(const QMultiMap<QString,int>& toPlot, bool
   g->setYAxisTitle(tr(yTitle.c_str()));
   g->setAntialiasing(false);
   g->setAutoScale();
+  /* The 'setAutoScale' above is needed to make sure that the plot initially encompasses all the
+   * data points. However, this has the side-effect suggested by its name: all the axes become
+   * auto-scaling if the data changes. If, in the plot preferences, autoscaling has been disabled
+   * the the next line re-fixes the axes
+   */
+  if ( ! appWindow()->autoscale2DPlots ) g->enableAutoscaling(false);
 
+  // This deals with the case where the X-values are not in order. In general, this shouldn't
+  // happen, but it does apparently with some muon analyses.
   g->checkValuesInAxisRange(mc);
 
   QApplication::restoreOverrideCursor();
-  //setUpSpectrumGraph(ml,firstWorkspace);
   return ml;
 }
 
@@ -3142,7 +3160,7 @@ MultiLayer* MantidUI::plotSelectedRows(const MantidMatrix * const m, bool errs, 
   return plotSpectraList(m->workspaceName(),rowSet,errs,distr);
 }
 
-Table* MantidUI::createTableFromBins(const QString& wsName, Mantid::API::MatrixWorkspace_sptr workspace, const QList<int>& bins, bool errs, int fromRow, int toRow)
+Table* MantidUI::createTableFromBins(const QString& wsName, Mantid::API::MatrixWorkspace_const_sptr workspace, const QList<int>& bins, bool errs, int fromRow, int toRow)
 {
   if (bins.empty()) return NULL;
 

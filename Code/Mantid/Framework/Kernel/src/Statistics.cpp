@@ -1,11 +1,12 @@
+// Includes
+#include "MantidKernel/Statistics.h"
+
 #include <algorithm>
 #include <functional>
 #include <limits>
-#include <math.h>
+#include <cmath>
 #include <numeric>
 #include <string>
-#include <iostream>
-#include "MantidKernel/Statistics.h"
 
 namespace Mantid
 {
@@ -204,14 +205,30 @@ namespace Mantid
       return getNanStatistics();
     }
 
+    /// Getting statistics of a boolean array should just give a bunch of NaNs
+    template<>
+    DLLExport Statistics getStatistics<bool> (const vector<bool>& data, const bool sorted)
+    {
+      UNUSED_ARG(sorted);
+      UNUSED_ARG(data);
+      return getNanStatistics();
+    }
 
-    // -------------------------- concrete instantiations
-    template DLLExport Statistics getStatistics<double> (const vector<double> &, const bool);
-    template DLLExport Statistics getStatistics<int32_t> (const vector<int32_t> &, const bool);
-    template DLLExport std::vector<double> getZscore<double> (const vector<double> &, const bool);
-    template DLLExport std::vector<double> getZscore<int32_t> (const vector<int32_t> &, const bool);
-    template DLLExport std::vector<double> getModifiedZscore<double> (const vector<double> &, const bool);
-    template DLLExport std::vector<double> getModifiedZscore<int32_t> (const vector<int32_t> &, const bool);
+    // -------------------------- Macro to instantiation concrete types --------------------------------
+#define INSTANTIATE(TYPE) \
+    template MANTID_KERNEL_DLL Statistics getStatistics<TYPE> (const vector<TYPE> &, const bool); \
+    template MANTID_KERNEL_DLL std::vector<double> getZscore<TYPE> (const vector<TYPE> &, const bool); \
+    template MANTID_KERNEL_DLL std::vector<double> getModifiedZscore<TYPE> (const vector<TYPE> &, const bool);
+
+    // --------------------------- Concrete instantiations ---------------------------------------------
+    INSTANTIATE(float);
+    INSTANTIATE(double);
+    INSTANTIATE(int);
+    INSTANTIATE(long);
+    INSTANTIATE(long long);
+    INSTANTIATE(unsigned int);
+    INSTANTIATE(unsigned long);
+    INSTANTIATE(unsigned long long);
 
   } // namespace Kernel
 } // namespace Mantid

@@ -132,6 +132,35 @@ size_t Qhelper::waveLengthCutOff(API::MatrixWorkspace_const_sptr dataWS, const d
   return std::lower_bound(Xs.begin(), Xs.end(), WMin) - Xs.begin();
 }
 
+
+/** This method performs the common work between Qxy and Q1D2 if algorihtm parameter OutputParts=True.
+    It simply outputs two workspaces as output parameters. sumOfCounts/sumOfNormFactors equals the
+    main output of Qxy or Q1D2
+*  @param alg algoritm
+*  @param sumOfCounts sum of counts
+*  @param sumOfNormFactors sum of normalisation factors
+*/
+void Qhelper::outputParts(API::Algorithm* alg, API::MatrixWorkspace_sptr sumOfCounts, 
+  API::MatrixWorkspace_sptr sumOfNormFactors)
+{
+  std::string baseName = alg->getPropertyValue("OutputWorkspace");
+
+  alg->declareProperty(
+    new API::WorkspaceProperty<API::MatrixWorkspace>("SumOfCounts","",Kernel::Direction::Output),
+    "The name of the MatrixWorkspace to store sum of counts" );
+  alg->setPropertyValue("SumOfCounts",baseName+"_sumOfCounts");
+
+  alg->setProperty("SumOfCounts", sumOfCounts);
+
+
+  alg->declareProperty(
+    new API::WorkspaceProperty<API::MatrixWorkspace>("sumOfNormFactors","",Kernel::Direction::Output),
+    "The name of the MatrixWorkspace to store sum of normalising factors" );
+  alg->setPropertyValue("sumOfNormFactors",baseName+"_sumOfNormFactors");
+
+  alg->setProperty("sumOfNormFactors", sumOfNormFactors);
+}
+
 } // namespace Algorithms
 } // namespace Mantid
 

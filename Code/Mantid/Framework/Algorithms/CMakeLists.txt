@@ -1,10 +1,8 @@
 set ( SRC_FILES
 	#	src/Q1DTOF.cpp
-	#src/SassenaFFT.cpp
 	src/AbsorptionCorrection.cpp
 	src/AddLogDerivative.cpp
 	src/AddSampleLog.cpp
-	src/AlignDetectorInTOF.cpp
 	src/AlignDetectors.cpp
 	src/AlphaCalc.cpp
 	src/AnyShapeAbsorption.cpp
@@ -15,7 +13,6 @@ set ( SRC_FILES
 	src/ApplyTransmissionCorrection.cpp
 	src/BinaryOperateMasks.cpp
 	src/BinaryOperation.cpp
-	src/BlendSq.cpp
 	src/CalMuonDeadTime.cpp
 	src/CalculateEfficiency.cpp
 	src/CalculateTransmission.cpp
@@ -36,8 +33,6 @@ set ( SRC_FILES
 	src/ConvertToDistribution.cpp
 	src/ConvertToEventWorkspace.cpp
 	src/ConvertToHistogram.cpp
-	src/ConvertToMaskWorkspace.cpp
-	src/ConvertToMaskingWorkspace.cpp
 	src/ConvertToMatrixWorkspace.cpp
 	src/ConvertToPointData.cpp
 	src/ConvertUnits.cpp
@@ -57,7 +52,6 @@ set ( SRC_FILES
 	src/CrossCorrelate.cpp
 	src/CuboidGaugeVolumeAbsorption.cpp
 	src/CylinderAbsorption.cpp
-	src/DampSq.cpp
 	src/DeleteWorkspace.cpp
 	src/DetectorDiagnostic.cpp
 	src/DetectorEfficiencyCor.cpp
@@ -108,7 +102,6 @@ set ( SRC_FILES
 	src/GroupWorkspaces.cpp
 	src/HRPDSlabCanAbsorption.cpp
 	src/He3TubeEfficiency.cpp
-	src/IDLRebin.cpp
 	src/IQTransform.cpp
 	src/IdentifyNoisyDetectors.cpp
 	src/Integration.cpp
@@ -132,6 +125,7 @@ set ( SRC_FILES
 	src/MuonAsymmetryCalc.cpp
 	src/MuonRemoveExpDecay.cpp
 	src/NormaliseByCurrent.cpp
+	src/NormaliseByDetector.cpp
 	src/NormaliseToMonitor.cpp
 	src/NormaliseToUnity.cpp
 	src/OneMinusExponentialCor.cpp
@@ -144,6 +138,7 @@ set ( SRC_FILES
 	src/PolynomialCorrection.cpp
 	src/Power.cpp
 	src/PowerLawCorrection.cpp
+	src/ProcessBackground.cpp
 	src/Q1D.cpp
 	src/Q1D2.cpp
 	src/Q1DWeighted.cpp
@@ -156,6 +151,7 @@ set ( SRC_FILES
 	src/Rebin2D.cpp
 	src/RebinToWorkspace.cpp
 	src/Rebunch.cpp
+	src/RecordPythonScript.cpp
 	src/Regroup.cpp
 	src/RemoveBins.cpp
 	src/RemoveLowResTOF.cpp
@@ -165,6 +161,7 @@ set ( SRC_FILES
 	src/ResetNegatives.cpp
 	src/ResizeRectangularDetector.cpp
 	src/SANSDirectBeamScaling.cpp
+	src/SassenaFFT.cpp
 	src/Scale.cpp
 	src/ScaleX.cpp
 	src/SetUncertainties.cpp
@@ -200,11 +197,9 @@ set ( SRC_FILES
 
 set ( INC_FILES
 	#	inc/MantidAlgorithms/Q1DTOF.h
-	#inc/MantidAlgorithms/SassenaFFT.h
 	inc/MantidAlgorithms/AbsorptionCorrection.h
 	inc/MantidAlgorithms/AddLogDerivative.h
 	inc/MantidAlgorithms/AddSampleLog.h
-	inc/MantidAlgorithms/AlignDetectorInTOF.h
 	inc/MantidAlgorithms/AlignDetectors.h
 	inc/MantidAlgorithms/AlphaCalc.h
 	inc/MantidAlgorithms/AnyShapeAbsorption.h
@@ -215,7 +210,6 @@ set ( INC_FILES
 	inc/MantidAlgorithms/ApplyTransmissionCorrection.h
 	inc/MantidAlgorithms/BinaryOperateMasks.h
 	inc/MantidAlgorithms/BinaryOperation.h
-	inc/MantidAlgorithms/BlendSq.h
 	inc/MantidAlgorithms/CalMuonDeadTime.h
 	inc/MantidAlgorithms/CalculateEfficiency.h
 	inc/MantidAlgorithms/CalculateTransmission.h
@@ -236,8 +230,6 @@ set ( INC_FILES
 	inc/MantidAlgorithms/ConvertToDistribution.h
 	inc/MantidAlgorithms/ConvertToEventWorkspace.h
 	inc/MantidAlgorithms/ConvertToHistogram.h
-	inc/MantidAlgorithms/ConvertToMaskWorkspace.h
-	inc/MantidAlgorithms/ConvertToMaskingWorkspace.h
 	inc/MantidAlgorithms/ConvertToMatrixWorkspace.h
 	inc/MantidAlgorithms/ConvertToPointData.h
 	inc/MantidAlgorithms/ConvertUnits.h
@@ -257,7 +249,6 @@ set ( INC_FILES
 	inc/MantidAlgorithms/CrossCorrelate.h
 	inc/MantidAlgorithms/CuboidGaugeVolumeAbsorption.h
 	inc/MantidAlgorithms/CylinderAbsorption.h
-	inc/MantidAlgorithms/DampSq.h
 	inc/MantidAlgorithms/DeleteWorkspace.h
 	inc/MantidAlgorithms/DetectorDiagnostic.h
 	inc/MantidAlgorithms/DetectorEfficiencyCor.h
@@ -309,7 +300,6 @@ set ( INC_FILES
 	inc/MantidAlgorithms/GroupWorkspaces.h
 	inc/MantidAlgorithms/HRPDSlabCanAbsorption.h
 	inc/MantidAlgorithms/He3TubeEfficiency.h
-	inc/MantidAlgorithms/IDLRebin.h
 	inc/MantidAlgorithms/IQTransform.h
 	inc/MantidAlgorithms/IdentifyNoisyDetectors.h
 	inc/MantidAlgorithms/Integration.h
@@ -333,6 +323,7 @@ set ( INC_FILES
 	inc/MantidAlgorithms/MuonAsymmetryCalc.h
 	inc/MantidAlgorithms/MuonRemoveExpDecay.h
 	inc/MantidAlgorithms/NormaliseByCurrent.h
+	inc/MantidAlgorithms/NormaliseByDetector.h
 	inc/MantidAlgorithms/NormaliseToMonitor.h
 	inc/MantidAlgorithms/NormaliseToUnity.h
 	inc/MantidAlgorithms/OneMinusExponentialCor.h
@@ -345,6 +336,7 @@ set ( INC_FILES
 	inc/MantidAlgorithms/PolynomialCorrection.h
 	inc/MantidAlgorithms/Power.h
 	inc/MantidAlgorithms/PowerLawCorrection.h
+	inc/MantidAlgorithms/ProcessBackground.h
 	inc/MantidAlgorithms/Q1D.h
 	inc/MantidAlgorithms/Q1D2.h
 	inc/MantidAlgorithms/Q1DWeighted.h
@@ -357,6 +349,7 @@ set ( INC_FILES
 	inc/MantidAlgorithms/Rebin2D.h
 	inc/MantidAlgorithms/RebinToWorkspace.h
 	inc/MantidAlgorithms/Rebunch.h
+	inc/MantidAlgorithms/RecordPythonScript.h
 	inc/MantidAlgorithms/Regroup.h
 	inc/MantidAlgorithms/RemoveBins.h
 	inc/MantidAlgorithms/RemoveLowResTOF.h
@@ -366,6 +359,7 @@ set ( INC_FILES
 	inc/MantidAlgorithms/ResetNegatives.h
 	inc/MantidAlgorithms/ResizeRectangularDetector.h
 	inc/MantidAlgorithms/SANSDirectBeamScaling.h
+	inc/MantidAlgorithms/SassenaFFT.h
 	inc/MantidAlgorithms/Scale.h
 	inc/MantidAlgorithms/ScaleX.h
 	inc/MantidAlgorithms/SetUncertainties.h
@@ -401,10 +395,8 @@ set ( INC_FILES
 
 set ( TEST_FILES
 	#	test/CalMuonDeadTimeTest.h
-	#test/SassenaFFTTest.h
 	test/AddLogDerivativeTest.h
 	test/AddSampleLogTest.h
-	test/AlignDetectorInTOFTest.h
 	test/AlignDetectorsTest.h
 	test/AlphaCalcTest.h
 	test/AnyShapeAbsorptionTest.h
@@ -414,7 +406,6 @@ set ( TEST_FILES
 	test/ApplyTransmissionCorrectionTest.h
 	test/BinaryOperateMasksTest.h
 	test/BinaryOperationTest.h
-	test/BlendSqTest.h
 	test/CalculateEfficiencyTest.h
 	test/CalculateTransmissionBeamSpreaderTest.h
 	test/CalculateTransmissionTest.h
@@ -434,7 +425,6 @@ set ( TEST_FILES
 	test/ConvertToDistributionTest.h
 	test/ConvertToEventWorkspaceTest.h
 	test/ConvertToHistogramTest.h
-	test/ConvertToMaskWorkspaceTest.h
 	test/ConvertToMatrixWorkspaceTest.h
 	test/ConvertToPointDataTest.h
 	test/ConvertUnitsTest.h
@@ -453,7 +443,6 @@ set ( TEST_FILES
 	test/CropWorkspaceTest.h
 	test/CuboidGaugeVolumeAbsorptionTest.h
 	test/CylinderAbsorptionTest.h
-	test/DampSqTest.h
 	test/DeleteWorkspaceTest.h
 	test/DetectorEfficiencyCorTest.h
 	test/DetectorEfficiencyVariationTest.h
@@ -495,7 +484,6 @@ set ( TEST_FILES
 	test/GroupWorkspacesTest.h
 	test/HRPDSlabCanAbsorptionTest.h
 	test/He3TubeEfficiencyTest.h
-	test/IDLRebinTest.h
 	test/IQTransformTest.h
 	test/IdentifyNoisyDetectorsTest.h
 	test/IntegrationTest.h
@@ -516,6 +504,7 @@ set ( TEST_FILES
 	test/MuonAsymmetryCalcTest.h
 	test/MuonRemoveExpDecayTest.h
 	test/NormaliseByCurrentTest.h
+	test/NormaliseByDetectorTest.h
 	test/NormaliseToMonitorTest.h
 	test/OneMinusExponentialCorTest.h
 	test/PDFFTTest.h
@@ -527,6 +516,7 @@ set ( TEST_FILES
 	test/PolynomialCorrectionTest.h
 	test/PowerLawCorrectionTest.h
 	test/PowerTest.h
+	test/ProcessBackgroundTest.h
 	test/Q1D2Test.h
 	test/Q1DTest.h
 	test/Q1DWeightedTest.h
@@ -546,6 +536,7 @@ set ( TEST_FILES
 	test/ReplaceSpecialValuesTest.h
 	test/ResetNegativesTest.h
 	test/ResizeRectangularDetectorTest.h
+	test/SassenaFFTTest.h
 	test/ScaleTest.h
 	test/ScaleXTest.h
 	test/ShiftLogTimeTest.h

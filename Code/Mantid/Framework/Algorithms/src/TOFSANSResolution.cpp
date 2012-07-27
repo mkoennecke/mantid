@@ -1,6 +1,5 @@
 /*WIKI* 
-
-
+Compute the Q resolution for a given I(Q) for a TOF SANS instrument.
 *WIKI*/
 //----------------------------------------------------------------------
 // Includes
@@ -94,14 +93,6 @@ void TOFSANSResolution::exec()
   R2 /= 1000.0;
   wl_resolution = getProperty("DeltaT");
 
-  // Although we want the 'ReducedWorkspace' to be an event workspace for this algorithm to do
-  // anything, we don't want the algorithm to 'fail' if it isn't
-  if (!reducedEventWS)
-  {
-    g_log.warning() << "An Event Workspace is needed to compute dQ. Calculation skipped." << std::endl;
-    return;
-  }
-
   // Calculate the output binning
   const std::vector<double> binParams = getProperty("OutputBinning");
 
@@ -136,13 +127,13 @@ void TOFSANSResolution::exec()
   const int numberOfSpectra = static_cast<int>(reducedWS->getNumberHistograms());
   Progress progress(this,0.0,1.0,numberOfSpectra);
 
-  PARALLEL_FOR2(reducedEventWS, iqWS)
+  PARALLEL_FOR2(reducedWS, iqWS)
   for (int i = 0; i < numberOfSpectra; i++)
   {
     PARALLEL_START_INTERUPT_REGION
     IDetector_const_sptr det;
     try {
-      det = reducedEventWS->getDetector(i);
+      det = reducedWS->getDetector(i);
     } catch (Exception::NotFoundError&) {
       g_log.warning() << "Spectrum index " << i << " has no detector assigned to it - discarding" << std::endl;
       // Catch if no detector. Next line tests whether this happened - test placed
@@ -157,26 +148,28 @@ void TOFSANSResolution::exec()
 
     // Multiplicative factor to go from lambda to Q
     // Don't get fooled by the function name...
-    const double theta = reducedEventWS->detectorTwoTheta(det);
+    const double theta = reducedWS->detectorTwoTheta(det);
     const double factor = 4.0 * M_PI * sin( theta/2.0 );
 
-    EventList& el = reducedEventWS->getEventList(i);
-    el.switchTo(WEIGHTED);
+    const MantidVec& XIn = reducedWS->readX(i);
+    const MantidVec& YIn = reducedWS->readY(i);
+    const int wlLength = static_cast<int>(XIn.size());
 
-    std::vector<WeightedEvent>::iterator itev;
-    std::vector<WeightedEvent>::iterator itev_end = el.getWeightedEvents().end();
+    std::vector<double> _dx(xLength-1, 0.0);
+    std::vector<double> _norm(xLength-1, 0.0);
+    std::vector<double> _tofy(xLength-1, 0.0);
+    std::vector<double> _thetay(xLength-1, 0.0);
 
-    for (itev = el.getWeightedEvents().begin(); itev != itev_end; ++itev)
+    for ( int j = 0; j < wlLength-1; j++)
     {
-      if ( boost::math::isnan(itev->weight()) ) continue;
-      if (std::abs(itev->weight()) == std::numeric_limits<double>::infinity()) continue;
-      if ( !isEmpty(min_wl) && itev->tof() < min_wl ) continue;
-      if ( !isEmpty(max_wl) && itev->tof() > max_wl ) continue;
-
-      const double q = factor/itev->tof();
+      const double wl = (XIn[j+1]+XIn[j])/2.0;
+      if ( !isEmpty(min_wl) && wl < min_wl ) continue;
+      if ( !isEmpty(max_wl) && wl > max_wl ) continue;
+      const double q = factor/wl;
       int iq = 0;
 
       // Bin assignment depends on whether we have log or linear bins
+      //TODO: change this so that we don't have to pass in the binning parameters
       if(binParams[1]>0.0)
       {
         iq = (int)floor( (q-binParams[0])/ binParams[1] );
@@ -189,17 +182,27 @@ void TOFSANSResolution::exec()
       const double dTheta2 = ( 3.0*R1*R1/(L1*L1) + 3.0*R2*R2*src_to_pixel*src_to_pixel/(L1*L1*L2*L2)
             + 2.0*(pixel_size_x*pixel_size_x+pixel_size_y*pixel_size_y)/(L2*L2) )/12.0;
 
-      const double dwl_over_wl = 3.9560*getTOFResolution(itev->tof())/(1000.0*(L1+L2)*itev->tof());
+      const double dwl_over_wl = 3.9560*getTOFResolution(wl)/(1000.0*(L1+L2)*wl);
       const double dq_over_q = std::sqrt(dTheta2/(theta*theta)+dwl_over_wl*dwl_over_wl);
-      
-      PARALLEL_CRITICAL(iq)    /* Write to shared memory - must protect */
-      if (iq>=0 && iq < xLength-1 && !boost::math::isnan(dq_over_q) && dq_over_q>0)
+
+      // By using only events with a positive weight, we use only the data distribution and
+      // leave out the background events
+      if (iq>=0 && iq < xLength-1 && !boost::math::isnan(dq_over_q) && dq_over_q>0 && YIn[j]>0)
       {
-        DxOut[iq] += q*dq_over_q*itev->weight();
-        XNorm[iq] += itev->weight();
-        TOFY[iq] += q*std::fabs(dwl_over_wl)*itev->weight();
-        ThetaY[iq] += q*std::sqrt(dTheta2)/theta*itev->weight();
+        _dx[iq] += q*dq_over_q*YIn[j];
+        _norm[iq] += YIn[j];
+        _tofy[iq] += q*std::fabs(dwl_over_wl)*YIn[j];
+        _thetay[iq] += q*std::sqrt(dTheta2)/theta*YIn[j];
       }
+    }
+
+    // Move over the distributions for that pixel
+    PARALLEL_CRITICAL(iq)    /* Write to shared memory - must protect */
+    for (int iq = 0; iq < xLength-1; iq++){
+      DxOut[iq] += _dx[iq];
+      XNorm[iq] += _norm[iq];
+      TOFY[iq] += _tofy[iq];
+      ThetaY[iq] += _thetay[iq];
     }
 
     progress.report("Computing Q resolution");
@@ -209,12 +212,10 @@ void TOFSANSResolution::exec()
   // Normalize according to the chosen weighting scheme
   for ( int i = 0; i<xLength-1; i++ )
   {
-    if (XNorm[i]>0)
-    {
-      DxOut[i] /= XNorm[i];
-      TOFY[i] /= XNorm[i];
-      ThetaY[i] /= XNorm[i];
-    }
+    if (XNorm[i]==0) continue;
+    DxOut[i] /= XNorm[i];
+    TOFY[i] /= XNorm[i];
+    ThetaY[i] /= XNorm[i];
   }
 }
 } // namespace Algorithms

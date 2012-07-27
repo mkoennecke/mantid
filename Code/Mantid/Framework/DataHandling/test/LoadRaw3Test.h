@@ -23,8 +23,9 @@ using namespace Mantid::Kernel;
 class LoadRaw3Test : public CxxTest::TestSuite
 {
 public:
-    static LoadRaw3Test *createSuite() { return new LoadRaw3Test(); }
+  static LoadRaw3Test *createSuite() { return new LoadRaw3Test(); }
   static void destroySuite(LoadRaw3Test *suite) { delete suite; }
+
   LoadRaw3Test()
   {
     // Path to test input file assumes Test directory checked out from SVN
@@ -310,7 +311,7 @@ public:
   {
     LoadRaw3 loader5;
     loader5.initialize();
-    loader5.setPropertyValue("Filename", "CSP79590.raw");
+    loader5.setPropertyValue("Filename", "CSP78173.raw");
     loader5.setPropertyValue("OutputWorkspace", "multiperiod");
     // loader5.setPropertyValue("SpectrumList", "0,1,2,3");
     
@@ -334,12 +335,13 @@ public:
       period++;
     }
     std::vector<std::string>::const_iterator itr1=wsNamevec.begin();
+    int periodNumber = 0;
+    const int nHistograms = 4;
     for (;itr1!=wsNamevec.end();itr1++)
     {	
       MatrixWorkspace_sptr  outsptr;
       TS_ASSERT_THROWS_NOTHING(outsptr=AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>((*itr1)));
-      TS_ASSERT_EQUALS( outsptr->getNumberHistograms(), 4 )
-
+      doTestMultiPeriodWorkspace(outsptr, nHistograms, ++periodNumber);
     }
     std::vector<std::string>::const_iterator itr=wsNamevec.begin();
     MatrixWorkspace_sptr  outsptr1;
@@ -351,7 +353,7 @@ public:
     TS_ASSERT_EQUALS( outsptr1->dataX(0), outsptr2->dataX(0) )
 
     // But the data should be different
-    TS_ASSERT_DIFFERS( outsptr1->dataY(1)[555], outsptr2->dataY(1)[555] )
+    TS_ASSERT_DIFFERS( outsptr1->dataY(1)[8], outsptr2->dataY(1)[8] )
 
     TS_ASSERT_EQUALS( outsptr1->getInstrument()->baseInstrument(), outsptr2->getInstrument()->baseInstrument() )
     TS_ASSERT_EQUALS( &(outsptr1->sample()), &(outsptr2->sample()) )
@@ -577,11 +579,13 @@ public:
       period++;
     }
     itr1=wsNamevec.begin();
+    int periodNumber = 0;
+    const int nHistograms = 2;
     for (;itr1!=wsNamevec.end();itr1++)
     {	
       MatrixWorkspace_sptr  outsptr;
       TS_ASSERT_THROWS_NOTHING(outsptr=AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>((*itr1)));
-      TS_ASSERT_EQUALS( outsptr->getNumberHistograms(), 2 )
+      doTestMultiPeriodWorkspace(outsptr, nHistograms, ++periodNumber);
     }
     std::vector<std::string>::const_iterator itr=wsNamevec.begin();
     MatrixWorkspace_sptr  outsptr1;
@@ -864,6 +868,26 @@ public:
   } 
 
 private:
+
+  /// Helper method to run common set of tests on a workspace in a multi-period group.
+  void doTestMultiPeriodWorkspace(MatrixWorkspace_sptr workspace, const size_t& nHistograms, int expected_period)
+  {
+    // Check the number of histograms.
+    TS_ASSERT_EQUALS(workspace->getNumberHistograms(), nHistograms);
+    // Check the current period property.
+    const Mantid::API::Run& run = workspace->run();
+    Property* prop = run.getLogData("current_period");
+    PropertyWithValue<int>* current_period_property = dynamic_cast<PropertyWithValue<int>* >(prop); 
+    TS_ASSERT(current_period_property != NULL);
+    int actual_period;
+    Kernel::toValue<int>(current_period_property->value(), actual_period);
+    TS_ASSERT_EQUALS(expected_period, actual_period);
+    // Check the period n property.
+    std::stringstream stream;
+    stream << "period " << actual_period;
+    TSM_ASSERT_THROWS_NOTHING("period number series could not be found.", run.getLogData(stream.str()));
+  }
+
   LoadRaw3 loader,loader2,loader3;
   std::string inputFile;
   std::string outputSpace;

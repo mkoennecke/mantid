@@ -71,12 +71,11 @@ class RefLview(PythonAlgorithm):
             ws_name = "refl%d" % _run
             ws_event_data = ws_name+"_evt"  
 
-            _File = FileFinder.findRuns("REF_L%d" %_run)
-            if len(_File)>0 and os.path.isfile(_File[0]): 
-                data_file = _File[0]
+            try:
+                data_file = FileFinder.findRuns("REF_L%d" %_run)[0]
                 if bDebug:
-                    print 'DEBUG: full file name is ' + _File[0]
-            else:
+                    print 'DEBUG: full file name is ' + data_file
+            except RuntimeError:
                 msg = "RefLReduction: could not find run %d\n" % _run
                 msg += "Add your data folder to your User Data Directories in the File menu"
                 if bDebug:
@@ -100,10 +99,17 @@ class RefLview(PythonAlgorithm):
             _line = ' Run start: ' + run_start
             print _line
             
+            #duration
+            duration_value = mt_run.getProperty('duration').value
+            duration_units = mt_run.getProperty('duration').units
+            _line = ' Duration: {0:.2f}'.format(duration_value)
+            _line += ' ' + duration_units
+            print _line
+            
             #Lambda Requested
             lambda_request_value = mt_run.getProperty('LambdaRequest').value[0]
             lambda_request_units = mt_run.getProperty('LambdaRequest').units
-            _line = ' Lambda requested: ' + str(lambda_request_value)
+            _line = ' Lambda requested: {0:.2f}'.format(lambda_request_value)
             _line += ' ' + lambda_request_units
             print _line
             
@@ -118,6 +124,12 @@ class RefLview(PythonAlgorithm):
             thi_value = mt_run.getProperty('thi').value[0]
             thi_units = mt_run.getProperty('thi').units
             _line = ' thi: {0:.4f}'.format(thi_value)
+            _line += ' ' + thi_units
+            print _line
+            
+            #(tthd-thi)/2
+            _cal = (float(tthd_value)-float(thi_value))/2.
+            _line = ' (tthd-thi)/2: {0:.2f}'.format(_cal)
             _line += ' ' + thi_units
             print _line
             

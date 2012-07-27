@@ -1,11 +1,16 @@
 set ( SRC_FILES
+	src/AlignAndFocusPowder.cpp
 	src/ComputeSensitivity.cpp
+	src/DgsConvertToEnergyTransfer.cpp
+	src/DgsPreprocessData.cpp
+	src/DgsProcessDetectorVanadium.cpp
 	src/DgsReduction.cpp
 	src/EQSANSDarkCurrentSubtraction.cpp
 	src/EQSANSInstrument.cpp
 	src/EQSANSLoad.cpp
 	src/EQSANSPatchSensitivity.cpp
 	src/EQSANSQ2D.cpp
+	src/EQSANSReduce.cpp
 	src/HFIRDarkCurrentSubtraction.cpp
 	src/HFIRInstrument.cpp
 	src/HFIRLoad.cpp
@@ -22,13 +27,18 @@ set ( SRC_UNITY_IGNORE_FILES
 )
 
 set ( INC_FILES
+	inc/MantidWorkflowAlgorithms/AlignAndFocusPowder.h
 	inc/MantidWorkflowAlgorithms/ComputeSensitivity.h
+	inc/MantidWorkflowAlgorithms/DgsConvertToEnergyTransfer.h
+	inc/MantidWorkflowAlgorithms/DgsPreprocessData.h
+	inc/MantidWorkflowAlgorithms/DgsProcessDetectorVanadium.h
 	inc/MantidWorkflowAlgorithms/DgsReduction.h
 	inc/MantidWorkflowAlgorithms/EQSANSDarkCurrentSubtraction.h
 	inc/MantidWorkflowAlgorithms/EQSANSInstrument.h
 	inc/MantidWorkflowAlgorithms/EQSANSLoad.h
 	inc/MantidWorkflowAlgorithms/EQSANSPatchSensitivity.h
 	inc/MantidWorkflowAlgorithms/EQSANSQ2D.h
+	inc/MantidWorkflowAlgorithms/EQSANSReduce.h
 	inc/MantidWorkflowAlgorithms/HFIRDarkCurrentSubtraction.h
 	inc/MantidWorkflowAlgorithms/HFIRInstrument.h
 	inc/MantidWorkflowAlgorithms/HFIRLoad.h

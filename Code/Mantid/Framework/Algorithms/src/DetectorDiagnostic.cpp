@@ -359,39 +359,16 @@ namespace Mantid
      * Create a masking workspace to return.
      *
      * @param inputWS The workspace to initialize from. The instrument is copied from this.
-     * @param initialize Whether or not to set all of the values to keep the data.
      */
-    MatrixWorkspace_sptr DetectorDiagnostic::generateEmptyMask(API::MatrixWorkspace_const_sptr inputWS, const bool initialize)
+    DataObjects::MaskWorkspace_sptr DetectorDiagnostic::generateEmptyMask(API::MatrixWorkspace_const_sptr inputWS)
     {
       // Create a new workspace for the results, copy from the input to ensure that we copy over the instrument and current masking
-      DataObjects::MaskWorkspace* maskWS = new DataObjects::MaskWorkspace();
+      DataObjects::MaskWorkspace_sptr maskWS(new DataObjects::MaskWorkspace());
       maskWS->initialize(inputWS->getNumberHistograms(), 1, 1);
-      MatrixWorkspace_sptr outputWS(maskWS);
-      WorkspaceFactory::Instance().initializeFromParent(inputWS, outputWS, false);
-      outputWS->setTitle(inputWS->getTitle());
+      WorkspaceFactory::Instance().initializeFromParent(inputWS, maskWS, false);
+      maskWS->setTitle(inputWS->getTitle());
 
-      if (initialize) // initialize the mask as keep everything
-      {
-        // initialize the mask as keep everything
-        const double liveValue(0.0); // keep the data - delete is 1.0
-        const double errors(0.0); // uncertainty
-        int64_t size = outputWS->getNumberHistograms();
-        PARALLEL_FOR1(outputWS)
-        for (int64_t i = 0; i < size; i++)
-        {
-          PARALLEL_START_INTERUPT_REGION
-          outputWS->dataY(i)[0] = liveValue; // by default it stays
-          outputWS->dataE(i)[0] = errors;
-          PARALLEL_END_INTERUPT_REGION
-        }
-        PARALLEL_CHECK_INTERUPT_REGION
-      }
-
-      // Clear the mask flags
-      Geometry::ParameterMap & pmap = outputWS->instrumentParameters();
-      pmap.clearParametersByName("masked");
-
-      return outputWS;
+      return maskWS;
     }
 
 

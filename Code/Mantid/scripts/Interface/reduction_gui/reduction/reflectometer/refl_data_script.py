@@ -20,6 +20,9 @@ class DataSets(BaseScriptElement):
     
     data_x_range_flag = True
     data_x_range = [115,210]
+
+    tthd_value = 'N/A'
+    ths_value = 'N/A'
     
     norm_x_range_flag = True
     norm_x_range = [115,210]
@@ -46,6 +49,7 @@ class DataSets(BaseScriptElement):
 
     #scaling factor file
     scaling_factor_file = ''
+    scaling_factor_file_flag = True
     slits_width_flag = True
 
     #incident medium list and selected value
@@ -99,9 +103,13 @@ class DataSets(BaseScriptElement):
             script += "              AngleOffsetError=%s,\n" % str(self.angle_offset_error)
            
         # sf configuration file
-        if self.scaling_factor_file != '':
-            script += "ScalingFactorFile='%s',\n" % str(self.scaling_factor_file)   
-            script += "SlitsWidthFlag=%s,\n" % str(self.slits_width_flag)
+#        if self.scaling_factor_file != '':
+        if (self.scaling_factor_file_flag):
+            script += "ScalingFactorFile='%s',\n" % str(self.scaling_factor_file)
+        else:
+            script += "ScalingFactorFile='',\n"
+               
+        script += "SlitsWidthFlag=%s,\n" % str(self.slits_width_flag)
             
         # The output should be slightly different if we are generating
         # a script for the automated reduction
@@ -141,6 +149,9 @@ class DataSets(BaseScriptElement):
         xml += "<x_max_pixel>%s</x_max_pixel>\n" % str(self.data_x_range[1])
         xml += "<x_range_flag>%s</x_range_flag>\n" % str(self.data_x_range_flag)
 
+        xml += "<tthd_value>%s</tthd_value>\n" % str(self.tthd_value)
+        xml += "<ths_value>%s</ths_value>\n" % str(self.ths_value)
+
         xml += "<norm_flag>%s</norm_flag>\n" % str(self.NormFlag)
         xml += "<norm_x_range_flag>%s</norm_x_range_flag>\n" % str(self.norm_x_range_flag)
         xml += "<norm_x_max>%s</norm_x_max>\n" % str(self.norm_x_range[1])
@@ -163,6 +174,7 @@ class DataSets(BaseScriptElement):
         xml += "<angle_offset_error>%s</angle_offset_error>\n" % str(self.angle_offset_error)
         
         # scaling factor file name
+        xml += "<scaling_factor_flag>%s</scaling_factor_flag>\n" % str(self.scaling_factor_file_flag)
         xml += "<scaling_factor_file>%s</scaling_factor_file>\n" % str(self.scaling_factor_file)
         xml += "<slits_width_flag>%s</slits_width_flag>\n" % str(self.slits_width_flag)
         
@@ -199,6 +211,17 @@ class DataSets(BaseScriptElement):
         self.DataPeakPixels = [BaseScriptElement.getIntElement(instrument_dom, "from_peak_pixels"),
                                BaseScriptElement.getIntElement(instrument_dom, "to_peak_pixels")]
         
+        
+        #data metadata
+        _tthd_value = BaseScriptElement.getStringElement(instrument_dom, "tthd_value")
+        if (_tthd_value == ''):
+            _tthd_value = 'N/A'
+        self.tthd_value = _tthd_value
+        
+        _ths_value = BaseScriptElement.getStringElement(instrument_dom, "ths_value")
+        if (_ths_value == ''):
+            _ths_value = 'N/A'
+        self.ths_value = _ths_value
         
         #low resolution range
         self.data_x_range_flag = BaseScriptElement.getBoolElement(instrument_dom, "x_range_flag",
@@ -266,6 +289,7 @@ class DataSets(BaseScriptElement):
         #scaling factor file and options
         self.scaling_factor_file = BaseScriptElement.getStringElement(instrument_dom, "scaling_factor_file")
         self.slits_width_flag = BaseScriptElement.getBoolElement(instrument_dom, "slits_width_flag")
+        self.scaling_factor_file_flag = BaseScriptElement.getBoolElement(instrument_dom, "scaling_factor_flag")
         
         #incident medium selected
         if BaseScriptElement.getStringList(instrument_dom, "incident_medium_list") != []:        
@@ -293,6 +317,9 @@ class DataSets(BaseScriptElement):
         self.TofRangeFlag = DataSets.TofRangeFlag
         self.data_files = DataSets.data_files
         
+        self.tthd_value = DataSets.tthd_value
+        self.ths_value = DataSets.ths_value
+        
         self.NormFlag = DataSets.NormFlag
         self.NormBackgroundFlag = DataSets.NormBackgroundFlag
         self.NormBackgroundRoi = DataSets.NormBackgroundRoi
@@ -315,6 +342,7 @@ class DataSets(BaseScriptElement):
         #scaling factor file and options
         self.scaling_factor_file = DataSets.scaling_factor_file
         self.slits_width_flag = DataSets.slits_width_flag
+        self.scaling_factor_file_flag = DataSets.scaling_factor_file_flag
         
         #incident medium selected
         self.incident_medium_list = DataSets.incident_medium_list

@@ -1,8 +1,8 @@
-#ifndef  H_CONVERT_TO_MDEVENTS_MODQ_TRANSF
-#define  H_CONVERT_TO_MDEVENTS_MODQ_TRANSF
+#ifndef MANTID_MDEVENTS_MODQ_TRANSF_H
+#define MANTID_MDEVENTS_MODQ_TRANSF_H
 //
 #include "MantidMDEvents/MDTransfInterface.h"
-#include "MantidMDEvents/ConvToMDEventsBase.h"
+//#include "MantidMDEvents/ConvToMDBase.h"
 #include "MantidMDEvents/MDTransfFactory.h"
 #include "MantidMDEvents/MDTransfDEHelper.h"
 //
@@ -64,43 +64,43 @@ public:
 // WARNING!!!! THESE METHODS ARE USED BEFORE INITIALIZE IS EXECUTED SO THEY CAN NOT RELY ON THE CONTENTS OF THE CLASS TO BE DEFINED (THEY ARE VIRTUAL STATIC METHODS)
     /** return the number of dimensions, calculated by the transformation from the workspace.
        Depending on EMode, this numebr here is either 1 or 2 and do not depend on input workspace*/
-    unsigned int getNMatrixDimensions(ConvertToMD::EModes mode,
+    unsigned int getNMatrixDimensions(CnvrtToMD::EModes mode,
         API::MatrixWorkspace_const_sptr Sptr = API::MatrixWorkspace_const_sptr())const;
     /**function returns units ID-s which this transformation prodiuces its ouptut.
        It is Momentum and Momentum and DelteE in inelastic modes */
-    std::vector<std::string> outputUnitID(ConvertToMD::EModes dEmode,
+    std::vector<std::string> outputUnitID(CnvrtToMD::EModes dEmode,
         API::MatrixWorkspace_const_sptr Sptr = API::MatrixWorkspace_const_sptr())const;
     /**the default dimID-s in ModQ mode are |Q| and dE if necessary */ 
-    std::vector<std::string> getDefaultDimID(ConvertToMD::EModes dEmode,
+    std::vector<std::string> getDefaultDimID(CnvrtToMD::EModes dEmode,
         API::MatrixWorkspace_const_sptr Sptr = API::MatrixWorkspace_const_sptr())const;
    /**  returns the units, the transformation expects for input workspace to be expressed in. */
-    const std::string inputUnitID(ConvertToMD::EModes dEmode,
+    const std::string inputUnitID(CnvrtToMD::EModes dEmode,
         API::MatrixWorkspace_const_sptr Sptr = API::MatrixWorkspace_const_sptr())const;
 
 
  
 protected:
     //  directions to the detectors 
-    double ex,ey,ez;
+    double m_ex,m_ey,m_ez;
     // the matrix which transforms the neutron momentums from lablratory to crystall coordinate system. 
-    std::vector<double> rotMat;
+    std::vector<double> m_RotMat;
     // min-max values, some modified to work with squared values:
-    std::vector<double> dim_min,dim_max;
+    std::vector<double> m_DimMin,m_DimMax;
     // pointer to the class, which contains the information about precprocessed detectors
-    Kernel::V3D const * pDet;
+    Kernel::V3D const * m_Det;
 
     // number of dimensions, calculated from a matrix workspace, which is one in elastic and two in inelastic mode here. 
-    unsigned int nMatrixDim;
+    unsigned int m_NMatrixDim;
     // the variable which describes current conversion mode:
-    ConvertToMD::EModes emode;
+    CnvrtToMD::EModes m_Emode;
     /** the vector of the additional coordinates which define additional MD dimensions. 
         For implemented ModQ case, these dimensions do not depend on matrix coordinates and are determined by WS properties */
-    std::vector<coord_t>  addDimCoordinates;
+    std::vector<coord_t>  m_AddDimCoordinates;
     //************* These two variables are relevant to inelastic modes only and will be used in inelastic cases:
     // the energy of the incident neutrons
-    double Ei;
+    double m_Ei;
     // the wavevector of incident neutrons
-    double ki;  
+    double m_Ki;  
 private:
      /// how to transform workspace data in elastic case
     inline bool calcMatrixCoordElastic(const double &k0,std::vector<coord_t> &Coored)const;

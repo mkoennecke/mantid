@@ -13,6 +13,15 @@
 #include "MantidAPI/WorkspaceGroup.h"
 #include "MantidAPI/Algorithm.h"
 
+namespace Mantid
+{
+  namespace DataObjects
+  {
+    class PeaksWorkspace;
+  }
+}
+
+
 namespace WorkspaceCreationHelper
 {
   /// Create a fibonacci series
@@ -42,10 +51,10 @@ namespace WorkspaceCreationHelper
 
     Mantid::Kernel::Logger & getLogger(){return a_log;}
     
-    Mantid::API::Progress *getProgress(){return pProg.get();}
+    Mantid::API::Progress *getProgress(){return m_Progress.get();}
     void resetProgress(size_t nSteps)
     {
-        pProg = std::auto_ptr<Mantid::API::Progress >(new Mantid::API::Progress(this,0,1,nSteps));
+        m_Progress = std::auto_ptr<Mantid::API::Progress >(new Mantid::API::Progress(this,0,1,nSteps));
     }
   private:
       void init(){};
@@ -53,7 +62,7 @@ namespace WorkspaceCreationHelper
    /// Sets documentation strings for this algorithm
       virtual void initDocs(){};
 
-      std::auto_ptr<Mantid::API::Progress > pProg;
+      std::auto_ptr<Mantid::API::Progress > m_Progress;
       /// logger -> to provide logging, for MD dataset file operations
       static Mantid::Kernel::Logger  &a_log;
 
@@ -152,6 +161,8 @@ namespace WorkspaceCreationHelper
   /// Function to create a fixed RebinnedOutput workspace
   Mantid::DataObjects::RebinnedOutput_sptr CreateRebinnedOutputWorkspace();
 
+  /// Create a simple peaks workspace containing the given number of peaks
+  boost::shared_ptr<Mantid::DataObjects::PeaksWorkspace> createPeaksWorkspace(const int numPeaks = 2);
 }
 
 #endif /*WORKSPACECREATIONHELPER_H_*/

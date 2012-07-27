@@ -1,17 +1,25 @@
 set ( SRC_FILES
+	#       src/LoadSassena.cpp
+	src/ADARAPackets.cpp
+	src/ADARAParser.cpp
+	src/AppendGeometryToSNSNexus.cpp
 	src/CompressEvents.cpp
 	src/CreateSampleShape.cpp
 	src/DefineGaugeVolume.cpp
 	src/DeleteTableRows.cpp
 	src/DetermineChunking.cpp
 	src/FakeEventDataListener.cpp
+	src/FakeISISHistoDAE.cpp
 	src/FileEventDataListener.cpp
 	src/FindDetectorsInShape.cpp
 	src/FindDetectorsPar.cpp
+	src/GenerateGroupingPowder.cpp
 	src/GetMaskedDetectors.cpp
 	src/GroupDetectors.cpp
 	src/GroupDetectors2.cpp
 	src/ISISDataArchive.cpp
+	src/ISISHistoDataListener.cpp
+	src/ISISRunLogs.cpp
 	src/LiveDataAlgorithm.cpp
 	src/Load.cpp
 	src/LoadAscii.cpp
@@ -33,6 +41,7 @@ set ( SRC_FILES
 	src/LoadGSS.cpp
 	src/LoadISISNexus.cpp
 	src/LoadISISNexus2.cpp
+	src/LoadILL.cpp
 	src/LoadInstrument.cpp
 	src/LoadInstrumentFromNexus.cpp
 	src/LoadInstrumentFromRaw.cpp
@@ -69,7 +78,6 @@ set ( SRC_FILES
 	src/LoadRawBin0.cpp
 	src/LoadRawHelper.cpp
 	src/LoadRawSpectrum0.cpp
-#        src/LoadSassena.cpp
 	src/LoadSNSEventNexus.cpp
 	src/LoadSNSNexus.cpp
 	src/LoadSNSspec.cpp
@@ -88,10 +96,11 @@ set ( SRC_FILES
 	src/OrbiterDataArchive.cpp
 	src/ProcessDasNexusLog.cpp
 	src/RawFileInfo.cpp
-	src/RenameLog.cpp
 	src/RemoveLogs.cpp
+	src/RenameLog.cpp
 	src/RotateInstrumentComponent.cpp
 	src/SNSDataArchive.cpp
+	src/SNSLiveEventDataListener.cpp
 	src/SaveAscii.cpp
 	src/SaveCSV.cpp
 	src/SaveCalFile.cpp
@@ -125,19 +134,28 @@ set ( SRC_UNITY_IGNORE_FILES src/LoadDAE/idc.cpp
         src/LoadDAE/isisds_command.cpp)
 
 set ( INC_FILES
+	#	inc/MantidDataHandling/LoadSassena.h
+	inc/MantidDataHandling/ADARA.h
+	inc/MantidDataHandling/ADARAPackets.h
+	inc/MantidDataHandling/ADARAParser.h
+	inc/MantidDataHandling/AppendGeometryToSNSNexus.h
 	inc/MantidDataHandling/CompressEvents.h
 	inc/MantidDataHandling/CreateSampleShape.h
 	inc/MantidDataHandling/DefineGaugeVolume.h
 	inc/MantidDataHandling/DeleteTableRows.h
 	inc/MantidDataHandling/DetermineChunking.h
 	inc/MantidDataHandling/FakeEventDataListener.h
+	inc/MantidDataHandling/FakeISISHistoDAE.h
 	inc/MantidDataHandling/FileEventDataListener.h
 	inc/MantidDataHandling/FindDetectorsInShape.h
 	inc/MantidDataHandling/FindDetectorsPar.h
+	inc/MantidDataHandling/GenerateGroupingPowder.h
 	inc/MantidDataHandling/GetMaskedDetectors.h
 	inc/MantidDataHandling/GroupDetectors.h
 	inc/MantidDataHandling/GroupDetectors2.h
 	inc/MantidDataHandling/ISISDataArchive.h
+	inc/MantidDataHandling/ISISHistoDataListener.h
+	inc/MantidDataHandling/ISISRunLogs.h
 	inc/MantidDataHandling/LiveDataAlgorithm.h
 	inc/MantidDataHandling/Load.h
 	inc/MantidDataHandling/LoadAscii.h
@@ -155,6 +173,7 @@ set ( INC_FILES
 	inc/MantidDataHandling/LoadGSS.h
 	inc/MantidDataHandling/LoadISISNexus.h
 	inc/MantidDataHandling/LoadISISNexus2.h
+	inc/MantidDataHandling/LoadILL.h
 	inc/MantidDataHandling/LoadInstrument.h
 	inc/MantidDataHandling/LoadInstrumentFromNexus.h
 	inc/MantidDataHandling/LoadInstrumentFromRaw.h
@@ -186,7 +205,6 @@ set ( INC_FILES
 	inc/MantidDataHandling/LoadRawBin0.h
 	inc/MantidDataHandling/LoadRawHelper.h
 	inc/MantidDataHandling/LoadRawSpectrum0.h
-#	inc/MantidDataHandling/LoadSassena.h
 	inc/MantidDataHandling/LoadSNSEventNexus.h
 	inc/MantidDataHandling/LoadSNSNexus.h
 	inc/MantidDataHandling/LoadSNSspec.h
@@ -209,6 +227,7 @@ set ( INC_FILES
 	inc/MantidDataHandling/RenameLog.h
 	inc/MantidDataHandling/RotateInstrumentComponent.h
 	inc/MantidDataHandling/SNSDataArchive.h
+	inc/MantidDataHandling/SNSLiveEventDataListener.h
 	inc/MantidDataHandling/SaveAscii.h
 	inc/MantidDataHandling/SaveCSV.h
 	inc/MantidDataHandling/SaveCalFile.h
@@ -244,7 +263,11 @@ set ( INC_FILES
 )
 
 set ( TEST_FILES
+	#Needs fixing to not rely on network. test/SNSLiveEventDataListenerTest.h
+	#test/LoadDAETest.h
 	#test/LoadSNSNexusTest.h # TODO has no active tests in it
+	#test/LoadSassenaTest.h
+	test/AppendGeometryToSNSNexusTest.h
 	test/CompressEventsTest.h
 	test/CreateSampleShapeTest.h
 	test/DefineGaugeVolumeTest.h
@@ -254,24 +277,26 @@ set ( TEST_FILES
 	test/FileEventDataListenerTest.h
 	test/FindDetectorsInShapeTest.h
 	test/FindDetectorsParTest.h
+	test/GenerateGroupingPowderTest.h
 	test/GetMaskedDetectorsTest.h
 	test/GroupDetectors2Test.h
 	test/GroupDetectorsTest.h
 	test/ISISDataArchiveTest.h
+	test/ISISHistoDataListenerTest.h
 	test/InstrumentRayTracerTest.h
 	test/LiveDataAlgorithmTest.h
 	test/LoadAsciiTest.h
 	test/LoadCalFileTest.h
 	test/LoadCanSAS1dTest.h
-	test/LoadDAETest.h
 	test/LoadDaveGrpTest.h
 	test/LoadDetectorInfoTest.h
 	test/LoadDetectorsGroupingFileTest.h
 	test/LoadDspacemapTest.h
 	test/LoadEmptyInstrumentTest.h
 	test/LoadEventNexusTest.h
-	test/LoadEventPreNexusTest.h
 	test/LoadEventPreNexus2Test.h
+	test/LoadEventPreNexusTest.h
+	#test/LoadILLTest.h
 	test/LoadISISNexusTest.h
 	test/LoadInstrumentFromRawTest.h
 	test/LoadInstrumentTest.h
@@ -300,7 +325,6 @@ set ( TEST_FILES
 	test/LoadRawBin0Test.h
 	test/LoadRawSpectrum0Test.h
 	test/LoadRawTest.h
-#	test/LoadSassenaTest.h
 	test/LoadSNSEventNexusTest.h
 	test/LoadSNSspecTest.h
 	test/LoadSPETest.h

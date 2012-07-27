@@ -213,10 +213,10 @@ public slots:
   static void setUpSpectrumGraph(MultiLayer* ml, const QString& wsName);
 
   // Set properties of a 1d graph which plots data from a workspace
-  static void setUpBinGraph(MultiLayer* ml, const QString& wsName, Mantid::API::MatrixWorkspace_sptr workspace);
+  static void setUpBinGraph(MultiLayer* ml, const QString& wsName, Mantid::API::MatrixWorkspace_const_sptr workspace);
 
   // Copy to a Table Y-values (and Err-values if errs==true) of bins with indeces from i0 to i1 (inclusive) from a workspace
-  Table* createTableFromBins(const QString& wsName, Mantid::API::MatrixWorkspace_sptr workspace, const QList<int>& bins, bool errs=true,int fromRow = -1, int toRow = -1);
+  Table* createTableFromBins(const QString& wsName, Mantid::API::MatrixWorkspace_const_sptr workspace, const QList<int>& bins, bool errs=true,int fromRow = -1, int toRow = -1);
 
   // Copies selected columns (time bins) in a MantidMatrix to a Table
   Table* createTableFromSelectedColumns(MantidMatrix *m, bool errs);
@@ -235,13 +235,12 @@ public slots:
   Table* createDetectorTable(const QString & wsName, const std::vector<int>& indices, bool include_data = false);
   //  *****                            *****  //
   void renameWorkspace(QString = "");
+
 public:
 
   // Return pointer to the fit function property browser
   MantidQt::MantidWidgets::FitPropertyBrowser* fitFunctionBrowser(){return m_fitFunction;}
 
-
-public:
   MultiLayer* mergePlots(MultiLayer* g1, MultiLayer* g2);
   MantidMatrix* getMantidMatrix(const QString& wsName);
   MantidMatrix* newMantidMatrix(const QString& name, int start=-1, int end=-1);
@@ -272,10 +271,6 @@ public:
   //This is anoverloaded method toexecute load raw/nexus and  called from Icat interface
   void executeloadAlgorithm(const QString&, const QString&, const QString&);
 
-					      
-public slots:
-  void cancelAllRunningAlgorithms();
-
 signals:
   //A signal to indicate that we want a script to produce a dialog
   void showPropertyInputDialog(const QString & algName);
@@ -303,7 +298,7 @@ signals:
   void workspace_removed(const QString &);
   void workspaces_cleared();
   void algorithms_updated();
-  void workspace_renamed(const QString &, const QString);
+  void workspace_renamed(const QString &, const QString &);
   void workspaces_grouped(const QStringList&);
   void workspace_ungrouped(const QString&, Mantid::API::Workspace_sptr);
 

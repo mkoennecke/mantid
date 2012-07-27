@@ -8,6 +8,7 @@
 //Kernel
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/DateAndTime.h"
+#include "MantidKernel/FilteredTimeSeriesProperty.h"
 #include "MantidKernel/Property.h"
 #include "MantidKernel/BoundedValidator.h"
 #include "MantidKernel/ArrayBoundedValidator.h"
@@ -200,6 +201,58 @@ namespace PythonAPI
       .def("nthTime", &TimeSeriesProperty<double>::nthTime)
     ;
 
+    register_ptr_to_python<TimeSeriesProperty<int32_t>*>();
+    register_ptr_to_python<const TimeSeriesProperty<int32_t>*>();
+
+    class_<Mantid::Kernel::TimeSeriesProperty<int32_t>, \
+           bases<Mantid::Kernel::Property>, boost::noncopyable>("TimeSeriesProperty_int32_t", no_init)
+      .def("getStatistics", &Mantid::Kernel::TimeSeriesProperty<int32_t>::getStatistics)
+      .add_property("value", &Mantid::Kernel::TimeSeriesProperty<int32_t>::valuesAsVector)
+      .add_property("times", &Mantid::Kernel::TimeSeriesProperty<int32_t>::timesAsVector)
+      .def("valueAsString", &TimeSeriesProperty<int32_t>::value)
+      .def("size", &TimeSeriesProperty<int32_t>::size)
+      .def("firstTime", &TimeSeriesProperty<int32_t>::firstTime)
+      .def("firstValue", &TimeSeriesProperty<int32_t>::firstValue)
+      .def("lastTime", &TimeSeriesProperty<int32_t>::lastTime)
+      .def("lastValue", &TimeSeriesProperty<int32_t>::lastValue)
+      .def("nthValue", &TimeSeriesProperty<int32_t>::nthValue)
+      .def("nthTime", &TimeSeriesProperty<int32_t>::nthTime)
+    ;
+
+    register_ptr_to_python<TimeSeriesProperty<int64_t>*>();
+    register_ptr_to_python<const TimeSeriesProperty<int64_t>*>();
+
+    class_<Mantid::Kernel::TimeSeriesProperty<int64_t>, \
+           bases<Mantid::Kernel::Property>, boost::noncopyable>("TimeSeriesProperty_int64_t", no_init)
+      .def("getStatistics", &Mantid::Kernel::TimeSeriesProperty<int64_t>::getStatistics)
+      .add_property("value", &Mantid::Kernel::TimeSeriesProperty<int64_t>::valuesAsVector)
+      .add_property("times", &Mantid::Kernel::TimeSeriesProperty<int64_t>::timesAsVector)
+      .def("valueAsString", &TimeSeriesProperty<int64_t>::value)
+      .def("size", &TimeSeriesProperty<int64_t>::size)
+      .def("firstTime", &TimeSeriesProperty<int64_t>::firstTime)
+      .def("firstValue", &TimeSeriesProperty<int64_t>::firstValue)
+      .def("lastTime", &TimeSeriesProperty<int64_t>::lastTime)
+      .def("lastValue", &TimeSeriesProperty<int64_t>::lastValue)
+      .def("nthValue", &TimeSeriesProperty<int64_t>::nthValue)
+      .def("nthTime", &TimeSeriesProperty<int64_t>::nthTime)
+    ;
+
+    //----------------------------- Filtered time series ------------------------------------------------
+    /// Macro to reduce copy-and-paste
+    #define EXPORT_FILTEREDTIMESERIES_PROP(TYPE, suffix)\
+      register_ptr_to_python<FilteredTimeSeriesProperty<TYPE>*>();\
+      register_ptr_to_python<const FilteredTimeSeriesProperty<TYPE>*>();\
+      implicitly_convertible<FilteredTimeSeriesProperty<TYPE>*,const FilteredTimeSeriesProperty<TYPE>*>();\
+      \
+      class_<FilteredTimeSeriesProperty<TYPE>, bases<TimeSeriesProperty<TYPE> >, boost::noncopyable>("FilteredTimeSeriesProperty_"#suffix, no_init)\
+        .def("unfiltered", &FilteredTimeSeriesProperty<TYPE>::unfiltered, return_value_policy<return_by_value>(),\
+             "Returns a time series containing the unfiltered data") \
+        ;
+
+    EXPORT_FILTEREDTIMESERIES_PROP(double, dbl);
+    EXPORT_FILTEREDTIMESERIES_PROP(int32_t, int32_t)
+    EXPORT_FILTEREDTIMESERIES_PROP(int64_t, int64_t)
+
     class_<time_duration>("time_duration", no_init)
     .def("hours", &time_duration::hours, "Returns the normalized number of hours")
     .def("minutes", &time_duration::minutes, "Returns the normalized number of minutes +/-(0..59)")
@@ -343,6 +396,8 @@ namespace PythonAPI
       .def("setDataSearchDirs", (void (ConfigServiceWrapper::*)(const boost::python::list &))&ConfigServiceWrapper::setDataSearchDirs)
       .def("appendDataSearchDir", &ConfigServiceWrapper::appendDataSearchDir)
       .def("getInstrumentDirectory", &ConfigServiceWrapper::getInstrumentDirectory)
+      .def("reset", &ConfigServiceWrapper::reset)
+      .def("getPropertiesDir", &ConfigServiceWrapper::getPropertiesDir)
       .def("getUserFilename", &ConfigServiceWrapper::getUserFilename)
       .def("saveConfig", &ConfigServiceWrapper::saveConfig)
       ;

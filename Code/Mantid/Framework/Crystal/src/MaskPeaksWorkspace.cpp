@@ -13,6 +13,8 @@
 #include "MantidAPI/IPeakFunction.h"
 #include "MantidKernel/VectorHelper.h"
 #include "MantidKernel/ArrayProperty.h"
+#include "MantidDataObjects/TableWorkspace.h"
+#include "MantidAPI/TableRow.h"
 #include "MantidGeometry/Instrument/RectangularDetector.h"
 #include <boost/math/special_functions/fpclassify.hpp>
 #include <fstream>
@@ -56,6 +58,8 @@ namespace Mantid
       declareProperty("XMax", 2, "Maximum of X (col) Range to mask peak");
       declareProperty("YMin", -2, "Minimum of Y (row) Range to mask peak");
       declareProperty("YMax", 2, "Maximum of Y (row) Range to mask peak");
+      declareProperty("TOFMin", EMPTY_DBL(), "Minimum TOF relative to peak's center TOF.");
+      declareProperty("TOFMax", EMPTY_DBL(), "Maximum TOF relative to peak's center TOF.");
 
     }
 
@@ -71,6 +75,9 @@ namespace Mantid
       PeaksWorkspace_sptr peaksW;
       peaksW = AnalysisDataService::Instance().retrieveWS<PeaksWorkspace>(getProperty("InPeaksWorkspace"));
 
+      // Get the value of TOF range to mask
+      double tofMin = getProperty("TOFMin");
+      double tofMax = getProperty("TOFMax");
 
       int i, XPeak, YPeak;
       double col, row;
@@ -88,7 +95,14 @@ namespace Mantid
       if (!inst)
         throw std::runtime_error("The InputWorkspace does not have a valid instrument attached to it!");
 
+      // Init a table workspace
+      DataObjects::TableWorkspace_sptr tablews =
+          boost::shared_ptr<DataObjects::TableWorkspace>(new DataObjects::TableWorkspace());
+      tablews->addColumn("double", "XMin");
+      tablews->addColumn("double", "XMax");
+      tablews->addColumn("str", "SpectraList");
  
+      // Loop of peaks
       std::vector <std::pair<double, int> >::iterator Iter1;
       for ( Iter1 = v1.begin() ; Iter1 != v1.end() ; ++Iter1 )
       {
@@ -99,6 +113,7 @@ namespace Mantid
         col = peak.getCol();
         row = peak.getRow();
         Kernel::V3D pos = peak.getDetPos();
+        double peakcenter = peak.getTOF();
 
         XPeak = int(col+0.5)-1;
         YPeak = int(row+0.5)-1;
@@ -115,19 +130,50 @@ namespace Mantid
             if(YPeak+iy >= det->ypixels() || YPeak+iy < 0)continue;
             int pixelID = det->getAtXY(XPeak+ix,YPeak+iy)->getID();
 
-
             //Find the corresponding workspace index, if any
             if (pixel_to_wi->find(pixelID) != pixel_to_wi->end())
             {
               size_t wi = (*pixel_to_wi)[pixelID];
               const MantidVec& X = inputW->readX(wi);
-              inputW->getEventList(wi).maskTof(X[0],X[X.size()-1]);
+
+              // Add information to TableWorkspace
+              API::TableRow newrow = tablews->appendRow();
+              double x0 = X[0];
+              double xf = X[X.size()-1]-1;
+              if (tofMin != EMPTY_DBL())
+              {
+                  x0 = peakcenter + tofMin;
+              }
+              if (tofMax != EMPTY_DBL())
+              {
+            	  xf = peakcenter + tofMax;
+              }
+              std::stringstream ss;
+              ss << wi;
+              newrow << x0 << xf << ss.str();
+
+              g_log.debug() << "Mask: " << wi << ", " << x0 << ", " << xf << std::endl;
+
+              // inputW->getEventList(wi).maskTof(X[0],X[X.size()-1]);
+              // newrow << X[0] <<  X[X.size()-1];
             }
           }
+      } // ENDFOR(Iter1)
 
-      }
-    //Clean up memory
-    delete pixel_to_wi;
+      // Mask bins
+      API::IAlgorithm_sptr maskbinstb = this->createSubAlgorithm("MaskBinsFromTable", 0.5, 1.0, true);
+      maskbinstb->initialize();
+
+      maskbinstb->setPropertyValue("InputWorkspace", inputW->getName());
+      maskbinstb->setPropertyValue("OutputWorkspace", inputW->getName());
+      maskbinstb->setProperty("MaskingInformation", tablews);
+
+      maskbinstb->execute();
+
+      //Clean up memory
+      delete pixel_to_wi;
+
+      return;
     }
 
     void MaskPeaksWorkspace::retrieveProperties()

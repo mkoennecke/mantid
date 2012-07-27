@@ -46,7 +46,7 @@ void LoadRawSpectrum0::initDocs()
 
 		/// Constructor
 		LoadRawSpectrum0::LoadRawSpectrum0() :
-		 m_filename(), m_numberOfSpectra(0), m_numberOfPeriods(0),
+		 m_filename(), m_numberOfSpectra(0),
 			m_specTimeRegimes(), m_prog(0.0)
 		{
 		}
@@ -112,8 +112,8 @@ void LoadRawSpectrum0::initDocs()
 			if(bLoadlogFiles)
 			{
 				runLoadLog(m_filename,localWorkspace);
-				Property* log = createPeriodLog(1);
-				if (log) run.addLogData(log);
+        const int period_number = 1;
+        createPeriodLogs(period_number, localWorkspace);
 			}
 			// Set the total proton charge for this run
 			setProtonCharge(run);
@@ -122,7 +122,7 @@ void LoadRawSpectrum0::initDocs()
 			setWorkspaceProperty("OutputWorkspace", title, wsgrp_sptr, localWorkspace,m_numberOfPeriods, false);
 			
 			// Loop over the number of periods in the raw file, putting each period in a separate workspace
-			for (int64_t period = 0; period < m_numberOfPeriods; ++period)
+			for (int period = 0; period < m_numberOfPeriods; ++period)
 			{
 				if (period > 0)
 				{
@@ -136,20 +136,18 @@ void LoadRawSpectrum0::initDocs()
 						prevPeriod << "PERIOD " << (period);
 						Run& runObj = localWorkspace->mutableRun();
 						runObj.removeLogData(prevPeriod.str());
+            runObj.removeLogData("current_period");
 						//add current period data
-						Property* log = createPeriodLog(static_cast<int>(period+1));
-						if (log) 
-						{ 
-						  runObj.addLogData(log);
-						}
+            int period_number = static_cast<int>(period+1);
+            createPeriodLogs(period_number, localWorkspace);
 					}
 					//skip all spectra except the first one in each period
 					for(int i=1;i<=m_numberOfSpectra;++i)
 					{
 						skipData(file, i+ (period-1)*(m_numberOfSpectra+1) );
 					}
-
 				}
+
 				int64_t wsIndex = 0;
 				// for each period read first spectrum
 				int64_t histToRead = period*(m_numberOfSpectra+1);

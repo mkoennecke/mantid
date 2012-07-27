@@ -224,7 +224,7 @@ namespace Mantid
           outws =outputWorkspace+"_"+suffix.str();
           std::string WSName = localWSName + "_" + suffix.str();
           declareProperty(new WorkspaceProperty<Workspace>(outws,WSName,Direction::Output));
-          if(wsGrpSptr)wsGrpSptr->add(WSName);
+          if(wsGrpSptr)wsGrpSptr->addWorkspace(localWorkspace);
           setProperty(outws,boost::static_pointer_cast<Workspace>(localWorkspace));
         }
         else
@@ -725,6 +725,7 @@ namespace Mantid
                 {
                   LogParser parser(logv);
                   ws->mutableRun().addLogData(parser.createPeriodLog(static_cast<int>(period)));
+                  ws->mutableRun().addLogData(parser.createCurrentPeriodLog(static_cast<int>(period)));
                   ws->mutableRun().addLogData(parser.createAllPeriodsLog());
                   ws->mutableRun().addLogData(parser.createRunningLog());
                 }

@@ -367,7 +367,7 @@ namespace MDEvents
 
     // -------- Input workspace -> convert to Event ------------------------------------
     m_inWS = getProperty("InputWorkspace");
-    Workspace2D_sptr inWS2D = boost::dynamic_pointer_cast<Workspace2D>(m_inWS);
+    Workspace2D_sptr m_InWS2D = boost::dynamic_pointer_cast<Workspace2D>(m_inWS);
     if (LorentzCorrection)
     {
       API::Run & run = m_inWS->mutableRun();
@@ -517,9 +517,7 @@ namespace MDEvents
     size_t totalEvents = m_inWS->size();
     if (m_inEventWS && !OneEventPerBin)
       totalEvents = m_inEventWS->getNumberEvents();
-    prog = new Progress(this, 0, 1.0, totalEvents);
-//    if (DODEBUG) prog = new ProgressText(0, 1.0, totalCost, true);
-//    if (DODEBUG) prog->setNotifyStep(1);
+    prog = boost::make_shared<Progress>(this, 0, 1.0, totalEvents);
 
     // Is the addition of events thread-safe?
     bool MultiThreadedAdding = m_inWS->threadSafe();
@@ -560,15 +558,7 @@ namespace MDEvents
       eventsAdded += eventsAdding;
       approxEventsInOutput += eventsAdding;
 
-      // Performance depends pretty strongly on WHEN you split the boxes.
-      // This is an empirically-determined way to optimize the splitting calls.
-      // Split when adding 1/16^th as many events as are already in the output,
-      //  (because when the workspace gets very large you should split less often)
-      // But no more often than every 10 million events.
-      size_t comparisonPoint = approxEventsInOutput/16;
-      if (comparisonPoint < 10000000)
-        comparisonPoint = 10000000;
-      if (bc->shouldSplitBoxes(eventsAdded, lastNumBoxes) || (eventsAdded > (comparisonPoint)))
+      if (bc->shouldSplitBoxes(approxEventsInOutput,eventsAdded, lastNumBoxes))
       {
         if (DODEBUG) g_log.information() << cputim << ": Added tasks worth " << eventsAdded << " events. WorkspaceIndex " << wi << std::endl;
         // Do all the adding tasks

@@ -31,6 +31,7 @@ namespace Mantid
 
     using namespace Kernel;
     using namespace API;
+    using DataObjects::MaskWorkspace_sptr;
     using namespace Geometry;
 
     /// Default constructor
@@ -122,7 +123,7 @@ namespace Mantid
       // create a vector of vectors of specIDs that will be used to calculate medians
       std::vector<std::vector<size_t> > specmap=makeMap(countsWS);
       const bool excludeZeroes = getProperty("ExcludeZeroesFromMedian");
-      MatrixWorkspace_sptr maskWS;
+      MaskWorkspace_sptr maskWS;
 
       // 1. Calculate the median
       std::vector<double>  median = calculateMedian(countsWS, excludeZeroes,specmap);
@@ -337,7 +338,8 @@ namespace Mantid
         g_log.debug() << "new component with " <<nhist <<" spectra.\n";
         for (size_t i = 0; i < nhist; ++i)
         {
-          g_log.information() <<i<<" "<<hists.at(i)<<std::endl;
+          g_log.debug() << "Counts workspace index=" << i 
+                        << ", Mask workspace index=" << hists.at(i) << std::endl;
           PARALLEL_START_INTERUPT_REGION
           ++steps;
           // update the progressbar information

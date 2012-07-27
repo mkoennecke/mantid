@@ -1,5 +1,5 @@
-#ifndef H_MDTRANSF_DE_HELPER
-#define H_MDTRANSF_DE_HELPER
+#ifndef MANTID_MDEVENTS_MDTRANSF_DE_HELPER_H
+#define MANTID_MDEVENTS_MDTRANSF_DE_HELPER_H
 
 #include "MantidKernel/DllConfig.h"
 #include <vector>
@@ -35,7 +35,7 @@ namespace MDEvents
         Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
 
-namespace ConvertToMD
+namespace CnvrtToMD
 {
     /* enum describes known eneergy conversion/analysis modes
     *  It is important to assign enums proper numbers, as direct correspondence between enums and their emodes 
@@ -48,7 +48,7 @@ namespace ConvertToMD
           Indir   = 2,  //< emode=2; InDirect inelastic analysis mode
           No_DE,         //< couples with NoNonentum analysis, means just copying existing data (may be doing units conversion), 
                        // it is also the counter for the number of availible modes, used to initiate the mode names
-          Undef        // non-existing (undefined mode). Used to check if emode was defined
+          Undef        //< non-existing (undefined mode). Used to check if emode was defined
     };
 }
 
@@ -59,9 +59,9 @@ class DLLExport MDTransfDEHelper
     // energy conversion modes supported by this class
     std::vector<std::string> getEmodes()const{return EmodesList;}
     /// string presentation of emode
-    std::string getEmode(ConvertToMD::EModes Mode)const;
+    std::string getEmode(CnvrtToMD::EModes Mode)const;
     /// convert string presentation of emode into nimerical one 
-    ConvertToMD::EModes getEmode(const std::string &Mode)const;
+    CnvrtToMD::EModes getEmode(const std::string &Mode)const;
     // constructor
     MDTransfDEHelper();
  private:

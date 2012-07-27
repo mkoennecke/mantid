@@ -3,6 +3,7 @@
 #include <napi.h>
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/ITableWorkspace.h"
+#include "MantidAPI/Progress.h"
 #include "MantidKernel/TimeSeriesProperty.h"
 #include "MantidDataObjects/EventWorkspace.h"
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -50,6 +51,9 @@ namespace Mantid
     public:
       /// Default constructor
       NexusFileIO();
+
+      /// Contructor with Progress suplied
+      NexusFileIO( API::Progress* prog );
 
       /// Destructor
       ~NexusFileIO() {}
@@ -102,6 +106,8 @@ namespace Mantid
       NXaccess m_nexusformat;
       /// Nexus compression method
       int m_nexuscompression;
+      /// Allow an externally supplied progress object to be used
+      API::Progress *m_progress;
       /// Write a simple value plus possible attributes
       template<class TYPE>
       bool writeNxValue(const std::string& name, const TYPE& value, const int nxType, 
@@ -225,9 +231,9 @@ namespace Mantid
       if( NXopendata(fileID, name.c_str()) == NX_ERROR )return false;
       for(unsigned int it=0; it < attributes.size(); ++it)
       {
-        NXputattr(fileID, attributes[it].c_str(), (void*)avalues[it].c_str(), static_cast<int>(avalues[it].size()+1), NX_CHAR);
+        NXputattr(fileID, attributes[it].c_str(), reinterpret_cast<void*>(const_cast<char*>(avalues[it].c_str())), static_cast<int>(avalues[it].size()+1), NX_CHAR);
       }
-      NXputdata(fileID, (void*)nxstr.c_str());
+      NXputdata(fileID, reinterpret_cast<void*>(const_cast<char*>(nxstr.c_str())));
       NXclosedata(fileID);
       return true;
     }
@@ -286,9 +292,9 @@ namespace Mantid
       if( NXopendata(fileID, "value") == NX_ERROR )return false;
       for(unsigned int it=0; it < attributes.size(); ++it)
       {
-        NXputattr(fileID, attributes[it].c_str(), (void*)avalues[it].c_str(), static_cast<int>(avalues[it].size()+1), NX_CHAR);
+        NXputattr(fileID, attributes[it].c_str(), reinterpret_cast<void*>(const_cast<char*>(avalues[it].c_str())), static_cast<int>(avalues[it].size()+1), NX_CHAR);
       }
-      NXputdata(fileID, (void*)nxstr.c_str());
+      NXputdata(fileID, reinterpret_cast<void*>(const_cast<char*>(nxstr.c_str())));
       NXclosedata(fileID);
       NXclosegroup(fileID);
       return true;

@@ -161,18 +161,20 @@ class DataReflSFCalculatorWidget(BaseRefWidget):
         if not IS_IN_MANTIDPLOT:
             return
         
-        f = FileFinder.findRuns("%s%s" % (self.instrument_name, str(self._summary.data_run_number_edit.text())))
+        try:
+            f = FileFinder.findRuns("%s%s" % (self.instrument_name, str(self._summary.data_run_number_edit.text())))[0]
             
-        range_min = float(self._summary.tof_min.text())
-        range_max = float(self._summary.tof_max.text())
+            range_min = float(self._summary.tof_min.text())
+            range_max = float(self._summary.tof_max.text())
 
-        if len(f)>0 and os.path.isfile(f[0]):
             def call_back(xmin, xmax):
                 self._summary.tof_min.setText("%-d" % float(xmin))
                 self._summary.tof_max.setText("%-d" % float(xmax))
-            data_manipulation.tof_distribution(f[0], call_back,
+            data_manipulation.tof_distribution(f, call_back,
                                                range_min=range_min,
                                                range_max=range_max)
+        except:
+            pass
     
     def _plot_count_vs_y(self, is_peak=True):
         """
@@ -218,12 +220,12 @@ class DataReflSFCalculatorWidget(BaseRefWidget):
         if not IS_IN_MANTIDPLOT:
             return
         
-        f = FileFinder.findRuns("%s%s" % (self.instrument_name, str(file_ctrl.text())))
-
-        range_min = int(min_ctrl.text())
-        range_max = int(max_ctrl.text())
-
-        if len(f)>0 and os.path.isfile(f[0]):
+        try:
+            f = FileFinder.findRuns("%s%s" % (self.instrument_name, str(file_ctrl.text())))[0]
+            
+            range_min = int(min_ctrl.text())
+            range_max = int(max_ctrl.text())
+            
             def call_back(xmin, xmax):
                 min_ctrl.setText("%-d" % int(xmin))
                 max_ctrl.setText("%-d" % int(xmax))
@@ -233,14 +235,16 @@ class DataReflSFCalculatorWidget(BaseRefWidget):
             # For REFM it's the other way around
             if self.short_name == "REFM":
                 is_pixel_y = not is_pixel_y
-                
-            min, max = data_manipulation.counts_vs_pixel_distribution(f[0], is_pixel_y=is_pixel_y,
+            
+            min, max = data_manipulation.counts_vs_pixel_distribution(f, is_pixel_y=is_pixel_y,
                                                                       callback=call_back,
                                                                       range_min=range_min,
                                                                       range_max=range_max,
                                                                       high_res=is_high_res,
                                                                       instrument=self.short_name)
             return min, max
+        except:
+            pass
 
     def _remove_item(self):
         if self._summary.angle_list.count()==1:
@@ -258,8 +262,6 @@ class DataReflSFCalculatorWidget(BaseRefWidget):
         self._summary.angle_list.setEnabled(True)        
         self._summary.remove_btn.setEnabled(True)  
 
-        
-
     def _edit_event(self, text=None, ctrl=None):
         self._summary.edited_warning_label.show()
         util.set_edited(ctrl,True)
@@ -270,10 +272,12 @@ class DataReflSFCalculatorWidget(BaseRefWidget):
     def data_run_number_validated(self):
         self._summary.data_run_number_processing.show()
         run_number = self._summary.data_run_number_edit.text()
-        _file = FileFinder.findRuns("REF_L%d"%int(run_number))
-        lambdaRequest = ''
+        
         try:
-            S1H, S2H, S1W, S2W, lambdaRequest = self.getSlitsValueAndLambda(_file[0])
+            _file = FileFinder.findRuns("REF_L%d"%int(run_number))[0]
+            lambdaRequest = ''
+            
+            S1H, S2H, S1W, S2W, lambdaRequest = self.getSlitsValueAndLambda(_file)
             self._summary.s1h.setText(str(S1H))
             self._summary.s2h.setText(str(S2H))
             self._summary.s1w.setText(str(S1W))
@@ -283,8 +287,7 @@ class DataReflSFCalculatorWidget(BaseRefWidget):
         except:
             self._summary.data_run_number_processing.hide()
         
-    def _add_data(self):
-        
+    def _add_data(self):        
         state = self.get_editing_state()
 #        state = self.get_state()
         in_list = False
@@ -381,9 +384,6 @@ class DataReflSFCalculatorWidget(BaseRefWidget):
             Populate the UI elements with the data from the given state. 
             @param state: data object    
         """
-
-        print 'in set_state'
-
         self._summary.angle_list.clear()
         if len(state.data_sets) == 1 and state.data_sets[0].data_file==0:
             pass
@@ -459,7 +459,6 @@ class DataReflSFCalculatorWidget(BaseRefWidget):
         return state
     
     def get_editing_state(self):
-        
         m = REFLDataSets()
 
         #run number

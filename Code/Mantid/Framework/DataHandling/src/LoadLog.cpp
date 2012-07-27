@@ -41,14 +41,13 @@ The first column is the number of seconds since January 1, 1990, then the other 
 #include "MantidKernel/PropertyWithValue.h"
 #include "MantidKernel/TimeSeriesProperty.h"
 
+#include <boost/regex.hpp>
 #include <boost/algorithm/string.hpp>
 #include <Poco/File.h>
 #include <Poco/Path.h>
 #include <Poco/DirectoryIterator.h>
 #include <Poco/DateTimeParser.h>
 #include <Poco/DateTimeFormat.h>
-#include <Poco/RegularExpression.h>
-
 #include <fstream>  // used to get ifstream
 #include <sstream>
 
@@ -120,8 +119,8 @@ void LoadLog::init()
 
       bool operator()(const std::string & test) const
       {
-        Poco::RegularExpression regex(m_expression, Poco::RegularExpression::RE_CASELESS);
-        return regex.match(test);
+        boost::regex regex(m_expression, boost::regex_constants::icase);
+        return boost::regex_match(test, regex);
       }
       
     private:
@@ -297,7 +296,7 @@ void LoadLog::exec()
 
       if( potentialLogFiles.empty() )
       {
-        Poco::RegularExpression regex(l_rawID + "_.*\\.txt", Poco::RegularExpression::RE_CASELESS );
+        boost::regex regex(l_rawID + "_.*\\.txt", boost::regex_constants::icase);
         Poco::DirectoryIterator end_iter;
         for ( Poco::DirectoryIterator dir_itr(Poco::Path(m_filename).parent()); dir_itr != end_iter; ++dir_itr )
         {
@@ -305,7 +304,7 @@ void LoadLog::exec()
 
           l_filenamePart = Poco::Path(dir_itr->path()).getFileName();
 
-          if ( regex.match(l_filenamePart) )
+          if ( boost::regex_match(l_filenamePart, regex) )
           {
             potentialLogFiles.insert( dir_itr->path() );
           }
@@ -334,21 +333,6 @@ void LoadLog::exec()
  
   //If there are no log files by now, we have nothing else to do
   if( potentialLogFiles.empty() ) return;
-
-  //Do a quick search for the icpevent file
-  std::string icpevent_file_name("");
-  std::set<std::string>::const_iterator icpfile = find_if(potentialLogFiles.begin(), potentialLogFiles.end(), FileMatcher(std::string(".*icpevent.*")));
-  if( icpfile != potentialLogFiles.end() )
-  {
-    icpevent_file_name = *icpfile;
-  }
-
-  Kernel::LogParser parser(icpevent_file_name);
-  // Add mantid-created logs
-  
-  m_periods=parser.getPeriodsProperty();
-  localWorkspace->mutableRun().addLogData(parser.createAllPeriodsLog());
-  localWorkspace->mutableRun().addLogData(parser.createRunningLog());
 
   // Extract the common part of log file names (the workspace name)
   std::string ws_name = Poco::Path(m_filename).getFileName();
@@ -408,7 +392,7 @@ void LoadLog::exec()
           log_name.erase(0, n_common_chars);
         }
 
-        Property* log = parser.createLogProperty(*logs_itr,stringToLower(log_name));
+        Property* log = LogParser::createLogProperty(*logs_itr,stringToLower(log_name));
         if (log)
         {
           localWorkspace->mutableRun().addLogData(log);

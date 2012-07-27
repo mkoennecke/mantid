@@ -12,10 +12,10 @@
 #include "MantidKernel/Strings.h"
 #include "MantidKernel/System.h"
 #include "MantidKernel/TimeSeriesProperty.h"
+#include <boost/regex.hpp>
 #include <map>
 #include <Poco/DirectoryIterator.h>
 #include <Poco/Path.h>
-#include <Poco/RegularExpression.h>
 #include <Poco/SAX/ContentHandler.h>
 #include <Poco/SAX/SAXParser.h>
 #include <fstream>
@@ -360,6 +360,64 @@ namespace API
   {
     return m_run.access();
   }
+
+  /**
+   * Get an experimental log either by log name or by type, e.g.
+   *   - temperature_log
+   *   - chopper_speed_log
+   * The logs are first checked for one matching the given string and if that
+   * fails then the instrument is checked for a parameter of the same name
+   * and if this exists then its value is assume to be the actual log required
+   * @param log :: A string giving either a specific log name or instrument parameter whose
+   * value is to be retrieved
+   * @return A pointer to the property
+   */
+  Kernel::Property * ExperimentInfo::getLog(const std::string & log) const
+  {
+    try
+    {
+      return run().getProperty(log);
+    }
+    catch(Kernel::Exception::NotFoundError&)
+    {
+      // No log with that name
+    }
+    // If the instrument has a parameter with that name then take the value as a log name
+    const std::string logName = instrumentParameters().getString(sptr_instrument.get(), log);
+    if(logName.empty())
+    {
+      throw std::invalid_argument("ExperimentInfo::getLog - No instrument parameter named \""
+         + log + "\". Cannot access full log name");
+    }
+    return run().getProperty(logName);
+  }
+
+  /**
+   * Get an experimental log as a single value either by log name or by type. @see getLog
+   * @param log :: A string giving either a specific log name or instrument parameter whose
+   * value is to be retrieved
+   * @return A pointer to the property
+   */
+  double ExperimentInfo::getLogAsSingleValue(const std::string & log) const
+  {
+    try
+    {
+      return run().getPropertyAsSingleValue(log);
+    }
+    catch(Kernel::Exception::NotFoundError&)
+    {
+      // No log with that name
+    }
+    // If the instrument has a parameter with that name then take the value as a log name
+    const std::string logName = instrumentParameters().getString(sptr_instrument.get(), log);
+    if(logName.empty())
+    {
+      throw std::invalid_argument("ExperimentInfo::getLog - No instrument parameter named \""
+         + log + "\". Cannot access full log name");
+    }
+    return run().getPropertyAsSingleValue(logName);
+  }
+
   //---------------------------------------------------------------------------------------
   /** Utility method to get the run number
    *
@@ -492,7 +550,7 @@ namespace API
     // Get the search directory for XML instrument definition files (IDFs)
     std::string directoryName = Kernel::ConfigService::Instance().getInstrumentDirectory();
 
-    Poco::RegularExpression regex(instrument+"_Definition.*\\.xml", Poco::RegularExpression::RE_CASELESS );
+    boost::regex regex(instrument+"_Definition.*\\.xml", boost::regex_constants::icase);
     Poco::DirectoryIterator end_iter;
     DateAndTime d(date);
     bool foundGoodFile = false; // True if we have found a matching file (valid at the given date)
@@ -504,7 +562,7 @@ namespace API
       if ( !Poco::File(dir_itr->path() ).isFile() ) continue;
 
       std::string l_filenamePart = Poco::Path(dir_itr->path()).getFileName();
-      if ( regex.match(l_filenamePart) )
+      if ( regex_match(l_filenamePart, regex) )
       {
         g_log.debug() << "Found file: '" << dir_itr->path() << "'\n";
         std::string validFrom, validTo;

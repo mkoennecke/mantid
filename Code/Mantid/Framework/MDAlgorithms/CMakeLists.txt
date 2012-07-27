@@ -8,7 +8,8 @@ set ( SRC_FILES
 	src/CompareMDWorkspaces.cpp
 	src/ConvertToDetectorFaceMD.cpp
 	src/ConvertToMDEvents.cpp
-    src/DampedHisenbergFMSW.cpp
+	src/ConvertToMD.cpp	
+	src/DampedHisenbergFMSW.cpp
 	src/DivideMD.cpp
 	src/EqualToMD.cpp
 	src/ExponentialMD.cpp
@@ -38,8 +39,8 @@ set ( SRC_FILES
 	src/TransformMD.cpp
 	src/UnaryOperationMD.cpp
 	src/Vector3DParameterParser.cpp
+	src/WeightedMeanMD.cpp
 	src/XorMD.cpp
-
 )
 
 #set ( SRC_UNITY_IGNORE_FILES src/IDynamicRebinning.cpp
@@ -54,7 +55,8 @@ set ( INC_FILES
 	inc/MantidMDAlgorithms/CompareMDWorkspaces.h
 	inc/MantidMDAlgorithms/ConvertToDetectorFaceMD.h
 	inc/MantidMDAlgorithms/ConvertToMDEvents.h
-  inc/MantidMDAlgorithms/DampedHisenbergFMSW.h
+	inc/MantidMDAlgorithms/ConvertToMD.h	
+	inc/MantidMDAlgorithms/DampedHisenbergFMSW.h
 	inc/MantidMDAlgorithms/DivideMD.h
 	inc/MantidMDAlgorithms/EqualToMD.h
 	inc/MantidMDAlgorithms/ExponentialMD.h
@@ -85,20 +87,26 @@ set ( INC_FILES
 	inc/MantidMDAlgorithms/UnaryOperationMD.h
 	inc/MantidMDAlgorithms/Vector3DParameter.h
 	inc/MantidMDAlgorithms/Vector3DParameterParser.h
+	inc/MantidMDAlgorithms/WeightedMeanMD.h
 	inc/MantidMDAlgorithms/XorMD.h
 )
 
 # Test files. Other source files required.
 set ( TEST_FILES
+	#
+	#	test/ConvertToMDEventsCoordTransfTest.h
 	# these tests are as they test verify different parts of the CPR algorithms
 	#test/CreateMDFitWorkspaceTest.h
 	test/AndMDTest.h
 	test/BooleanBinaryOperationMDTest.h
 	test/CobaltSWDTest.h
 	test/CompareMDWorkspacesTest.h
-	test/ConvertToDetectorFaceMDTest.h	
-#	test/ConvertToMDEventsCoordTransfTest.h
-  test/DampedHisenbergFMSWTest.h
+	test/ConvertEventsToMDTest.h
+	test/ConvertToDetectorFaceMDTest.h
+	test/ConvertToMDTest.h
+	test/ConvertToMDTestPerformance.h
+	test/ConvertToQ3DdETest.h
+	test/DampedHisenbergFMSWTest.h
 	test/DivideMDTest.h
 	test/EqualToMDTest.h
 	test/ExponentialMDTest.h
@@ -126,12 +134,8 @@ set ( TEST_FILES
 	test/TobyFitSimulateTest.h
 	test/TransformMDTest.h
 	test/UnaryOperationMDTest.h
+	test/WeightedMeanMDTest.h
 	test/XorMDTest.h
-#	
-	test/ConvertEventsToMDEventsTest.h		
-	test/ConvertToMDEventsTest.h		
-	test/ConvertToQ3DdETest.h	
-	test/ConvertToMDEventsTestPerformance.h 	
 )
 
 set ( GMOCK_TEST_FILES

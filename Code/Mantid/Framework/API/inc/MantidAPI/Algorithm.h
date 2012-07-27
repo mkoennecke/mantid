@@ -310,6 +310,7 @@ protected:
   static size_t g_execCount; ///< Counter to keep track of algorithm execution order
 
   // ------------------ For WorkspaceGroups ------------------------------------
+  virtual bool checkGroups();
   virtual bool processGroups();
   virtual void setOtherProperties(IAlgorithm * alg, const std::string & propertyName, const std::string & propertyValue, int periodNum);
 
@@ -366,16 +367,12 @@ private:
   /// All the WorkspaceProperties that are Output (not inOut). Set in execute()
   std::vector<IWorkspaceProperty *> m_pureOutputWorkspaceProps;
 
-  // ------------------ For WorkspaceGroups ------------------------------------
-  virtual void checkGroups();
   void copyNonWorkspaceProperties(IAlgorithm * alg, int periodNum);
 
   /// One vector of workspaces for each input workspace property
   std::vector<WorkspaceVector> m_groups;
   /// Pointer to the WorkspaceGroup (if any) for each input workspace property
   std::vector<boost::shared_ptr<WorkspaceGroup> > m_groupWorkspaces;
-  /// Flag set true if processGroups() should be called
-  bool m_processGroups;
   /// If only one input is a group, this is its index. -1 if they are all groups
   int m_singleGroup;
   /// Size of the group(s) being processed

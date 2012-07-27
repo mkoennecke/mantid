@@ -85,10 +85,13 @@ set ( TEST_PY_FILES
   test/python/CompositeValidatorTest.py
   test/python/ConfigServiceTest.py
   test/python/CreateWorkspaceTest.py
+  test/python/DeltaEModeTest.py
   test/python/ExperimentInfoTest.py
   test/python/FacilityInfoTest.py
   test/python/FilePropertyTest.py
   test/python/FileFinderTest.py
+  test/python/FilteredTimeSeriesPropertyTest.py
+  test/python/FindReflectometryLinesTest.py
   test/python/FrameworkManagerTest.py
   test/python/IComponentTest.py
   test/python/IEventWorkspaceTest.py
@@ -112,20 +115,23 @@ set ( TEST_PY_FILES
   test/python/PythonAlgorithmTraitsTest.py
   test/python/PythonAlgorithmWorkspacePropertyTest.py
   test/python/ReferenceFrameTest.py
+  test/python/RetrieveRunInfoTest.py
   test/python/RunTest.py
   test/python/SimpleAPITest.py
   test/python/SimpleAPILoadTest.py
   test/python/SimpleAPIFitTest.py
+  test/python/Stitch1DTest.py
   test/python/TimeSeriesPropertyTest.py
   test/python/QuatTest.py
   test/python/V3DTest.py
   test/python/UnitCellTest.py
+  test/python/UnitConversionTest.py
+  test/python/UnitFactoryTest.py
   test/python/WorkspaceFactoryTest.py
   test/python/WorkspaceTest.py
   test/python/WorkspaceGroupTest.py
   test/python/WorkspacePropertiesTest.py
   test/python/WorkspaceValidatorsTest.py
-  
 )
 
 set ( PYTEST_HELPERS test/python/testhelpers.py )

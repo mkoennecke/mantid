@@ -12,7 +12,10 @@ namespace Mantid
 {
 namespace API
 {
-/** DataProcessorAlgorithm : TODO: DESCRIPTION
+/**
+
+   Data processor algorithm to be used as a parent to workflow algorithms.
+   This algorithm provides utility methods to load and process data.
 
    @date 2012-04-04
 
@@ -44,6 +47,7 @@ public:
 
 protected:
   void setLoadAlg(const std::string & alg);
+  void setLoadAlgFileProp(const std::string & filePropName);
   void setAccumAlg(const std::string & alg);
   ITableWorkspace_sptr determineChunk();
   void loadChunk();
@@ -54,14 +58,17 @@ protected:
   /// MPI option. If false, we will use one job event if MPI is available
   bool m_useMPI;
   Workspace_sptr assemble(const std::string &partialWSName, const std::string &outputWSName);
-  void saveNexus(const std::string &outputWSName,
-        const std::string &outputFile);
+  void saveNexus(const std::string &outputWSName, const std::string &outputFile);
+  bool isMainThread();
+  int getNThreads();
 
 private:
   /// The name of the algorithm to invoke when loading data
   std::string m_loadAlg;
   /// The name of the algorithm to invoke when accumulating data chunks
   std::string m_accumulateAlg;
+  /// An alternate filename property for the load algorithm
+  std::string m_loadAlgFileProp;
 };
 
 } // namespace API

@@ -1,5 +1,5 @@
-#ifndef H_MDWS_SLICEDESCR
-#define H_MDWS_SLICEDESCR
+#ifndef MANTID_MDEVENTS_MDWS_TRANSFORMATION_H
+#define MANTID_MDEVENTS_MDWS_TRANSFORMATION_H
 
 #include "MantidMDEvents/MDTransfAxisNames.h"
 #include "MantidMDEvents/MDWSDescription.h"
@@ -10,7 +10,7 @@ namespace Mantid
 {
 namespace MDEvents
 {
- /***  The class responsible for building Momentums Transformation Matrix for ConvertToMDEvents algorithm
+ /***  The class responsible for building Momentums Transformation Matrix for CnvrtToMD algorithm
     *  from the input parameters of the algorithm and parameters, retrieved from input and 
     *  (if availible) output MD workspace
     *
@@ -38,7 +38,7 @@ namespace MDEvents
     File change history is stored at: <https://svn.mantidproject.org/mantid/trunk/Code/Mantid>
     Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
-namespace ConvertToMD
+namespace CnvrtToMD
 {
     /// enum descrines availble momentum scalings, interpreted by this class
     enum CoordScaling
@@ -63,30 +63,32 @@ public:
    /** function provides the linear representation for the transformation matrix, which translate momentums from laboratory to crystal cartezian 
        (C)- Busing, Levi 1967 coordinate system */
    std::vector<double> getTransfMatrix(MDEvents::MDWSDescription &TargWSDescription,const std::string &QScaleRequested)const;
-   std::vector<double> getTransfMatrix(MDEvents::MDWSDescription &TargWSDescription,ConvertToMD::CoordScaling scaling)const;
+   std::vector<double> getTransfMatrix(MDEvents::MDWSDescription &TargWSDescription,CnvrtToMD::CoordScaling scaling)const;
   
    /// construct meaningful dimension names for Q3D case and different transformation types defined by the class
    void setQ3DDimensionsNames(MDEvents::MDWSDescription &TargWSDescription,const std::string &QScaleRequested)const;
-   void setQ3DDimensionsNames(MDEvents::MDWSDescription &TargWSDescription,ConvertToMD::CoordScaling scaling)const;
+   void setQ3DDimensionsNames(MDEvents::MDWSDescription &TargWSDescription,CnvrtToMD::CoordScaling scaling)const;
    /// construct meaningful dimension names for ModQ case and different transformation types defined by the class;
    void setModQDimensionsNames(MDEvents::MDWSDescription &TargWSDescription,const std::string &QScaleRequested)const;
   /// return the list of possible scalings for momentums
-   std::vector<std::string> getQScalings()const{return QScalingID;}
-   ConvertToMD::CoordScaling getQScaling(const std::string &ScID)const;
+   std::vector<std::string> getQScalings()const{return m_QScalingID;}
+   CnvrtToMD::CoordScaling getQScaling(const std::string &ScID)const;
 private:
-    bool is_uv_default;
+    bool m_isUVdefault;
     /** vectors, which describe the projection plain the target ws is based on (notional or cryst cartezian coordinate system). The transformation matrix below 
       * should bring the momentums from lab coordinate system into orthogonal, related to u,v vectors, coordinate system */
-    mutable Kernel::V3D uProj,vProj,wProj;
+    mutable Kernel::V3D m_UProj,m_VProj,m_WProj;
 
   /// logger -> to provide logging, for MD dataset file operations
-   static Mantid::Kernel::Logger& convert_log;
+   static Mantid::Kernel::Logger& g_Log;
 
    /// string representation of QScaling ID, which would be known to user
-   std::vector<std::string> QScalingID;
+   std::vector<std::string> m_QScalingID;
+   //
+   bool v3DIsDefault(const std::vector<double> &vect,const std::string &message)const;
 protected: // for testing
   /// function generates "Kind of" W transformation matrix for different Q-conversion modes;
-   Kernel::DblMatrix buildQTrahsf(MDEvents::MDWSDescription &TargWSDescription,ConvertToMD::CoordScaling scaling)const;
+   Kernel::DblMatrix buildQTrahsf(MDEvents::MDWSDescription &TargWSDescription,CnvrtToMD::CoordScaling scaling)const;
    /// build orthogonal coordinate around two input vecotors u and v expressed in rlu;
    //std::vector<Kernel::V3D> buildOrtho3D(const Kernel::DblMatrix &BM,const Kernel::V3D &u, const Kernel::V3D &v)const;
 

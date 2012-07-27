@@ -1,18 +1,29 @@
 /*WIKI* 
 
-
 Combines the data contained in an arbitrary number of input workspaces. If the input workspaces do not have common binning, the bins in the output workspace will cover the entire range of all the input workspaces, with the largest bin widths used in regions of overlap.
 
 ==== Restrictions on the input workspace ====
 
 The input workspaces must contain histogram data with the same number of spectra and matching units and instrument name in order for the algorithm to succeed. 
 
-'''For [[Workspace2D]]s''': Each input workspace must have common internal binning across all its spectra.
+'''For [[Workspace2D]]s''': Each input workspace must have common binning for all its spectra. 
 
 '''For [[EventWorkspace]]s''': This algorithm is Event-aware; it will append event lists from common spectra. Binning parameters need not be compatible; the output workspace will use the first workspaces' X bin boundaries.
 
+'''For [[WorkspaceGroup]]s''': Each nested has to be one of the above.
+
 Other than this it is currently left to the user to ensure that the combination of the workspaces is a valid operation.
 
+=== Processing Group Workspaces ===
+
+==== Multi-period Group Workspaces ====
+
+Group workspaces will be merged respecting the periods within each group. For example if you have two multiperiod group workspaces A and B and an output workspace C. A contains matrix workspaces A_1 and A_2, and B contains matrix workspaces B_1 and B2. Since this
+is multiperiod data, A_1 and B_1 share the same period, as do A_2 and B_2. So merging must be with respect to workspaces of equivalent periods. Therefore,
+merging is conducted such that A_1 + B_1 = C_1 and A_2 + B_2 = C_2.
+
+==== Group Workspaces that are not multiperiod ====
+If group workspaces are provided that are not multi-period, this algorithm will merge across all nested workspaces, to give a singe output matrix workspace. 
 
 ==== Subalgorithms used ====
 
@@ -23,6 +34,8 @@ The [[Rebin]] algorithm is used, if neccessary, to put all the input workspaces 
 //----------------------------------------------------------------------
 // Includes
 //----------------------------------------------------------------------
+#include "MantidAPI/AlgorithmManager.h"
+#include "MantidAPI/WorkspaceGroup.h"
 #include "MantidAlgorithms/MergeRuns.h"
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/MandatoryValidator.h"
@@ -48,7 +61,7 @@ using namespace API;
 using namespace DataObjects;
 
 /// Default constructor
-MergeRuns::MergeRuns() : Algorithm(),m_progress(NULL) {}
+MergeRuns::MergeRuns() : Algorithm(),m_progress(NULL),m_useDefaultGroupingBehaviour(true) {}
 
 /// Destructor
 MergeRuns::~MergeRuns()
@@ -64,7 +77,7 @@ void MergeRuns::init()
   declareProperty(
     new ArrayProperty<std::string>("InputWorkspaces", boost::make_shared<MandatoryValidator<std::vector<std::string>>>()),
     "The names of the input workspaces as a comma-separated list" );
-  declareProperty(new WorkspaceProperty<MatrixWorkspace>("OutputWorkspace","",Direction::Output),
+  declareProperty(new WorkspaceProperty<>("OutputWorkspace","",Direction::Output),
     "Name of the output workspace" );
 }
 
@@ -368,7 +381,7 @@ static bool compare(MatrixWorkspace_sptr first, MatrixWorkspace_sptr second)
  */
 bool MergeRuns::validateInputsForEventWorkspaces(const std::vector<std::string>& inputWorkspaces)
 {
-  Unit_sptr unit;
+  std::string xUnitID;
   std::string YUnit;
   bool dist(false);
 
@@ -392,7 +405,7 @@ bool MergeRuns::validateInputsForEventWorkspaces(const std::vector<std::string>&
     // Check a few things are the same for all input workspaces
     if ( i == 0 )
     {
-      unit = ws->getAxis(0)->unit();
+      xUnitID = ws->getAxis(0)->unit()->unitID();
       YUnit = ws->YUnit();
       dist = ws->isDistribution();
       instrument = ws->getInstrument()->getName();
@@ -400,7 +413,7 @@ bool MergeRuns::validateInputsForEventWorkspaces(const std::vector<std::string>&
     else
     {
       std::string errors;
-      if (ws->getAxis(0)->unit() != unit)               errors += "different X units; ";
+      if (ws->getAxis(0)->unit()->unitID() != xUnitID)               errors += "different X units; ";
       if (ws->YUnit() != YUnit)                         errors += "different Y units; ";
       if (ws->isDistribution()   != dist)               errors += "not all distribution or all histogram type; ";
       if (ws->getInstrument()->getName() != instrument) errors += "different instrument names; ";
@@ -431,7 +444,7 @@ std::list<API::MatrixWorkspace_sptr> MergeRuns::validateInputs(const std::vector
   std::list<MatrixWorkspace_sptr> inWS;
 
   size_t numSpec(0);
-  Unit_sptr unit;
+  std::string xUnitID;
   std::string YUnit;
   bool dist(false);
   // Going to check that name of instrument matches - think that's the best possible at the moment
@@ -466,7 +479,7 @@ std::list<API::MatrixWorkspace_sptr> MergeRuns::validateInputs(const std::vector
     if ( i == 0 )
     {
       numSpec = ws->getNumberHistograms();
-      unit = ws->getAxis(0)->unit();
+      xUnitID = ws->getAxis(0)->unit()->unitID();
       YUnit = ws->YUnit();
       dist = ws->isDistribution();
       instrument = ws->getInstrument()->getName();
@@ -475,7 +488,7 @@ std::list<API::MatrixWorkspace_sptr> MergeRuns::validateInputs(const std::vector
     {
       std::string errors;
       if (ws->getNumberHistograms() != numSpec)         errors += "different number of histograms; ";
-      if (ws->getAxis(0)->unit() != unit)               errors += "different X units; ";
+      if (ws->getAxis(0)->unit()->unitID() != xUnitID)               errors += "different X units; ";
       if (ws->YUnit() != YUnit)                         errors += "different Y units; ";
       if (ws->isDistribution()   != dist)               errors += "not all distribution or all histogram type; ";
       if (ws->getInstrument()->getName() != instrument) errors += "different instrument names; ";
@@ -675,6 +688,219 @@ API::MatrixWorkspace_sptr MergeRuns::rebinInput(const API::MatrixWorkspace_sptr&
   rebin->setProperty("Params",params);
   rebin->executeAsSubAlg();
   return rebin->getProperty("OutputWorkspace");
+}
+
+/**
+Validate the multiperiods workspace groups. Gives the opportunity to exit processing if things don't look right.
+*/
+void MergeRuns::validateMultiPeriodGroupInputs(const size_t& nInputWorkspaces) const
+{
+  const size_t multiPeriodGroupsSize = m_multiPeriodGroups.size();
+  if(multiPeriodGroupsSize != 0 && multiPeriodGroupsSize != nInputWorkspaces)
+  {
+    std::string msg = "MergeRuns can either process complete array of MatrixWorkspaces or Multi-period-groups, but mixing of types is not permitted.";
+    throw std::runtime_error(msg);
+  }
+
+  if(multiPeriodGroupsSize > 0)
+  { 
+    const size_t benchMarkGroupSize = m_multiPeriodGroups[0]->size();
+    for(size_t i = 0; i < multiPeriodGroupsSize; ++i)
+    {
+      WorkspaceGroup_sptr currentGroup = m_multiPeriodGroups[i];
+      if(currentGroup->size() != benchMarkGroupSize)
+      {
+       throw std::runtime_error("Not all the input Multi-period-group input workspaces are the same size.");
+      }
+      for(size_t j = 0; j < currentGroup->size(); ++j)
+      {
+        MatrixWorkspace_const_sptr currentNestedWS = boost::dynamic_pointer_cast<const MatrixWorkspace>(currentGroup->getItem(j));
+        Property* nPeriodsProperty = currentNestedWS->run().getLogData("nperiods");
+        size_t nPeriods = atoi(nPeriodsProperty->value().c_str());
+        if(nPeriods != benchMarkGroupSize)
+        {
+          throw std::runtime_error("Missmatch between nperiods log and the number of workspaces in the input group: " + m_multiPeriodGroups[i]->name());
+        }
+        Property* currentPeriodProperty = currentNestedWS->run().getLogData("current_period");
+        size_t currentPeriod = atoi(currentPeriodProperty->value().c_str());
+        if(currentPeriod != (j+1))
+        {
+          throw std::runtime_error("Multiperiod group workspaces must be ordered by current_period. Correct: " + currentNestedWS->name());
+        }
+      }
+    }
+  }
+}
+
+/**
+ Determine if the group appears to be a multiperiod group workspace.
+ Checks that all nested workspaces have a nperiods log and a current_period log.
+ @ return True only if it is a multiperiod group workspace.
+*/
+bool MergeRuns::isMultiPeriodGroup(WorkspaceGroup_const_sptr inputGroup) const
+{
+  bool b_isMultiPeriod = false;
+  for(size_t i = 0; i < inputGroup->size(); ++i)
+  {
+    auto item = boost::dynamic_pointer_cast<MatrixWorkspace>(inputGroup->getItem(i));
+    try
+    {
+      Property* nPeriodsProperty = item->run().getLogData("nperiods");
+      int nPeriods = atoi(nPeriodsProperty->value().c_str());
+      if(nPeriods > 1)
+      {
+        b_isMultiPeriod = true;
+      }
+      else
+      {
+        return false;
+      }
+    }
+    catch(Exception::NotFoundError &)
+    {
+    }
+  }
+  return b_isMultiPeriod;
+}
+
+/** Check the input workspace properties for groups.
+*
+* Overriden from base Algorithm class.
+*
+* Checks to see if the inputs are MULTIPERIOD group data.
+*
+* @throw std::invalid_argument if the groups sizes are incompatible.
+* @throw std::invalid_argument if a member is not found
+*
+* This method (or an override) must NOT THROW any exception if there are no input workspace groups
+*/
+bool MergeRuns::checkGroups()
+{
+  typedef std::vector<std::string> WorkspaceNameType;
+
+  m_multiPeriodGroups.clear();
+  WorkspaceNameType workspaces = this->getProperty("InputWorkspaces");
+  WorkspaceNameType::iterator it = workspaces.begin();
+
+  // Inspect all the input workspaces in the ArrayProperty input.
+  while(it != workspaces.end())
+  {
+    Workspace_sptr ws = AnalysisDataService::Instance().retrieve(*it);
+    if(!ws)
+    {
+      throw Kernel::Exception::NotFoundError("Workspace", *it);
+    }
+    WorkspaceGroup_sptr inputGroup = boost::dynamic_pointer_cast<WorkspaceGroup>(ws);
+    if(inputGroup)
+    {
+      if(isMultiPeriodGroup(inputGroup))
+      {
+        m_multiPeriodGroups.push_back(inputGroup);
+      }
+    }
+    ++it;
+  }
+  const size_t multiPeriodGroupsSize = m_multiPeriodGroups.size();
+  // If there are no MULTIPERIOD group workpaces detected, we hand the checking back up toe the base class.
+  if(multiPeriodGroupsSize == 0)
+  {
+    // This will prevent (this) implementation of processGroups from being run. The base class proccessGroups will be used instead.
+    m_useDefaultGroupingBehaviour = true;
+    // Use the base class inmplementation.
+    return Algorithm::checkGroups(); 
+  }
+  // Check that we have correct looking group workspace indexes.
+  validateMultiPeriodGroupInputs(workspaces.size());
+
+  m_useDefaultGroupingBehaviour = false;
+  return !m_useDefaultGroupingBehaviour;
+}
+
+
+/**
+Creates a list of input workspaces as a string for a given period using all nested workspaces at that period 
+within all group workspaces.
+
+This requires a little explanation, because this is the reason that this algorithm needs a customised overriden checkGroups and processGroups
+method:
+
+Say you have two multiperiod group workspaces A and B and an output workspace C. A contains matrix workspaces A_1 and A_2, and B contains matrix workspaces B_1 and B2. Because this
+is multiperiod data. A_1 and B_1 share the same period, as do A_2 and B_2. So merging must be with respect to workspaces of equivalent periods. Therefore,
+merging must be A_1 + B_1 = C_1 and A_2 + B_2 = C_2. This method constructs the inputs for a nested call to MergeRuns in this manner.
+
+@param periodIndex : zero based index denoting the period.
+@return comma separated string of input workspaces.
+*/
+std::string MergeRuns::createFormattedInputWorkspaceNames(const size_t& periodIndex) const
+{
+  std::string prefix = "";
+  std::string inputWorkspaces = "";
+  for(size_t j = 0; j < m_multiPeriodGroups.size(); ++j)
+  {
+    inputWorkspaces += prefix + m_multiPeriodGroups[j]->getItem(periodIndex)->name();
+    prefix = ",";
+  }
+  return inputWorkspaces;
+}
+
+//--------------------------------------------------------------------------------------------
+/** Process WorkspaceGroup inputs.
+*
+* Overriden from Algorithm base class.
+*
+* This should be called after checkGroups(), which sets up required members.
+* It goes through each member of the group(s), creates and sets an algorithm
+* for each and executes them one by one.
+*
+* If there are several group input workspaces, then the member of each group
+* is executed pair-wise.
+*
+* @return true - if all the workspace members are executed.
+*/
+bool MergeRuns::processGroups()
+{
+  // If we are not processing multiperiod groups, use the base behaviour.
+  if(m_useDefaultGroupingBehaviour)
+  {
+    return Algorithm::processGroups();
+  }
+
+  Property* outputWorkspaceProperty = this->getProperty("OutputWorkspace");
+  const std::string outName = outputWorkspaceProperty->value();
+
+  size_t nPeriods = m_multiPeriodGroups[0]->size();
+  const bool doObserveADSNotifications = true;
+  WorkspaceGroup_sptr outputWS = boost::make_shared<WorkspaceGroup>(!doObserveADSNotifications);
+  // Loop through all the periods.
+  for(size_t i = 0; i < nPeriods; ++i)
+  {
+    // Create a formatted input workspace list. As this is the usual input (ArrayProperty) to the MergeRuns algorithm.
+    const std::string inputWorkspaces = createFormattedInputWorkspaceNames(i);
+
+    Algorithm_sptr alg_sptr = API::AlgorithmManager::Instance().createUnmanaged(this->name(), this->version());
+    IAlgorithm* alg = alg_sptr.get();
+    if(!alg)
+    {
+      g_log.error()<<"CreateAlgorithm failed for "<<this->name()<<"("<<this->version()<<")"<<std::endl;
+      throw std::runtime_error("Algorithm creation failed.");
+    }
+    alg->initialize();
+    alg->setPropertyValue("InputWorkspaces", inputWorkspaces);
+    // Create a name for the output workspace based upon the requested name for the overall output group workspace.
+    const std::string outName_i = outName + "_" + Strings::toString(i+1);
+    alg->setPropertyValue("OutputWorkspace", outName_i);
+
+    if (!alg->execute())
+    {
+      throw std::runtime_error("Execution of " + this->name() + " for group entry " + Strings::toString(i+1) + " failed.");
+    }
+    outputWS->add(outName_i);
+  }
+  outputWS->observeADSNotifications(doObserveADSNotifications);
+  this->setProperty("OutputWorkspace", outputWS);
+  this->setExecuted(true);
+  AnalysisDataService::Instance().addOrReplace(outName, outputWS);
+  return true;
 }
 
 } // namespace Algorithm

@@ -149,6 +149,10 @@ class SNSPowderReduction(PythonAlgorithm):
         def getInfo(self, frequency, wavelength):
             #print "getInfo(%f, %f)" % (frequency, wavelength)
             if self.filename is not None:
+                if frequency is None:
+                    raise RuntimeError("Unable to determine frequency from data")
+                if wavelength is None:
+                    raise RuntimeError("Unable to determine wavelength from data")
                 frequency = self.__getFrequency(float(frequency))
                 wavelength = self.__getWavelength(frequency, float(wavelength))
         
@@ -198,6 +202,8 @@ class SNSPowderReduction(PythonAlgorithm):
         self.declareFileProperty("CharacterizationRunsFile", "", FileAction.OptionalLoad,
                                  ['.txt'],
                                  Description="File with characterization runs denoted")
+        self.declareProperty("UnwrapRef", 0.,
+                             Description="Reference total flight path for frame unwrapping. Zero skips the correction")
         self.declareProperty("LowResRef", 0.,
                              Description="Reference DIFC for resolution removal. Zero skips the correction")
         self.declareProperty("CropWavelengthMin", 0.,
@@ -260,20 +266,8 @@ class SNSPowderReduction(PythonAlgorithm):
         # generate the workspace name
         wksp = "%s_%d" % (self._instrument, runnumber)
         strategy = []
-        if HAVE_MPI:
-            comm = mpi.world
-            Chunks = DetermineChunking(Filename=wksp+extension,MaxChunkSize=self._chunks,OutputWorkspace='Chunks').workspace()
-            # What about no chunks for parallel?
-            if len(Chunks) == 1:
-            	strategy.append({'ChunkNumber':comm.rank+1,'TotalChunks':comm.size})
-            else:
-            	for row in Chunks:
-			 if (int(row["ChunkNumber"])-1)%comm.size == comm.rank:
-				 strategy.append(row)
-
-        else:
-            Chunks = DetermineChunking(Filename=wksp+extension,MaxChunkSize=self._chunks,OutputWorkspace='Chunks').workspace()
-            for row in Chunks: strategy.append(row)
+        Chunks = DetermineChunking(Filename=wksp+extension,MaxChunkSize=self._chunks,OutputWorkspace='Chunks').workspace()
+        for row in Chunks: strategy.append(row)
 
         return strategy
 
@@ -285,23 +279,20 @@ class SNSPowderReduction(PythonAlgorithm):
         firstChunk = True
         for chunk in strategy:
             if "ChunkNumber" in chunk:
-                self.log().information("Working on chunk %d of %d" % (chunk["ChunkNumber"], len(strategy)))
+                self.log().information("Working on chunk %d of %d" % (chunk["ChunkNumber"], chunk["TotalChunks"]))
             temp = self._loadData(runnumber, extension, filterWall, **chunk)
             if self._info is None:
                 self._info = self._getinfo(temp)
             temp = self._focus(temp, calib, self._info, filterLogs, preserveEvents, normByCurrent, filterBadPulsesOverride)
-            if HAVE_MPI and len(strategy) == 1:
-                alg = GatherWorkspaces(InputWorkspace=temp, PreserveEvents=preserveEvents, AccumulationMethod="Add", OutputWorkspace=wksp)
+            if firstChunk:
+                alg = RenameWorkspace(InputWorkspace=temp, OutputWorkspace=wksp)
                 wksp = alg['OutputWorkspace']
+                firstChunk = False
             else:
-                if firstChunk:
-                    alg = RenameWorkspace(InputWorkspace=temp, OutputWorkspace=wksp)
-                    wksp = alg['OutputWorkspace']
-                    firstChunk = False
-                else:
-                    wksp += temp
-                    DeleteWorkspace(temp)
-        if HAVE_MPI and len(strategy) > 1:
+                wksp += temp
+                DeleteWorkspace(temp)
+        # Sum workspaces for all mpi tasks
+        if HAVE_MPI:
             alg = GatherWorkspaces(InputWorkspace=wksp, PreserveEvents=preserveEvents, AccumulationMethod="Add", OutputWorkspace=wksp)
             wksp = alg['OutputWorkspace']
         if self._chunks > 0:
@@ -385,9 +376,10 @@ class SNSPowderReduction(PythonAlgorithm):
         else:
             Rebin(InputWorkspace=wksp, OutputWorkspace=wksp, Params=binning)
         AlignDetectors(InputWorkspace=wksp, OutputWorkspace=wksp, OffsetsWorkspace=self._instrument + "_offsets")
+        LRef = self.getProperty("UnwrapRef")
         DIFCref = self.getProperty("LowResRef")
         wavelengthMin = self.getProperty("CropWavelengthMin")
-        if (DIFCref > 0.) or (wavelengthMin>0): # super special Jason stuff
+        if (LRef > 0.) or (DIFCref > 0.) or (wavelengthMin>0): # super special Jason stuff
             kwargs = {}
             try:
                 if info.tmin > 0:
@@ -397,6 +389,8 @@ class SNSPowderReduction(PythonAlgorithm):
             except:
                 pass
             ConvertUnits(InputWorkspace=wksp, OutputWorkspace=wksp, Target="TOF") # corrections only work in TOF for now
+            if LRef > 0.:
+                UnwrapSNS(InputWorkspace=wksp, OutputWorkspace=wksp, LRef=LRef, **kwargs)
             if DIFCref > 0. or wavelengthMin > 0.:
                 if kwargs.has_key("Tmax"):
                     del kwargs["Tmax"]
@@ -430,16 +424,22 @@ class SNSPowderReduction(PythonAlgorithm):
     def _getinfo(self, wksp):
         logs = wksp.getRun()
         # get the frequency
-        if not "SpeedRequest1" in logs.keys():
-            self.log().information("SpeedRequest1 is not specified")
-            return self._config.getInfo(None, None)
-        frequency = logs['SpeedRequest1']
+        frequency = None
+        if "SpeedRequest1" in logs.keys():
+            frequency = logs['SpeedRequest1']
+        else:
+            self.log().information("'SpeedRequest1' is not specified in logs")
+            if "frequency" in logs.keys():
+                frequency = logs['frequency']
+            else:
+                self.log().information("'frequency' is not specified in logs")
+                return self._config.getInfo(None, None)
         if frequency.units != "Hz":
             raise RuntimeError("Only know how to deal with frequency in Hz, not %s" % frequency.units)
         frequency = frequency.getStatistics().mean
 
         if not "LambdaRequest" in logs.keys():
-            self.log().information("LambdaRequest is not in the datafile")
+            self.log().information("'LambdaRequest' is not in the datafile")
             return self._config.getInfo(None, None)
         wavelength = logs['LambdaRequest']
         if wavelength.units != "Angstrom":

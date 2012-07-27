@@ -2,21 +2,25 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidDataHandling/LoadISISNexus2.h"
-#include "MantidKernel/UnitFactory.h"
-#include "MantidKernel/ConfigService.h"
+
 #include "MantidKernel/ArrayProperty.h"
-#include "MantidAPI/FileProperty.h"
-#include "MantidAPI/SpectraDetectorMap.h"
-#include "MantidKernel/TimeSeriesProperty.h"
+#include "MantidKernel/BoundedValidator.h"
+#include "MantidKernel/ConfigService.h"
 #include "MantidKernel/LogParser.h"
-#include "MantidGeometry/Instrument/XMLlogfile.h"
+#include "MantidKernel/LogFilter.h"
+#include "MantidKernel/TimeSeriesProperty.h"
+#include "MantidKernel/UnitFactory.h"
+
+#include "MantidAPI/FileProperty.h"
+#include "MantidAPI/LoadAlgorithmFactory.h"
+#include "MantidAPI/SpectraDetectorMap.h"
+
 #include "MantidGeometry/Instrument/Detector.h"
+#include "MantidGeometry/Instrument/XMLlogfile.h"
 
 #include "MantidNexusCPP/NeXusFile.hpp"
 #include "MantidNexusCPP/NeXusException.hpp"
 
-#include "MantidAPI/LoadAlgorithmFactory.h"
-#include "MantidKernel/BoundedValidator.h"
 #include <Poco/Path.h>
 #include <Poco/DateTimeFormatter.h>
 #include <Poco/DateTimeParser.h>
@@ -24,6 +28,7 @@
 
 #include <boost/lexical_cast.hpp>
 #include <cmath>
+#include <vector>
 #include <sstream>
 #include <cctype>
 #include <functional>
@@ -48,7 +53,7 @@ namespace Mantid
     m_numberOfPeriods(0), m_numberOfPeriodsInFile(0), m_numberOfChannels(0), m_numberOfChannelsInFile(0),
     m_have_detector(false), m_spec_min(0), m_spec_max(EMPTY_INT()), m_spec_list(), 
     m_entrynumber(0), m_range_supplied(true), m_tof_data(), m_proton_charge(0.),
-    m_spec(), m_monitors(), m_progress()
+    m_spec(), m_monitors(), m_logCreator(), m_progress()
     {}
 
     /// Initialisation method.
@@ -215,7 +220,7 @@ namespace Mantid
 
       loadSampleData(local_workspace, entry);
       m_progress->report("Loading logs");
-      loadLogs(local_workspace);
+      loadLogs(local_workspace, entry);
 
       // Load first period outside loop
       m_progress->report("Loading data");
@@ -228,17 +233,24 @@ namespace Mantid
       }
       int64_t firstentry = (m_entrynumber > 0) ? m_entrynumber : 1;
       loadPeriodData(firstentry, entry, local_workspace);
+      
+      // Clone the workspace at this point to provide a base object for future workspace generation.
+      DataObjects::Workspace2D_sptr period_free_workspace = boost::dynamic_pointer_cast<DataObjects::Workspace2D>
+              (WorkspaceFactory::Instance().create(local_workspace));
+
+      createPeriodLogs(firstentry, local_workspace);
 
       if( m_numberOfPeriods > 1 && m_entrynumber == 0 )
       {
+        
         WorkspaceGroup_sptr wksp_group(new WorkspaceGroup);
         wksp_group->setTitle(local_workspace->getTitle());
 
         //This forms the name of the group
         const std::string base_name = getPropertyValue("OutputWorkspace") + "_";
         const std::string prop_name = "OutputWorkspace_";
-
-        for( size_t p = 1; p <= m_numberOfPeriods; ++p )
+        
+        for( int p = 1; p <= m_numberOfPeriods; ++p )
         {
           std::ostringstream os;
           os << p;
@@ -246,11 +258,14 @@ namespace Mantid
           if( p > 1 )
           {
             local_workspace = boost::dynamic_pointer_cast<DataObjects::Workspace2D>
-              (WorkspaceFactory::Instance().create(local_workspace));
+              (WorkspaceFactory::Instance().create(period_free_workspace));
             loadPeriodData(p, entry, local_workspace);
+            createPeriodLogs(p, local_workspace);
+            // Check consistency of logs data for multiperiod workspaces and raise warnings where necessary.
+            validateMultiPeriodLogs(local_workspace);
           }
           declareProperty(new WorkspaceProperty<Workspace>(prop_name + os.str(), base_name + os.str(), Direction::Output));
-          wksp_group->add(base_name + os.str());
+          wksp_group->addWorkspace(local_workspace);
           setProperty(prop_name + os.str(), boost::static_pointer_cast<Workspace>(local_workspace));
         }
         // The group is the root property value
@@ -286,6 +301,26 @@ namespace Mantid
         int64_t m_max;
       };
 
+    }
+
+    /**
+    Check for a set of synthetic logs associated with multi-period log data. Raise warnings where necessary.
+    */
+    void LoadISISNexus2::validateMultiPeriodLogs(Mantid::API::MatrixWorkspace_sptr ws) 
+    {
+      const Run& run = ws->run();
+      if(!run.hasProperty("current_period"))
+      {
+        g_log.warning("Workspace has no current_period log.");
+      }
+      if(!run.hasProperty("nperiods"))
+      {
+        g_log.warning("Workspace has no nperiods log");
+      }
+      if(!run.hasProperty("proton_charge_by_period"))
+      {
+        g_log.warning("Workspace has not proton_charge_by_period log");
+      }
     }
 
     /**
@@ -327,7 +362,7 @@ namespace Mantid
 
       // Check the entry number
       m_entrynumber = getProperty("EntryNumber");
-      if( static_cast<size_t>(m_entrynumber) > m_numberOfPeriods || m_entrynumber < 0 )
+      if( static_cast<int>(m_entrynumber) > m_numberOfPeriods || m_entrynumber < 0 )
       {
         g_log.error() << "Invalid entry number entered. File contains " << m_numberOfPeriods << " period. " 
           << std::endl;
@@ -494,6 +529,16 @@ namespace Mantid
       {
         g_log.debug() << "No title was found in the input file, " << getPropertyValue("Filename") << std::endl;
       }
+    }
+
+    /**
+     * Creates period log data in the workspace
+     * @param period :: period number
+     * @param local_workspace :: workspace to add period log data to.
+    */
+    void LoadISISNexus2::createPeriodLogs(int64_t period, DataObjects::Workspace2D_sptr local_workspace)
+    {
+      m_logCreator->addPeriodLogs(static_cast<int>(period), local_workspace->mutableRun());
     }
 
 
@@ -709,9 +754,9 @@ namespace Mantid
     *   /raw_data_1/runlog group of the file. Call to this method must be done
     *   within /raw_data_1 group.
     *   @param ws :: The workspace to load the logs to.
-    *   @param period :: The period of this workspace
+    *   @param entry :: Nexus entry
     */
-    void LoadISISNexus2::loadLogs(DataObjects::Workspace2D_sptr ws, int period)
+    void LoadISISNexus2::loadLogs(DataObjects::Workspace2D_sptr ws, NXEntry & entry)
     {
       IAlgorithm_sptr alg = createSubAlgorithm("LoadNexusLogs", 0.0, 0.5);
       alg->setPropertyValue("Filename", this->getProperty("Filename"));
@@ -723,19 +768,31 @@ namespace Mantid
       catch(std::runtime_error&)
       {
         g_log.warning() << "Unable to load run logs. There will be no log "
-                        << "data associated with this workspace\n";
+          << "data associated with this workspace\n";
         return;
       }
-      ws->populateInstrumentParameters();
-      // If we loaded an icp_event log then create the necessary period logs 
-      if( ws->run().hasProperty("icp_event") )
+      // For ISIS Nexus only, fabricate an addtional log containing an array of proton charge information from the periods group.
+      try
       {
-        Kernel::Property *log = ws->run().getProperty("icp_event");
-        LogParser parser(log);
-        ws->mutableRun().addProperty(parser.createPeriodLog(period));
-        ws->mutableRun().addProperty(parser.createAllPeriodsLog());
+        NXClass protonChargeClass = entry.openNXGroup("periods");
+        NXFloat periodsCharge = protonChargeClass.openNXFloat("proton_charge");
+        periodsCharge.load();
+        size_t nperiods = periodsCharge.dim0();
+        std::vector<double> chargesVector(nperiods);
+        std::copy(periodsCharge(), periodsCharge() + nperiods, chargesVector.begin());
+        ArrayProperty<double>* protonLogData = new ArrayProperty<double>("proton_charge_by_period", chargesVector);
+        ws->mutableRun().addProperty(protonLogData);  
       }
+      catch(std::runtime_error&)
+      {
+        this->g_log.debug("Cannot read periods information from the nexus file. This group may be absent.");
+      }
+      // Populate the instrument parameters.
+      ws->populateInstrumentParameters();
 
+      // Make log creator object and add the run status log
+      m_logCreator.reset(new ISISRunLogs(ws->run(), m_numberOfPeriods));
+      m_logCreator->addStatusLog(ws->mutableRun());
     }
 
     double LoadISISNexus2::dblSqrt(double in)

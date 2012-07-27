@@ -176,7 +176,7 @@ class DirectEnergyConversion(object):
         if 'second_white' in kwargs:
             DeleteWorkspace(kwargs['second_white'])
         # Return a mask workspace
-        diag_mask = ExtractMasking(whiteintegrals, OutputWorkspace='diag_mask').workspace()
+        diag_mask = ExtractMask(whiteintegrals, OutputWorkspace='diag_mask').workspace()
         DeleteWorkspace(whiteintegrals)
 
         if var_name is not None and var_name != str(diag_mask):
@@ -289,7 +289,7 @@ class DirectEnergyConversion(object):
             monitor_ws = loader.workspace()
             
             try:
-                alg = GetEi(monitor_ws, int(self.ei_mon_spectra[0]), int(self.ei_mon_spectra[1]), ei_guess, self.fix_ei)
+                alg = GetEi(InputWorkspace=monitor_ws, Monitor1Spec=int(self.ei_mon_spectra[0]), Monitor2Spec=int(self.ei_mon_spectra[1]), EnergyEstimate=ei_guess,FixEi=self.fix_ei)
                 TzeroCalculated = float(alg.getPropertyValue("Tzero"))
                 ei_calc = monitor_ws.getRun().getLogData("Ei").value
             except:
@@ -504,7 +504,7 @@ class DirectEnergyConversion(object):
             raise TypeError('Unknown option passed to get_ei "%s"' % fix_ei)
 
         # Calculate the incident energy
-        alg = GetEi(input_ws, int(self.ei_mon_spectra[0]), int(self.ei_mon_spectra[1]), ei_guess, fix_ei)
+        alg = GetEi(InputWorkspace=input_ws, Monitor1Spec=int(self.ei_mon_spectra[0]), Monitor2Spec=int(self.ei_mon_spectra[1]), EnergyEstimate=ei_guess,FixEi=fix_ei)
         mon1_peak = float(alg.getPropertyValue("FirstMonitorPeak"))
         mon1_index = int(alg.getPropertyValue("FirstMonitorIndex"))
         ei = input_ws.getSampleDetails().getLogData("Ei").value
@@ -583,7 +583,7 @@ class DirectEnergyConversion(object):
         args['van_sig'] = self.diag_samp_sig
 
         diagnostics.diagnose(data_ws, **args)
-        monovan_masks = ExtractMasking(data_ws, OutputWorkspace='monovan_masks').workspace()
+        monovan_masks = ExtractMask(data_ws, OutputWorkspace='monovan_masks').workspace()
         MaskDetectors(data_ws, MaskedWorkspace=monovan_masks)
         DeleteWorkspace(Workspace=monovan_masks)
 

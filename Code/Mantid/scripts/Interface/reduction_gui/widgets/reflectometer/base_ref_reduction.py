@@ -35,6 +35,8 @@ class BaseRefWidget(BaseWidget):
     y_axis = []
     e_axis = []
 
+    bDEBUG = False
+
     def __init__(self, parent=None, state=None, settings=None, name="", data_proxy=None):      
         super(BaseRefWidget, self).__init__(parent, state, settings, data_proxy=data_proxy) 
 
@@ -45,6 +47,7 @@ class BaseRefWidget(BaseWidget):
 
     def initialize_content(self):
         self._summary.edited_warning_label.hide()
+        self._summary.log_scale_chk.hide()
         
         # Validators
         self._summary.data_peak_from_pixel.setValidator(QtGui.QIntValidator(self._summary.data_peak_from_pixel))
@@ -73,6 +76,7 @@ class BaseRefWidget(BaseWidget):
         self._summary.norm_background_to_pixel1.setValidator(QtGui.QIntValidator(self._summary.norm_background_to_pixel1))
 
         # Event connections
+        self.connect(self._summary.data_run_number_edit, QtCore.SIGNAL("returnPressed()"), self.data_run_number_validated)
         self.connect(self._summary.data_low_res_range_switch, QtCore.SIGNAL("clicked(bool)"), self._data_low_res_clicked)
         self.connect(self._summary.norm_low_res_range_switch, QtCore.SIGNAL("clicked(bool)"), self._norm_low_res_clicked)
         self.connect(self._summary.norm_switch, QtCore.SIGNAL("clicked(bool)"), self._norm_clicked)
@@ -91,12 +95,15 @@ class BaseRefWidget(BaseWidget):
         self.connect(self._summary.remove_btn, QtCore.SIGNAL("clicked()"), self._remove_item)
         self.connect(self._summary.fourth_column_switch, QtCore.SIGNAL("clicked(bool)"), self._fourth_column_clicked)
         self.connect(self._summary.create_ascii_button, QtCore.SIGNAL("clicked()"), self._create_ascii_clicked)
+        self.connect(self._summary.use_sf_config_switch, QtCore.SIGNAL("clicked(bool)"), self._use_sf_config_clicked)
         
         # Catch edited controls
         call_back = partial(self._edit_event, ctrl=self._summary.data_peak_from_pixel)
         self.connect(self._summary.data_peak_from_pixel, QtCore.SIGNAL("textChanged(QString)"), call_back)
 #        self.connect(self._summary.data_peak_from_pixel, QtCore.SIGNAL("textChanged(QString)"), self.refresh_data_peak_counts_vs_pixel)
 
+        call_back = partial(self._edit_event, ctrl=self._summary.use_sf_config_switch)
+        self.connect(self._summary.use_sf_config_switch, QtCore.SIGNAL("clicked()"), call_back)
         call_back = partial(self._edit_event, ctrl=self._summary.data_peak_to_pixel)
         self.connect(self._summary.data_peak_to_pixel, QtCore.SIGNAL("textChanged(QString)"), call_back)
         call_back = partial(self._edit_event, ctrl=self._summary.data_background_from_pixel1)
@@ -131,9 +138,9 @@ class BaseRefWidget(BaseWidget):
         self.connect(self._summary.norm_run_number_edit, QtCore.SIGNAL("textChanged(QString)"), call_back)
         call_back = partial(self._edit_event, ctrl=self._summary.data_run_number_edit)
         self.connect(self._summary.data_run_number_edit, QtCore.SIGNAL("textChanged(QString)"), self._run_number_changed)
+        self.connect(self._summary.data_run_number_edit, QtCore.SIGNAL("returnPressed()"), self._run_number_changed)
         self._run_number_first_edit = True
         
-
         call_back = partial(self._edit_event, ctrl=self._summary.slits_width_flag)
         self.connect(self._summary.slits_width_flag, QtCore.SIGNAL("clicked()"), call_back)
  
@@ -177,6 +184,53 @@ class BaseRefWidget(BaseWidget):
         if not self._settings.debug and not os.path.isdir("/SNS/%s" % self.instrument_name):
             self._summary.auto_reduce_check.hide()
             
+    def getMetadata(self,file):
+        """
+        This retrieve the metadata from the data event NeXus file
+        """
+        _full_file_name = file
+        LoadEventNexus(Filename=_full_file_name,
+                       OutputWorkspace='tmpWks',
+                       MetaDataOnly='1')
+        
+        mt1 = mtd['tmpWks']
+        mt_run = mt1.getRun()
+        
+        #tthd
+        tthd = mt_run.getProperty('tthd').value[0]
+        
+        #ths
+        ths = mt_run.getProperty('ths').value[0]
+        
+        return [tthd,ths]
+    
+    def data_run_number_validated(self):
+        """
+        This function is reached when the user hits ENTER on the data run
+        number and will retrieve some of the metadata and display them
+        in the metadata box
+        """
+#        self._summary.data_run_number_processing.show()
+        run_number = self._summary.data_run_number_edit.text()
+        
+        try:
+            _file = FileFinder.findRuns("REF_L%d"%int(run_number))[0]
+            lambdaRequest = ''
+            
+            metadata= self.getMetadata(_file)
+            
+            tthd_value = metadata[0]
+            tthd_value_string = '{0:.2f}'.format(tthd_value)
+            self._summary.tthd_value.setText(tthd_value_string)
+            
+            ths_value = metadata[1]
+            ths_value_string = '{0:.2f}'.format(ths_value)
+            self._summary.ths_value.setText(ths_value_string)
+#            self._summary.data_run_number_processing.hide()
+        except:
+            pass
+#            self._summary.data_run_number_processing.hide()
+            
     def _output_dir_browse(self):
         output_dir = QtGui.QFileDialog.getExistingDirectory(self, "Output Directory - Choose a directory",
                                                             os.path.expanduser('~'), 
@@ -195,6 +249,10 @@ class BaseRefWidget(BaseWidget):
         new_x_axis = []
         new_y_axis = []
         new_e_axis = []
+        
+        if self.bDEBUG:
+            print 'x_axis before _smooth_x_axis:'
+            print x_axis
         
         sz = len(x_axis)        
         i=0
@@ -228,6 +286,7 @@ class BaseRefWidget(BaseWidget):
                     _y = 0.
                     _e = 0.
                 else:
+
                     _error = 1./_left_e2 + 1./_right_e2
                     _x = (_left_x + _right_x) / 2. 
                     _y = (_left_y/_left_e2 + _right_y/_right_e2) / _error 
@@ -247,6 +306,11 @@ class BaseRefWidget(BaseWidget):
     
             i+=1
     
+        if self.bDEBUG:
+            print
+            print 'x-axis after _smooth_x_axis:'
+            print new_x_axis
+    
         self.x_axis = new_x_axis
         self.y_axis = new_y_axis
         self.e_axis = new_e_axis
@@ -261,7 +325,7 @@ class BaseRefWidget(BaseWidget):
 #            return
         
         #retrieve name of the output file
-        file_name = QtGui.QFileDialog.getOpenFileName(self, "Select or define a ASCII file name", "", "(*.txt)")
+        file_name = QtGui.QFileDialog.getSaveFileName(self, "Select or define a ASCII file name", "", "(*.txt)")
         if (str(file_name).strip() == ''):
             return
         
@@ -277,6 +341,19 @@ class BaseRefWidget(BaseWidget):
             text = [line1, line2, line3]
         else:
             text = ['#Q(1/Angstrom) R delta_R']
+        
+#        #rebinned using output factors
+#        q_min = float(self._summary.q_min_edit.text())
+#        q_bin = -float(self._summary.q_step_edit.text())
+#
+#        mt = mtd['ref_combined']
+#        x_axis = mt.readX(0)[:]
+#        q_max = float(x_axis[-1]) 
+#        
+#        q_binning = [q_min, q_bin, q_max]
+#        Rebin(InputWorkspace='ref_combined',
+#              OutputWorkspace='ref_combined',
+#              Params=q_binning)
             
         mt = mtd['ref_combined']
         x_axis = mt.readX(0)[:]
@@ -284,7 +361,6 @@ class BaseRefWidget(BaseWidget):
         e_axis = mt.readE(0)[:]
         
         self._smooth_x_axis(x_axis, y_axis, e_axis)
-        
         x_axis = self.x_axis
         y_axis = self.y_axis
         e_axis = self.e_axis
@@ -360,6 +436,7 @@ class BaseRefWidget(BaseWidget):
         
     def _reset_warnings(self):
         self._summary.edited_warning_label.hide()
+        util.set_edited(self._summary.use_sf_config_switch, False)
         util.set_edited(self._summary.data_peak_from_pixel, False)
         util.set_edited(self._summary.data_peak_to_pixel, False)
         util.set_edited(self._summary.data_background_from_pixel1, False)
@@ -499,8 +576,7 @@ class BaseRefWidget(BaseWidget):
                           "Your instrument may not be set up for automated reduction.")
         
     def _auto_reduce(self, is_checked=False):
-        if is_checked:
-            
+        if is_checked:            
             self._summary.auto_reduce_help_label.show()
             self._summary.auto_reduce_tip_label.show()
             self._summary.auto_reduce_btn.show()
@@ -630,6 +706,15 @@ class BaseRefWidget(BaseWidget):
         
         self._edit_event(None, self._summary.tof_range_switch)
 
+    def _use_sf_config_clicked(self, is_checked):
+        """
+            This is reached by the 'Use SF configuration file'
+        """
+        self._summary.outdir_label_3.setEnabled(is_checked)
+        self._summary.cfg_scaling_factor_file_name.setEnabled(is_checked)
+        self._summary.cfg_scaling_factor_file_name_browse.setEnabled(is_checked)
+        self._summary.slits_width_flag.setEnabled(is_checked)
+
     def _plot_count_vs_y(self, is_peak=True):
         """
             Plot counts as a function of high-resolution pixels
@@ -706,12 +791,12 @@ class BaseRefWidget(BaseWidget):
         if not IS_IN_MANTIDPLOT:
             return
         
-        f = FileFinder.findRuns("%s%s" % (self.instrument_name, str(file_ctrl.text())))
-
-        range_min = int(min_ctrl.text())
-        range_max = int(max_ctrl.text())
-
-        if len(f)>0 and os.path.isfile(f[0]):
+        try:
+            f = FileFinder.findRuns("%s%s" % (self.instrument_name, str(file_ctrl.text())))[0]
+            
+            range_min = int(min_ctrl.text())
+            range_max = int(max_ctrl.text())
+            
             def call_back(xmin, xmax):
                 min_ctrl.setText("%-d" % int(xmin))
                 max_ctrl.setText("%-d" % int(xmax))
@@ -721,35 +806,39 @@ class BaseRefWidget(BaseWidget):
             # For REFM it's the other way around
             if self.short_name == "REFM":
                 is_pixel_y = not is_pixel_y
-                
-            min, max = data_manipulation.counts_vs_pixel_distribution(f[0], is_pixel_y=is_pixel_y,
+            
+            min, max = data_manipulation.counts_vs_pixel_distribution(f, is_pixel_y=is_pixel_y,
                                                                       callback=call_back,
                                                                       range_min=range_min,
                                                                       range_max=range_max,
                                                                       high_res=is_high_res,
                                                                       instrument=self.short_name,
                                                                       isPeak=isPeak)
-            return min, max
+            return min, max            
+        except:
+            pass
             
     def _plot_tof(self):
         if not IS_IN_MANTIDPLOT:
             return
-        
-        f = FileFinder.findRuns("%s%s" % (self.instrument_name, str(self._summary.norm_run_number_edit.text())))
+        try:
+            f = FileFinder.findRuns("%s%s" % (self.instrument_name, str(self._summary.norm_run_number_edit.text())))[0]
+            print FileFinder.findRuns("%s%s" % (self.instrument_name, str(self._summary.norm_run_number_edit.text())))
             
-        range_min = int(self._summary.data_from_tof.text())
-        range_max = int(self._summary.data_to_tof.text())
-
-        if len(f)>0 and os.path.isfile(f[0]):
+            range_min = int(self._summary.data_from_tof.text())
+            range_max = int(self._summary.data_to_tof.text())
+        
             def call_back(xmin, xmax):
                 self._summary.data_from_tof.setText("%-d" % int(xmin))
                 self._summary.data_to_tof.setText("%-d" % int(xmax))
-            data_manipulation.tof_distribution(f[0], call_back,
+                
+            data_manipulation.tof_distribution(f, call_back,
                                                range_min=range_min,
                                                range_max=range_max)
+        except:
+            pass
 
     def _add_data(self):
-        
         state = self.get_editing_state()
         in_list = False
         # Check whether it's already in the list
@@ -776,6 +865,10 @@ class BaseRefWidget(BaseWidget):
                 state.q_step = float(_q_step)
         
                 state.scaling_factor_file = self._summary.cfg_scaling_factor_file_name.text()
+                if (self._summary.use_sf_config_switch.isChecked()):
+                    state.scaling_factor_file_flag = True
+                else:
+                    state.scaling_factor_file_flag = False
                 
                 state.slits_width_flag = self._summary.slits_width_flag.isChecked()
                 
@@ -798,6 +891,23 @@ class BaseRefWidget(BaseWidget):
         
         else:
             item_widget = QtGui.QListWidgetItem(run_numbers, self._summary.angle_list)
+            state.scaling_factor_file = self._summary.cfg_scaling_factor_file_name.text()
+            
+            if (self._summary.use_sf_config_switch.isChecked()):
+                state.scaling_factor_file_flag = True
+            else:
+                state.scaling_factor_file_flag = False
+
+             #incident medium
+            _incident_medium_list = [str(self._summary.incident_medium_combobox.itemText(j)) 
+                                     for j in range(self._summary.incident_medium_combobox.count())]
+            _incident_medium_index_selected = self._summary.incident_medium_combobox.currentIndex()
+                
+            _incident_medium_string = (',').join(_incident_medium_list)
+            state.incident_medium_list = [_incident_medium_string]
+                
+            state.incident_medium_index_selected = _incident_medium_index_selected
+                
             item_widget.setData(QtCore.Qt.UserRole, state)
         
         # Read logs
@@ -824,7 +934,6 @@ class BaseRefWidget(BaseWidget):
             Populate the UI elements with the data from the given state. 
             @param state: data object    
         """
-        
         self._summary.angle_list.clear()
         if len(state.data_sets)==1 and state.data_sets[0].data_files[0]==0:
             pass
@@ -850,7 +959,6 @@ class BaseRefWidget(BaseWidget):
         self._reset_warnings()
         
     def set_editing_state(self, state):
-
         self._summary.q_min_edit.setText(str(state.q_min))
         self._summary.log_scale_chk.setChecked(state.q_step<0)
 
@@ -870,6 +978,10 @@ class BaseRefWidget(BaseWidget):
         self._summary.x_min_edit.setText(str(state.data_x_range[0]))
         self._summary.x_max_edit.setText(str(state.data_x_range[1]))
         self._data_low_res_clicked(state.data_x_range_flag)
+        
+        #data metadata
+        self._summary.tthd_value.setText(str(state.tthd_value))
+        self._summary.ths_value.setText(str(state.ths_value))
         
         #norm low resolution range
         self._summary.norm_low_res_range_switch.setChecked(state.norm_x_range_flag)
@@ -915,8 +1027,10 @@ class BaseRefWidget(BaseWidget):
                 self._summary.outdir_edit.setText(str(state.output_dir))
             
         #scaling factor file and options
+        self._summary.use_sf_config_switch.setChecked(state.scaling_factor_file_flag)
         self._summary.cfg_scaling_factor_file_name.setText(str(state.scaling_factor_file))
         self._summary.slits_width_flag.setChecked(state.slits_width_flag)
+        self._use_sf_config_clicked(state.scaling_factor_file_flag)
             
         self._reset_warnings()
         self._summary.data_run_number_edit.setText(str(','.join([str(i) for i in state.data_files])))

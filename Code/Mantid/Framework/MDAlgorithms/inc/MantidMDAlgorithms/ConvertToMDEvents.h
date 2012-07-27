@@ -1,10 +1,11 @@
-#ifndef MANTID_MD_CONVERT2_MDEVENTS
-#define MANTID_MD_CONVERT2_MDEVENTS
+#ifndef MANTID_MDALGORITHMS_CONVERT2_MDEVENTS_H
+#define MANTID_MDALGORITHMS_CONVERT2_MDEVENTS_H
 
 
 #include "MantidMDEvents/MDWSDescription.h"
 #include "MantidMDEvents/BoxControllerSettingsAlgorithm.h"
-#include "MantidMDEvents/ConvToMDEventsBase.h"
+#include "MantidMDEvents/ConvToMDBase.h"
+#include "MantidAPI/DeprecatedAlgorithm.h"
 //
 #include "MantidMDEvents/ConvToMDPreprocDet.h"
 
@@ -14,7 +15,7 @@ namespace Mantid
 namespace MDAlgorithms
 {
 
-/** ConvertToMDEvents :
+/** ConvertToMD :
    *  Transfrom a workspace into MD workspace with components defined by user. 
    *
    * Gateway for number of subalgorithms, some are very important, some are questionable 
@@ -45,7 +46,7 @@ namespace MDAlgorithms
  
  
 /// Convert to MD Events class itself:
-  class DLLExport ConvertToMDEvents  : public MDEvents::BoxControllerSettingsAlgorithm
+  class DLLExport ConvertToMDEvents  : public MDEvents::BoxControllerSettingsAlgorithm, public API::DeprecatedAlgorithm
   {
   public:
     ConvertToMDEvents();
@@ -65,25 +66,19 @@ namespace MDAlgorithms
    /// Sets documentation strings for this algorithm
     virtual void initDocs();
    /// pointer to the input workspace;
-   Mantid::API::MatrixWorkspace_sptr inWS2D;
+   Mantid::API::MatrixWorkspace_sptr m_InWS2D;
    /// the pointer to class which keeps output MD workspace and is responsible for adding data to N-dimensional workspace;
-   boost::shared_ptr<MDEvents::MDEventWSWrapper> pWSWrapper;
+   boost::shared_ptr<MDEvents::MDEventWSWrapper> m_OutWSWrapper;
    /// the variable which keeps preprocessed positions of the detectors if any availible (TODO: should it be a table ws and separate algorithm?);
-   static MDEvents::ConvToMDPreprocDet det_loc;  
-  /// progress reporter
-   std::auto_ptr<API::Progress > pProg;
-    /// logger -> to provide logging, for MD dataset file operations
-   static Mantid::Kernel::Logger& convert_log;
+   static MDEvents::ConvToMDPreprocDet g_DetLoc;  
+   /// progress reporter
+   std::auto_ptr<API::Progress > m_Progress;
+   /// logger -> to provide logging, for MD dataset file operations
+   static Mantid::Kernel::Logger& g_Log;
    /// pointer to the class, which does the particular conversion
-   boost::shared_ptr<MDEvents::ConvToMDEventsBase> pConvertor;
-  
-   /// the class which knows about existing subalgorithms and generates alforithm ID as function of input parameters of this algorithm. 
-    ///ConvertToMD::ConvertToMDEventsParams ParamParser;   
-    /// The class which keeps map of all existing subalgorithms converting to MDEventWorkspace.
-    /// It returns the pointer to the subalgorithm receiving alogID from ParamParser. Shoud be re-implemented through a singleton if used not only here. 
-    //ConvertToMDEventsSubalgFactory  subAlgFactory;
-  //------------------------------------------------------------------------------------------------------------------------------------------
-    protected: //for testing
+   boost::shared_ptr<MDEvents::ConvToMDBase> m_Convertor; 
+   //------------------------------------------------------------------------------------------------------------------------------------------
+   protected: //for testing
         static Mantid::Kernel::Logger & getLogger();
 
  };

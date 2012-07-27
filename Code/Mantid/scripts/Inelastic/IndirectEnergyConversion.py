@@ -1,6 +1,7 @@
 from mantid.simpleapi import *
 from IndirectCommon import *
-import mantidplot as mp
+from IndirectImport import import_mantidplot
+mp = import_mantidplot()
 from mantid import config, logger
 import inelastic_indirect_reducer
 import sys, os.path
@@ -87,10 +88,7 @@ def slice(inputfiles, calib, xrange, spec, suffix, Save=False, Verbose=True,
     StartTime('Slice')
     workdir = config['defaultsave.directory']
     outWSlist = []
-    if  not ( ( len(xrange) == 2 ) or ( len(xrange) == 4 ) ):
-        error = 'ERROR >> TOF Range must contain either 2 or 4 numbers'
-        logger.notice(error)
-        sys.exit(error)
+    CheckXrange(xrange,'Time')
     for file in inputfiles:
         if Verbose:
             logger.notice('Reading file :'+file)
@@ -101,7 +99,7 @@ def slice(inputfiles, calib, xrange, spec, suffix, Save=False, Verbose=True,
         else:
             Load(Filename=file, OutputWorkspace=root, SpectrumMin=spec[0], SpectrumMax=spec[1],
                 LoadLogFiles=False)
-        nhist = mtd[root].getNumberHistograms()
+        nhist,ntc = CheckHistZero(root)
         if calib != '':
             if Verbose:
                 logger.notice('Using Calibration file :'+calib)
@@ -128,17 +126,8 @@ def slice(inputfiles, calib, xrange, spec, suffix, Save=False, Verbose=True,
     EndTime('Slice')
         
 def useCalib(detectors):
-    tmp = mtd[detectors]
-    shist = tmp.getNumberHistograms()
-    tmp = mtd['__calibration']
-    chist = tmp.getNumberHistograms()
-    if chist != shist:
-        msg = 'Number of spectra in calibration file does not match number \
-                that exist in the data file.'
-        logger.notice(msg)
-        sys.exit(msg)
-    else:
-        Divide(LHSWorkspace=detectors, RHSWorkspace='__calibration', OutputWorkspace=detectors)
+    CheckHistSame(detectors,'Detectors','__calibration','Calibration')
+    Divide(LHSWorkspace=detectors, RHSWorkspace='__calibration', OutputWorkspace=detectors)
     return detectors
     
 def getInstrumentDetails(instrument):
@@ -178,9 +167,11 @@ def getReflectionDetails(inst, analyser, refl):
     idf_dir = config['instrumentDefinition.directory']
     ws = '__empty_' + inst
     if (mtd[ws] == None):
-        idf = idf_dir + inst + '_Definition.xml'
+        idf_file = inst + '_Definition.xml'
+        idf = os.path.join(idf_dir, idf_file)
         LoadEmptyInstrument(Filename=idf, OutputWorkspace=ws)
-    ipf = idf_dir + inst + '_' + analyser + '_' + refl + '_Parameters.xml'
+    ipf_file = inst + '_' + analyser + '_' + refl + '_Parameters.xml'
+    ipf = os.path.join(idf_dir, ipf_file)
     LoadParameterFile(Workspace=ws, Filename=ipf)
     inst = mtd[ws].getInstrument()
     result = ''

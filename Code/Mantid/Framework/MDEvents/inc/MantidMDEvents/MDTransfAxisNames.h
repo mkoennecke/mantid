@@ -1,5 +1,5 @@
-#ifndef H_MDTRANSF_AXIS_NAMES
-#define H_MDTRANSF_AXIS_NAMES
+#ifndef MANTID_MDEVENTS_MDTRANSF_AXIS_NAMES_H
+#define MANTID_MDEVENTS_MDTRANSF_AXIS_NAMES_H
 #include "MantidMDEvents/MDTransfDEHelper.h"
 #include "MantidKernel/V3D.h"
 
@@ -37,7 +37,7 @@ namespace MDEvents
  * 
  *  DimensionID is the short name which used to retrieve this dimesnion from MD workspace.
  *  The names themself are defined in constructor  */
-namespace ConvertToMD
+namespace CnvrtToMD
 {
     enum defaultDimID
     {
@@ -54,14 +54,14 @@ class DLLExport MDTransfAxisNames
 {
 public:
     /// function returns default dimension id-s for different Q and dE modes, defined by this class
-    std::vector<std::string> getDefaultDimIDQ3D(ConvertToMD::EModes  dEmode)const;
-    std::vector<std::string> getDefaultDimIDModQ(ConvertToMD::EModes dEmode)const;
+    std::vector<std::string> getDefaultDimIDQ3D(CnvrtToMD::EModes  dEmode)const;
+    std::vector<std::string> getDefaultDimIDModQ(CnvrtToMD::EModes dEmode)const;
 
     // constructor
     MDTransfAxisNames();
 private:
    /// the vector describes default dimension names, specified along the axis if no names are explicitly requested;
-   std::vector<std::string> default_dim_ID;
+   std::vector<std::string> m_DefaultDimID;
  
 };
 /** function to build mslice-like axis name from the vector, which describes crystallographic direction along this axis*/

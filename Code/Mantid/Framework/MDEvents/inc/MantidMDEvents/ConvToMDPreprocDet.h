@@ -1,5 +1,5 @@
-#ifndef H_CONV2_MDEVENTS_DET_INFO_
-#define H_CONV2_MDEVENTS_DET_INFO_
+#ifndef MANTID_MDEVENTS_PREPROC_DET_H
+#define MANTID_MDEVENTS_PREPROC_DET_H
 /** This structure is the basis and temporary replacement for future subalgorithm, which calculates 
    * matrix workspace with various precprocessed detectors parameters.
    * The lightweight class below contain 3D uint vectors, pointing to the positions of the detectors
@@ -90,13 +90,13 @@ public:
     std::vector<size_t>const  & getSpec2DetMap()const{return spec2detMap;}
     std::vector<Kernel::V3D>const & getDetDir()const{return det_dir;}
 
-    /// obtain detector id, which correspond to the spectra index
+    /// obtain detector id, which correspond to the spectra number
     size_t  getWSDet(size_t iws)const{return spec2detMap[iws];}
-    /// obtain spectra id, corrsponing to detector id;
+    /// obtain detector id, corrsponing to  te wodkspace index;
     size_t  getDetSpectra(size_t i)const{return detIDMap[i];}
     int32_t getDetID(size_t i)const{return det_id[i];}
 
-    //int    getEmode()const{return emode;}
+    //int    getEmode()const{return m_Emode;}
     //double getEfix()const{return efix;}
     double getL1()const{return L1;}
 
@@ -105,7 +105,7 @@ public:
     void setL1(double Dist);
 
    /** function, does preliminary calculations of the detectors positions to convert results into k-dE space */     
-    void processDetectorsPositions(const API::MatrixWorkspace_sptr inputWS, Kernel::Logger& convert_log,API::Progress *pProg);
+    void processDetectorsPositions(const API::MatrixWorkspace_sptr inputWS, Kernel::Logger& g_Log,API::Progress *pProgress);
    /** function builds fake cpectra-detector map and all other detectors position for the case when detector information has been lost */
     void buildFakeDetectorsPositions(const API::MatrixWorkspace_sptr inputWS);
 
@@ -115,14 +115,7 @@ private:
     // function allocates the class detectors memory 
     void allocDetMemory(size_t nSpectra);
 
-    //void setEi(const API::MatrixWorkspace_sptr inputWS);
-
-
-   // parameter which describes the conversion mode, used to convert uints using TOF and detector's positions
-  //    int emode;
-    // parameter wjocj describes the energy used to convert uints using TOF and detector's positions
-  //  double efix;
-    // source-sample distance  used to convert uints using TOF and detector's positions
+      // source-sample distance  used to convert uints using TOF and detector's positions
     double L1; 
     // minimal position for the detectors
     Kernel::V3D   minDetPosition;    

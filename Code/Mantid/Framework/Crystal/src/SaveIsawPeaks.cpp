@@ -18,6 +18,7 @@ Save a PeaksWorkspace to a ISAW-style ASCII .peaks file.
 #include "MantidKernel/Utils.h"
 #include "MantidKernel/V3D.h"
 #include <fstream>
+#include <Poco/File.h>
 
 using namespace Mantid::Geometry;
 using namespace Mantid::DataObjects;
@@ -82,7 +83,7 @@ namespace Crystal
   void SaveIsawPeaks::exec()
   {
     // Section header
-    std::string header = "2   SEQN    H    K    L     COL      ROW     CHAN        L2   2_THETA        AZ         WL         D      IPK          INTI    SIGI  RFLG";
+    std::string header = "2   SEQN    H    K    L     COL      ROW     CHAN        L2   2_THETA        AZ         WL         D      IPK       INTI    SIGI  RFLG";
 
     std::string filename = getPropertyValue("Filename");
     PeaksWorkspace_sptr ws = getProperty("InputWorkspace");
@@ -133,6 +134,10 @@ namespace Crystal
 
     std::ofstream out;
     bool append = getProperty("AppendFile");
+
+    // do not append if file does not exist
+    if (!Poco::File(filename.c_str()).exists())append = false;
+
     if (append)
     {
       out.open( filename.c_str(), std::ios::app);
@@ -236,7 +241,7 @@ namespace Crystal
         if (!ids.empty())
         {
           // Write the bank header
-          out << "0  NRUN DETNUM    CHI      PHI    OMEGA   MONCNT" << std::endl;
+          out << "0  NRUN DETNUM     CHI      PHI    OMEGA       MONCNT" << std::endl;
           out <<  "1 " <<  std::setw( 5 ) <<  run <<  std::setw( 7 ) <<
               std::right <<  bank;
 
@@ -248,10 +253,15 @@ namespace Crystal
           double chi = angles[1];
           double omega = angles[0];
 
-          out  <<  std::setw( 7 ) <<  std::fixed <<  std::setprecision( 2 )  <<  chi << " ";
-          out  <<  std::setw( 7 ) <<  std::fixed <<  std::setprecision( 2 )  <<  phi << " ";
-          out  <<  std::setw( 7 ) <<  std::fixed <<  std::setprecision( 2 )  <<  omega << " ";
-          out  <<  std::setw( 7 ) <<  (int)( 0 ) <<  std::endl;
+          out  <<  std::setw( 8 ) <<  std::fixed <<  std::setprecision( 2 )  <<  chi << " ";
+          out  <<  std::setw( 8 ) <<  std::fixed <<  std::setprecision( 2 )  <<  phi << " ";
+          out  <<  std::setw( 8 ) <<  std::fixed <<  std::setprecision( 2 )  <<  omega << " ";
+
+          // Get the monitor count from the first peak (should all be the same for one run)
+          size_t first_peak_index = ids[0];
+          Peak & first_peak = peaks[ first_peak_index ];
+          double monct = first_peak.getMonitorCount();
+          out  <<  std::setw( 12 ) <<  (int)( monct ) <<  std::endl;
 
           out << header << std::endl;
 
@@ -290,7 +300,8 @@ namespace Crystal
             // Two-theta = polar angle = scattering angle = between +Z vector and the scattered beam
             scattering = dir.angle( V3D(0.0, 0.0, 1.0) );
 
-            // "Azimuthal" angle: project the beam onto the XY plane, and measure the angle between that and the +X axis (right-handed)
+            // "Azimuthal" angle: project the scattered beam direction onto the XY plane, 
+            // and calculate the angle between that and the +X axis (right-handed)
             azimuth = atan2( dir.Y(), dir.X() );
 
             out << std::setw( 9 ) << std::fixed << std::setprecision( 5 )
@@ -305,8 +316,11 @@ namespace Crystal
             out << std::setw( 9 ) << std::fixed << std::setprecision( 4 )
               << p.getDSpacing() << " ";
 
-            out << std::setw( 8 ) << std::fixed << int(p.getBinCount()) << std::setw( 10 ) << " "
-              << std::fixed << std::setprecision( 2 ) << p.getIntensity() << " ";
+            out << std::setw( 8 ) << std::fixed << std::setprecision(0)
+              << int(p.getBinCount()) << " ";
+
+            out << std::setw( 10 ) << std::fixed << std::setprecision( 2 ) 
+              << p.getIntensity() << " ";
 
             out << std::setw( 7 ) << std::fixed << std::setprecision( 2 )
               << p.getSigmaIntensity() << " ";

@@ -1,9 +1,10 @@
-#ifndef  H_CONVERT_TO_MDEVENTS_NOQ_TRANSF
-#define  H_CONVERT_TO_MDEVENTS_NOQ_TRANSF
+#ifndef  MANTID_MDEVENTS_NOQ_TRANSF_H
+#define  MANTID_MDEVENTS_NOQ_TRANSF_H
 //
 #include "MantidMDEvents/MDTransfInterface.h"
-#include "MantidMDEvents/ConvToMDEventsBase.h"
+//#include "MantidMDEvents/ConvToMDBase.h"
 #include "MantidMDEvents/MDTransfFactory.h"
+#include "MantidAPI/NumericAxis.h"
 
 //
 namespace Mantid
@@ -62,25 +63,25 @@ public:
 //***** output WS definition interface:
     /** return the number of dimensions, calculated by the transformation from the workspace.
         Depending on ws axis units, the numebr here is either 1 or 2* and is independent on emode*/
-    unsigned int getNMatrixDimensions(ConvertToMD::EModes mode, API::MatrixWorkspace_const_sptr inWS)const;
+    unsigned int getNMatrixDimensions(CnvrtToMD::EModes mode, API::MatrixWorkspace_const_sptr inWS)const;
     /**function returns units ID-s which this transformation prodiuces its ouptut.
        here it is usually input ws units, which are independent on emode */
-    std::vector<std::string> outputUnitID(ConvertToMD::EModes mode, API::MatrixWorkspace_const_sptr inWS)const;
-    std::vector<std::string> getDefaultDimID(ConvertToMD::EModes mode, API::MatrixWorkspace_const_sptr inWS)const;
-    const std::string inputUnitID(ConvertToMD::EModes mode, API::MatrixWorkspace_const_sptr inWS)const;
+    std::vector<std::string> outputUnitID(CnvrtToMD::EModes mode, API::MatrixWorkspace_const_sptr inWS)const;
+    std::vector<std::string> getDefaultDimID(CnvrtToMD::EModes mode, API::MatrixWorkspace_const_sptr inWS)const;
+    const std::string inputUnitID(CnvrtToMD::EModes mode, API::MatrixWorkspace_const_sptr inWS)const;
 private:
-    unsigned int nMatrixDim;
+    unsigned int m_NMatrixDim;
     // the variables used for exchange data between different specific parts of the generic ND algorithm:
      // pointer to Y axis of MD workspace
-     API::NumericAxis *pYAxis;
+     API::NumericAxis *m_YAxis;
 
    // pointer to the class, which contains the information about precprocessed detectors (fake in this case)
-     Kernel::V3D const * pDet;
+     Kernel::V3D const * m_Det;
      // min and max values for this conversion
-     std::vector<double> dim_min,dim_max;
+     std::vector<double> m_DimMin,m_DimMax;
     /** the vector of the additional coordinates which define additional MD dimensions. 
         For implemented NoQ case, these dimensions do not depend on matrix coordinates and are determined by the WS properties */
-    std::vector<coord_t>  addDimCoordinates;
+    std::vector<coord_t>  m_AddDimCoordinates;
 private:
     // internal helper function which extract one or two axis from input matrix workspace;
     static  void getAxes( API::MatrixWorkspace_const_sptr inWS,API::NumericAxis *&pXAxis,API::NumericAxis *&pYAxis);

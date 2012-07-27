@@ -138,12 +138,11 @@ Graph::Graph(int x, int y, int width, int height, QWidget* parent, Qt::WFlags f)
   drawArrowOn=false;
   ignoreResize = false;
   drawAxesBackbone = true;
-  d_auto_scale = true;
-  //d_auto_scale = false;
   autoScaleFonts = false;
   d_antialiasing = false;
   d_scale_on_print = true;
   d_print_cropmarks = false;
+  d_synchronize_scales = false;
 
   d_user_step = QVector<double>(QwtPlot::axisCnt);
   for (int i=0; i<QwtPlot::axisCnt; i++)
@@ -676,7 +675,7 @@ void Graph::showAxis(int axis, int type, const QString& formatInfo, Table *table
   setAxisTicksLength(axis, majTicksType, minTicksType,
       d_plot->minorTickLength(), d_plot->majorTickLength());
 
-  if (axisOn && (axis == QwtPlot::xTop || axis == QwtPlot::yRight))
+  if (d_synchronize_scales && axisOn && (axis == QwtPlot::xTop || axis == QwtPlot::yRight))
   {
     updateSecondaryAxis(axis);//synchronize scale divisions
   }
@@ -961,6 +960,25 @@ void Graph::setAxisTitleAlignment(int axis, int align)
   d_plot->setAxisTitle (axis, t);
 }
 
+int Graph::axisTitleDistance(int axis)
+{
+  if (!d_plot->axisEnabled(axis))
+    return 0;
+
+  return d_plot->axisWidget(axis)->spacing();
+}
+
+void Graph::setAxisTitleDistance(int axis, int dist)
+{
+  if (!d_plot->axisEnabled(axis))
+    return;
+
+  QwtScaleWidget *scale = d_plot->axisWidget(axis);
+  if (scale)
+    scale->setSpacing(dist);
+}
+
+
 void Graph::setScaleTitle(int axis, const QString& text)
 {
   int a = 0;
@@ -1032,32 +1050,37 @@ void Graph::updateSecondaryAxis(int axis)
   d_user_step[axis] = d_user_step[a];
 }
 
-void Graph::setAutoScale()
-{	
+void Graph::enableAutoscaling(bool yes)
+{
   for (int i = 0; i < QwtPlot::axisCnt; i++)
   {
-    if ( !m_fixed_axes.contains(i) )
+    if (yes)
     {
       d_plot->setAxisAutoScale(i);
     }
+    else
+    {
+      // We need this hack due to the fact that in Qwt 5.0 we can't
+      // disable autoscaling in an easier way, like for example: setAxisAutoScale(axisId, false)
+      d_plot->setAxisScaleDiv(i, *d_plot->axisScaleDiv(i));
+    }
   }
-  d_plot->replot();
+}
+
+void Graph::setAutoScale()
+{
+  enableAutoscaling(true);
   
   updateScale();
   
   for (int i = 0; i < QwtPlot::axisCnt; i++)
   {
-    if ( !m_fixed_axes.contains(i) && isLog(QwtPlot::Axis(i)) )
+    if ( isLog(QwtPlot::Axis(i)) )
     {
       niceLogScales(QwtPlot::Axis(i));
     }
   }
   emit modifiedGraph();
-}
-
-void Graph::setFixedScale(int axis)
-{
-  m_fixed_axes.insert(axis);
 }
 
 void Graph::initScaleLimits()
@@ -1274,10 +1297,12 @@ void Graph::setScale(int axis, double start, double end, double step,
 
   // 	d_user_step[axis] = step;
 
-  // 	if (axis == QwtPlot::xBottom || axis == QwtPlot::yLeft){
-  //   		updateSecondaryAxis(QwtPlot::xTop);
-  //   	    updateSecondaryAxis(QwtPlot::yRight);
-  //   	}
+  //    if (d_synchronize_scales){
+  //      if (axis == QwtPlot::xBottom)
+  //        updateSecondaryAxis(QwtPlot::xTop);
+  //      else if (axis == QwtPlot::yLeft)
+  //        updateSecondaryAxis(QwtPlot::yRight);
+  //    }
 
   // 	d_plot->replot();
   // 	//keep markers on canvas area
@@ -3468,27 +3493,20 @@ void Graph::updatePlot()
 {
   if ( isWaterfallPlot() ) updateDataCurves();
 
-  if (d_auto_scale && !zoomOn() && d_active_tool==NULL){
-    for (int i = 0; i < QwtPlot::axisCnt; i++)
-      d_plot->setAxisAutoScale(i);
-  }
-  d_plot->replot();
   updateScale();
 }
 
 void Graph::updateScale()
 {
-  if (!d_auto_scale)
-  {
-    //We need this hack due to the fact that in Qwt 5.0 we can't
-    //disable autoscaling in an easier way, like for example: setAxisAutoScale(axisId, false)
-    for (int i = 0; i < QwtPlot::axisCnt; i++)
-      d_plot->setAxisScaleDiv(i, *d_plot->axisScaleDiv(i));
-  }
   d_plot->replot();
   updateMarkersBoundingRect();
-  updateSecondaryAxis(QwtPlot::xTop);
-  updateSecondaryAxis(QwtPlot::yRight);
+
+  if (d_synchronize_scales)
+  {
+    updateSecondaryAxis(QwtPlot::xTop);
+    updateSecondaryAxis(QwtPlot::yRight);
+  }
+
   d_plot->replot();//TODO: avoid 2nd replot!
   d_zoomer[0]->setZoomBase();
   //	d_zoomer[1]->setZoomBase();
@@ -3791,8 +3809,11 @@ void Graph::zoomOut()
   d_zoomer[0]->zoom(-1);
   //d_zoomer[1]->zoom(-1);
 
-  updateSecondaryAxis(QwtPlot::xTop);
-  updateSecondaryAxis(QwtPlot::yRight);
+  if (d_synchronize_scales)
+  {
+    updateSecondaryAxis(QwtPlot::xTop);
+    updateSecondaryAxis(QwtPlot::yRight);
+  }
 }
 
 void Graph::drawText(bool on)
@@ -4116,6 +4137,7 @@ QString Graph::saveToString(bool saveAsTemplate)
   //s+="SpectrumList\t"+getSpectrumIndex()+"\n";
   //s+="Errors\t"+QString::number(getError())+"\n";
   s+="<Antialiasing>" + QString::number(d_antialiasing) + "</Antialiasing>\n";
+  s+="<SyncScales>" + QString::number(d_synchronize_scales) + "</SyncScales>\n";
   s+="Background\t" + d_plot->paletteBackgroundColor().name() + "\t";
   s+=QString::number(d_plot->paletteBackgroundColor().alpha()) + "\n";
   s+="Margin\t"+QString::number(d_plot->margin())+"\n";
@@ -4752,6 +4774,7 @@ void Graph::copy(Graph* g)
       addArrow(lmrk);
   }
   setAntialiasing(g->antialiasing(), true);
+  d_synchronize_scales = g->hasSynchronizedScaleDivisions();
   d_plot->replot();
 }
 

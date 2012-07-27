@@ -8,6 +8,7 @@
 #include <boost/shared_ptr.hpp>
 #include <Poco/Net/SocketAddress.h>
 #include "MantidKernel/DateAndTime.h"
+#include "MantidGeometry/IDTypes.h"
 #include "MantidAPI/DllConfig.h"
 
 namespace Mantid
@@ -17,7 +18,7 @@ namespace Mantid
     //----------------------------------------------------------------------
     // Forward declaration
     //----------------------------------------------------------------------
-    class MatrixWorkspace;
+    class Workspace;
 
     /** ILiveListener is the interface implemented by classes which connect directly to
         instrument data acquisition systems (DAS) for retrieval of 'live' data into Mantid.
@@ -82,7 +83,7 @@ namespace Mantid
        *  IF THIS METHOD IS CALLED BEFORE start() THEN THE RESULTS ARE UNDEFINED!!!
        *  @return A pointer to the workspace containing the buffered data.
        */
-      virtual boost::shared_ptr<MatrixWorkspace> extractData() = 0;
+      virtual boost::shared_ptr<Workspace> extractData() = 0;
 
       //----------------------------------------------------------------------
       // State flags
@@ -112,6 +113,11 @@ namespace Mantid
        *  @return A value of the RunStatus enumeration indicating the present status
        */
       virtual ILiveListener::RunStatus runStatus() = 0;
+
+      /** Sets a list of spectra to be extracted. Default is reading all available spectra.
+       * @param specList :: A vector with spectra indices.
+       */
+      virtual void setSpectra(const std::vector<specid_t>& specList) {(void)specList;}
 
       /// Constructor.
       ILiveListener();

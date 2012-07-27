@@ -2,11 +2,17 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidAPI/Run.h"
+#include "MantidAPI/PropertyNexus.h"
+
+#include "MantidKernel/ArrayProperty.h"
 #include "MantidKernel/DateAndTime.h"
 #include "MantidKernel/TimeSplitter.h"
 #include "MantidKernel/TimeSeriesProperty.h"
+#include "MantidKernel/VectorHelper.h"
+
 #include <boost/lexical_cast.hpp>
-#include "MantidAPI/PropertyNexus.h"
+
+#include <algorithm>
 
 namespace Mantid
 {
@@ -15,8 +21,17 @@ namespace API
 
 using namespace Kernel;
 
+/// The number of log entries summed when adding a run
 const int Run::ADDABLES = 6;
+
+/// The names of the log entries summed when adding two runs together
 const std::string Run::ADDABLE[ADDABLES] = {"tot_prtn_chrg", "rawfrm", "goodfrm", "dur", "gd_prtn_chrg", "uA.hour"};
+
+/// Name of the log entry containing the proton charge when retrieved using getProtonCharge
+const char * Run::PROTON_CHARGE_LOG_NAME = "gd_prtn_chrg";
+
+/// Name of the log entry containing the histogram bins
+const char * Run::HISTOGRAM_BINS_LOG_NAME = "processed_histogram_bins";
 
 // Get a reference to the logger
 Kernel::Logger& Run::g_log = Kernel::Logger::get("Run");
@@ -27,8 +42,7 @@ Kernel::Logger& Run::g_log = Kernel::Logger::get("Run");
   /**
    * Default constructor
    */
-  Run::Run() : m_manager(), m_protonChargeName("gd_prtn_chrg"), 
-    m_goniometer()
+  Run::Run() : m_manager(), m_goniometer(), m_singleValueCache()
   {
   }
 
@@ -43,8 +57,8 @@ Kernel::Logger& Run::g_log = Kernel::Logger::get("Run");
    * Copy constructor
    * @param copy :: The object to initialize the copy from
    */
-  Run::Run(const Run& copy) : m_manager(copy.m_manager), m_protonChargeName(copy.m_protonChargeName), 
-    m_goniometer(copy.m_goniometer)
+  Run::Run(const Run& copy) : m_manager(copy.m_manager),
+    m_goniometer(copy.m_goniometer), m_singleValueCache(copy.m_singleValueCache)
   {
   }
 
@@ -59,7 +73,6 @@ Kernel::Logger& Run::g_log = Kernel::Logger::get("Run");
   {
     if( this == &rhs ) return *this;
     m_manager = rhs.m_manager;
-    m_protonChargeName = rhs.m_protonChargeName;
     m_goniometer = rhs.m_goniometer;
     return *this;
   }
@@ -171,12 +184,6 @@ Kernel::Logger& Run::g_log = Kernel::Logger::get("Run");
         //now get pointers to the same properties on the left-handside
         Property * lhs_prop(sum.getProperty(rhs_name));
         lhs_prop->merge(*it);
-        
-/*        TimeSeriesProperty * timeS = dynamic_cast< TimeSeriesProperty * >(lhs_prop);
-        if (timeS)
-        {
-          (*lhs_prop) += (*it);
-        }*/
       }
       catch (Exception::NotFoundError &)
       {
@@ -241,6 +248,18 @@ Kernel::Logger& Run::g_log = Kernel::Logger::get("Run");
     }
   }
 
+  //-----------------------------------------------------------------------------------------------
+  /**
+   * Filter the run by the given boolean log. It replaces all time
+   * series properties with filtered time series properties
+   * @param filter :: A boolean time series to filter each log on
+   */
+  void Run::filterByLog(const Kernel::TimeSeriesProperty<bool> & filter)
+  {
+    // This will invalidate the cache
+    m_singleValueCache.clear();
+    m_manager.filterByProperty(filter);
+  }
 
 
   //-----------------------------------------------------------------------------------------------
@@ -251,15 +270,44 @@ Kernel::Logger& Run::g_log = Kernel::Logger::get("Run");
    */
   void Run::addProperty(Kernel::Property *prop, bool overwrite)
   {
-    // Mmake an exception for the proton charge
+    // Make an exception for the proton charge
     // and overwrite it's value as we don't want to store the proton charge in two separate locations
     // Similar we don't want more than one run_title
     std::string name = prop->name();
-    if( hasProperty(name) && (overwrite || prop->name() == m_protonChargeName || prop->name()=="run_title") )
+    if( hasProperty(name) && (overwrite || prop->name() == PROTON_CHARGE_LOG_NAME || prop->name()=="run_title") )
     {
       removeProperty(name);
     }
     m_manager.declareProperty(prop, "");
+  }
+
+  //-----------------------------------------------------------------------------------------------
+  /**
+   * Returns true if the named property exists
+   * @param name :: The name of the property
+   * @return True if the property exists, false otherwise
+   */
+  bool Run::hasProperty(const std::string & name) const
+  {
+    return m_manager.existsProperty(name);
+  }
+
+  //-----------------------------------------------------------------------------------------------
+  /**
+   * Remove a named property
+   * @param name :: The name of the property
+   * @param delProperty :: If true the property is deleted (default=true)
+   * @return True if the property exists, false otherwise
+   */
+
+  void Run::removeProperty(const std::string &name, bool delProperty)
+  {
+    // Remove any cached entries for this log. Need to make this more general
+    for(unsigned int stat = 0; stat < 7; ++stat)
+    {
+      m_singleValueCache.removeCache(std::make_pair(name,(Math::StatisticType)stat));
+    }
+    m_manager.removeProperty(name, delProperty);
   }
 
 
@@ -270,13 +318,13 @@ Kernel::Logger& Run::g_log = Kernel::Logger::get("Run");
    */
   void Run::setProtonCharge(const double charge)
   {
-    if( !hasProperty(m_protonChargeName) )
+    if( !hasProperty(PROTON_CHARGE_LOG_NAME) )
     {
-      addProperty(m_protonChargeName, charge, "uA.hour");
+      addProperty(PROTON_CHARGE_LOG_NAME, charge, "uA.hour");
     }
     else
     {
-      Kernel::Property *charge_prop = getProperty(m_protonChargeName);
+      Kernel::Property *charge_prop = getProperty(PROTON_CHARGE_LOG_NAME);
       charge_prop->setValue(boost::lexical_cast<std::string>(charge));
     }
   }
@@ -290,7 +338,7 @@ Kernel::Logger& Run::g_log = Kernel::Logger::get("Run");
    */
   double Run::getProtonCharge() const
   {
-    double charge = m_manager.getProperty(m_protonChargeName);
+    double charge = m_manager.getProperty(PROTON_CHARGE_LOG_NAME);
     return charge;
   }
 
@@ -341,6 +389,58 @@ Kernel::Logger& Run::g_log = Kernel::Logger::get("Run");
   }
 
   //-----------------------------------------------------------------------------------------------
+  /**
+   * Store the given values as a set of energy bin boundaries. Throws
+   *    - an invalid_argument if fewer than 2 values are given;
+   *    - an out_of_range error if first value is greater of equal to the last
+   * @param histoBins :: A vector of values that are interpreted as bin boundaries from a histogram
+   */
+  void Run::storeHistogramBinBoundaries(const std::vector<double> & histoBins)
+  {
+    if(histoBins.size() < 2)
+    {
+      std::ostringstream os;
+      os << "Run::storeEnergyBinBoundaries - Fewer than 2 values given, size=" << histoBins.size() << ". Cannot interpret values as bin boundaries.";
+      throw std::invalid_argument(os.str());
+    }
+    if(histoBins.front() >= histoBins.back())
+    {
+      std::ostringstream os;
+      os << "Run::storeEnergyBinBoundaries - Inconsistent start & end values given, size=" << histoBins.size() << ". Cannot interpret values as bin boundaries.";
+      throw std::out_of_range(os.str());
+    }
+    addProperty(new ArrayProperty<double>(HISTOGRAM_BINS_LOG_NAME, histoBins), true);
+  }
+
+  /**
+   * Returns the energy bin boundaries for a given energy value if they have been stored here. Throws a std::runtime_error
+   * if the energy bins have not been set and a std::out_of_range error if the input value is out of the stored range
+   * @return The bin boundaries for the given energy value
+   */
+  std::pair<double, double> Run::histogramBinBoundaries(const double value) const
+  {
+    if(!m_manager.existsProperty(HISTOGRAM_BINS_LOG_NAME))
+    {
+      throw std::runtime_error("Run::histogramBoundaries - No energy bins have been stored for this run");
+    }
+    const std::vector<double> bins = getPropertyValueAsType<std::vector<double>>(HISTOGRAM_BINS_LOG_NAME);
+    if(value < bins.front())
+    {
+      std::ostringstream os;
+      os << "Run::histogramBinBoundaries- Value lower than first bin boundary. Value= " << value << ", first boundary=" << bins.front();
+      throw std::out_of_range(os.str());
+    }
+    if(value > bins.back())
+    {
+      std::ostringstream os;
+      os << "Run::histogramBinBoundaries- Value greater than last bin boundary. Value= " << value << ", last boundary=" << bins.back();
+      throw std::out_of_range(os.str());
+    }
+    const int index = VectorHelper::getBinIndex(bins, value);
+    return std::make_pair(bins[index], bins[index+1]);
+  }
+
+  //-----------------------------------------------------------------------------------------------
   /** Return the total memory used by the run object, in bytes.
    */
   size_t Run::getMemorySize() const
@@ -356,7 +456,102 @@ Kernel::Logger& Run::g_log = Kernel::Logger::get("Run");
     return total;
   }
 
+  /**
+   * Returns a property as a time series property. It will throw if it is not valid or the
+   * property does not exist
+   * @param name The name of a time-series property
+   * @return A pointer to the time-series property
+   */
+  template<typename T>
+  Kernel::TimeSeriesProperty<T> * Run::getTimeSeriesProperty(const std::string & name) const
+  {
+    Kernel::Property *prop = getProperty(name);
+    if(Kernel::TimeSeriesProperty<T>* tsp = dynamic_cast<Kernel::TimeSeriesProperty<T>*>(prop))
+    {
+      return tsp;
+    }
+    else
+    {
+      throw std::invalid_argument("Run::getTimeSeriesProperty - '" + name + "' is not a TimeSeriesProperty");
+    }
+  }
 
+  /**
+   * Get the value of a property as the requested type. Throws if the type is not correct
+   * @param name :: The name of the property
+   * @return The value of as the requested type
+   */
+  template<typename HeldType>
+  HeldType Run::getPropertyValueAsType(const std::string & name) const
+  {
+    Kernel::Property *prop = getProperty(name);
+    if(Kernel::PropertyWithValue<HeldType>* valueProp = dynamic_cast<Kernel::PropertyWithValue<HeldType>*>(prop))
+    {
+      return (*valueProp)();
+    }
+    else
+    {
+      throw std::invalid_argument("Run::getPropertyValueAsType - '" + name + "' is not of the requested type");
+    }
+  }
+
+  /**
+   * Returns a property as a single double value from its name @see getPropertyAsSingleValue
+   * @param name :: The name of the property
+   * @param statistic :: The statistic to use to calculate the single value (default=Mean) @see StatisticType
+   * @return A single double value
+   */
+  double Run::getPropertyAsSingleValue(const std::string & name, Kernel::Math::StatisticType statistic) const
+  {
+    double singleValue(0.0);
+    const auto key = std::make_pair(name, statistic);
+    if(!m_singleValueCache.getCache(key, singleValue))
+    {
+      const Property *log = getProperty(name);
+      if(auto singleDouble = dynamic_cast<const PropertyWithValue<double>*>(log))
+      {
+        singleValue  = (*singleDouble)();
+      }
+      else if(auto seriesDouble = dynamic_cast<const TimeSeriesProperty<double>*>(log))
+      {
+        using namespace Mantid::Kernel::Math;
+        switch(statistic)
+        {
+        case FirstValue: singleValue = seriesDouble->nthValue(0);
+          break;
+        case LastValue: singleValue = seriesDouble->nthValue(seriesDouble->size() - 1);
+          break;
+        case Minimum: singleValue = seriesDouble->getStatistics().minimum;
+          break;
+        case Maximum: singleValue = seriesDouble->getStatistics().maximum;
+          break;
+        case Mean: singleValue = seriesDouble->getStatistics().mean;
+          break;
+        case Median: singleValue = seriesDouble->getStatistics().median;
+          break;
+        default: throw std::invalid_argument("Run::getPropertyAsSingleValue - Unknown statistic type: " + boost::lexical_cast<std::string>(statistic));
+        };
+      }
+      else
+      {
+        throw std::invalid_argument("Run::getPropertyAsSingleValue - Property \"" + name + "\" is not a single double or time series double.");
+      }
+      // Put it in the cache
+      m_singleValueCache.setCache(key, singleValue);
+    }
+    return singleValue;
+  }
+
+  /**
+   * Get a pointer to a property by name
+   * @param name :: The name of a property, throws an Exception::NotFoundError if it does not exist
+   * @return A pointer to the named property
+   */
+  Kernel::Property * Run::getProperty(const std::string & name) const
+  {
+    Kernel::Property *p = m_manager.getProperty(name);
+    return p;
+  }
 
   //-----------------------------------------------------------------------------------------------
   /** Get the gonimeter rotation matrix, calculated using the
@@ -427,9 +622,14 @@ Kernel::Logger& Run::g_log = Kernel::Logger::get("Run");
     std::vector<Property *> props = m_manager.getProperties();
     for (size_t i=0; i<props.size(); i++)
     {
-      Property * prop = props[i];
-      if (prop)
-        PropertyNexus::saveProperty(file, prop);
+      try
+      {
+        PropertyNexus::saveProperty(file, props[i]);
+      }
+      catch(std::invalid_argument &exc)
+      {
+        g_log.warning(exc.what());
+      }
     }
     file->closeGroup();
   }
@@ -489,6 +689,18 @@ Kernel::Logger& Run::g_log = Kernel::Logger::get("Run");
       }
     }
   }
+
+  /// @cond
+  /// Macro to instantiate concrete template members
+#define INSTANTIATE(TYPE) \
+  template MANTID_API_DLL Kernel::TimeSeriesProperty<TYPE> * Run::getTimeSeriesProperty(const std::string &) const;\
+  template MANTID_API_DLL TYPE Run::getPropertyValueAsType(const std::string &) const;
+
+  INSTANTIATE(double);
+  INSTANTIATE(int);
+  INSTANTIATE(std::string);
+  INSTANTIATE(bool);
+  /// @endcond
 
 } //API namespace
 

@@ -2,12 +2,14 @@
 // Includes
 //----------------------------------------------------------------------
 #include "MantidKernel/LogParser.h"
-#include "MantidKernel/TimeSeriesProperty.h"
 
-#include <fstream>  // used to get ifstream
-#include <sstream>
+#include "MantidKernel/TimeSeriesProperty.h"
+#include "MantidKernel/PropertyWithValue.h"
+
 #include <algorithm>
+#include <fstream>
 #include <limits>
+#include <sstream>
 
 using std::size_t;
 
@@ -18,163 +20,26 @@ namespace Mantid
 
     Kernel::Logger& LogParser::g_log = Mantid::Kernel::Logger::get("LogParser");
 
-    enum commands {NONE = 0,BEGIN,END,CHANGE_PERIOD};
-
-    /**
-     * Destructor
-     */
-    LogParser::~LogParser()
+    /// @returns the name of the log created that defines the status during a run
+    const std::string & LogParser::statusLogName()
     {
+      static std::string logname("running");
+      return logname;
     }
 
-    /** 
-    * Constructor.
-    * @param eventFName :: ICPevent file name.
-    */
-    LogParser::LogParser(const std::string& eventFName)
-      :m_nOfPeriods(1)
+    /// @returns the name of the log that contains all of the periods
+    const std::string & LogParser::periodsLogName()
     {
-      Kernel::TimeSeriesProperty<int>* periods = new Kernel::TimeSeriesProperty<int> ("periods");
-      Kernel::TimeSeriesProperty<bool>* status = new Kernel::TimeSeriesProperty<bool> ("running");
-      m_periods.reset( periods );
-      m_status.reset( status );
-
-      std::ifstream file(eventFName.c_str());
-      if (!file)
-      {
-        periods->addValue(Kernel::DateAndTime() + Kernel::DateAndTimeHelpers::oneSecond, 1);
-        status->addValue(Kernel::DateAndTime() + Kernel::DateAndTimeHelpers::oneSecond,true);
-        g_log.warning()<<"Cannot open ICPevent file "<<eventFName<<". Period 1 assumed for all data.\n";
-        return;
-      }
-
-      // Command map. BEGIN means start recording, END is stop recording, CHANGE_PERIOD - the period changed
-      std::map<std::string,commands> command_map;
-      command_map["BEGIN"] = BEGIN;
-      command_map["RESUME"] = BEGIN;
-      command_map["END_SE_WAIT"] = BEGIN;
-      command_map["PAUSE"] = END;
-      command_map["END"] = END;
-      command_map["ABORT"] = END;
-      command_map["UPDATE"] = END;
-      command_map["START_SE_WAIT"] = END;
-      command_map["CHANGE"] = CHANGE_PERIOD;
-
-      std::string str,start_time;
-      m_nOfPeriods = 1;
-
-      while(Mantid::Kernel::extractToEOL(file,str))
-      {
-        std::string stime,sdata;
-        stime = str.substr(0,19);
-        sdata = str.substr(19);
-        if (start_time.empty()) start_time = stime;
-
-        std::string scom;
-        std::istringstream idata(sdata);
-        idata >> scom;
-        commands com = command_map[scom];
-        if (com == CHANGE_PERIOD)
-        {
-          int ip = -1;
-          std::string s;
-          idata >> s >> ip;
-          if (ip > 0 && s == "PERIOD")
-          {
-            if (ip > m_nOfPeriods) m_nOfPeriods = ip;
-            periods->addValue(stime,ip);
-          }
-        }
-        else if (com == BEGIN)
-        {
-          status->addValue(stime,true);
-        }
-        else if (com == END)
-        {
-          status->addValue(stime,false);
-        }
-      };
-
-      if (periods->size() == 0) periods->addValue(start_time,1);
-      if (status->size() == 0) status->addValue(start_time,true);
-
+      static std::string logname("periods");
+      return logname;
     }
-
-    /** Create given the icpevent log property.
-    *  @param log :: A pointer to the property
-    */
-    LogParser::LogParser(const Kernel::Property* log)
-      :m_nOfPeriods(1)
-    {
-      Kernel::TimeSeriesProperty<int>* periods = new Kernel::TimeSeriesProperty<int> ("periods");
-      Kernel::TimeSeriesProperty<bool>* status = new Kernel::TimeSeriesProperty<bool> ("running");
-      m_periods.reset( periods );
-      m_status.reset( status );
-
-      const Kernel::TimeSeriesProperty<std::string>* icpLog = dynamic_cast<const Kernel::TimeSeriesProperty<std::string>*>(log);
-      if (!icpLog || icpLog->size() == 0)
-      {
-        periods->addValue(Kernel::DateAndTime(),1);
-        status->addValue(Kernel::DateAndTime(),true);
-        g_log.warning()<<"Cannot process ICPevent log. Period 1 assumed for all data.\n";
-        return;
-      }
-
-      /// Command map. BEGIN means start recording, END is stop recording, CHANGE_PERIOD - the period changed
-      std::map<std::string,commands> command_map;
-      command_map["BEGIN"] = BEGIN;
-      command_map["RESUME"] = BEGIN;
-      command_map["END_SE_WAIT"] = BEGIN;
-      command_map["PAUSE"] = END;
-      command_map["END"] = END;
-      command_map["ABORT"] = END;
-      command_map["UPDATE"] = END;
-      command_map["START_SE_WAIT"] = END;
-      command_map["CHANGE"] = CHANGE_PERIOD;
-
-      m_nOfPeriods = 1;
-
-      std::map<Kernel::DateAndTime, std::string> logm = icpLog->valueAsMap();
-      std::map<Kernel::DateAndTime, std::string>::const_iterator it = logm.begin();
-
-      for(;it!=logm.end();++it)
-      {
-        std::string scom;
-        std::istringstream idata(it->second);
-        idata >> scom;
-        commands com = command_map[scom];
-        if (com == CHANGE_PERIOD)
-        {
-          int ip = -1;
-          std::string s;
-          idata >> s >> ip;
-          if (ip > 0 && s == "PERIOD")
-          {
-            if (ip > m_nOfPeriods) m_nOfPeriods = ip;
-            periods->addValue(it->first,ip);
-          }
-        }
-        else if (com == BEGIN)
-        {
-          status->addValue(it->first,true);
-        }
-        else if (com == END)
-        {
-          status->addValue(it->first,false);
-        }
-      };
-
-      if (periods->size() == 0) periods->addValue(icpLog->firstTime(),1);
-      if (status->size() == 0) status->addValue(icpLog->firstTime(),true);
-    }
-
 
     /**  Reads in log data from a log file and stores them in a TimeSeriesProperty.
     @param logFName :: The name of the log file
     @param name :: The name of the property
     @return A pointer to the created property.
     */
-    Kernel::Property* LogParser::createLogProperty(const std::string& logFName, const std::string& name)const
+    Kernel::Property* LogParser::createLogProperty(const std::string& logFName, const std::string& name)
     {
       std::ifstream file(logFName.c_str());
       if (!file)
@@ -197,7 +62,7 @@ namespace Mantid
       {
         if( str.empty() || str[0]=='#') {continue;}
 
-        if (!Kernel::TimeSeriesProperty<double>::isTimeString(str)) 
+        if (!Kernel::TimeSeriesProperty<double>::isTimeString(str))
         {
           //if the line doesn't start with a time treat it as a continuation of the previous data
           if (change_times.empty() || isNumeric)
@@ -253,21 +118,201 @@ namespace Mantid
         }
         return logv;
       }
-
-
       return 0;
     }
+
+
+    /**
+     * Destructor
+     */
+    LogParser::~LogParser()
+    {
+    }
+
+    /**
+    Common creational method for generating a command map.
+    Better ensures that the same command mapping is available for any constructor.
+    @return fully constructed command map.
+    */
+    LogParser::CommandMap LogParser::createCommandMap() const
+    {
+      CommandMap command_map;
+      command_map["BEGIN"] = BEGIN;
+      command_map["RESUME"] = BEGIN;
+      command_map["END_SE_WAIT"] = BEGIN;
+      command_map["PAUSE"] = END;
+      command_map["END"] = END;
+      command_map["ABORT"] = END;
+      command_map["UPDATE"] = END;
+      command_map["START_SE_WAIT"] = END;
+      command_map["CHANGE"] = CHANGE_PERIOD;
+      command_map["CHANGE_PERIOD"] = CHANGE_PERIOD;
+      return command_map;
+    }
+
+    /**
+    Try to pass the periods
+    @param scom : The command corresponding to a change in period.
+    @param time : The time
+    @param idata : stream of input data
+    @param periods : periods data to update
+    */
+    void LogParser::tryParsePeriod(const std::string& scom, const DateAndTime& time, std::istringstream& idata, Kernel::TimeSeriesProperty<int>* const periods)
+    {
+      int ip = -1;
+      bool shouldAddPeriod = false;
+      // Handle the version where log flag is CHANGE PERIOD
+      if(scom == "CHANGE")
+      {
+        std::string s;
+        idata >> s >> ip;
+        if (ip > 0 && s == "PERIOD")
+        {
+          shouldAddPeriod = true;
+        }
+      }
+      // Handle the version where log flat is CHANGE_PERIOD
+      else if(scom == "CHANGE_PERIOD")
+      {
+        idata >> ip;
+        if( ip > 0 )
+        {
+          shouldAddPeriod = true;
+        }
+      }
+      // Common for either variant of the log flag.
+      if(shouldAddPeriod)
+      {
+        if (ip > m_nOfPeriods)
+        {
+          m_nOfPeriods = ip;
+        }
+        periods->addValue(time,ip);
+      }
+    }
+
+    /** 
+    * Constructor.
+    * @param eventFName :: ICPevent file name.
+    */
+    LogParser::LogParser(const std::string& eventFName)
+      :m_nOfPeriods(1)
+    {
+      Kernel::TimeSeriesProperty<int>* periods = new Kernel::TimeSeriesProperty<int> (periodsLogName());
+      Kernel::TimeSeriesProperty<bool>* status = new Kernel::TimeSeriesProperty<bool> (statusLogName());
+      m_periods.reset( periods );
+      m_status.reset( status );
+
+      std::ifstream file(eventFName.c_str());
+      if (!file)
+      {
+        periods->addValue(Kernel::DateAndTime() + Kernel::DateAndTimeHelpers::oneSecond, 1);
+        status->addValue(Kernel::DateAndTime() + Kernel::DateAndTimeHelpers::oneSecond,true);
+        g_log.warning()<<"Cannot open ICPevent file "<<eventFName<<". Period 1 assumed for all data.\n";
+        return;
+      }
+
+      // Command map. BEGIN means start recording, END is stop recording, CHANGE_PERIOD - the period changed
+      CommandMap command_map = createCommandMap();
+
+      std::string str,start_time;
+      m_nOfPeriods = 1;
+
+      while(Mantid::Kernel::extractToEOL(file,str))
+      {
+        std::string stime,sdata;
+        stime = str.substr(0,19);
+        sdata = str.substr(19);
+        if (start_time.empty()) start_time = stime;
+
+        std::string scom;
+        std::istringstream idata(sdata);
+        idata >> scom;
+        commands com = command_map[scom];
+        if (com == CHANGE_PERIOD)
+        {
+          tryParsePeriod(scom, DateAndTime(stime), idata, periods);
+        }
+        else if (com == BEGIN)
+        {
+          status->addValue(stime,true);
+        }
+        else if (com == END)
+        {
+          status->addValue(stime,false);
+        }
+      };
+
+      if (periods->size() == 0) periods->addValue(start_time,1);
+      if (status->size() == 0) status->addValue(start_time,true);
+
+    }
+
+    /** Create given the icpevent log property.
+    *  @param log :: A pointer to the property
+    */
+    LogParser::LogParser(const Kernel::Property* log)
+      :m_nOfPeriods(1)
+    {
+      Kernel::TimeSeriesProperty<int>* periods = new Kernel::TimeSeriesProperty<int> (periodsLogName());
+      Kernel::TimeSeriesProperty<bool>* status = new Kernel::TimeSeriesProperty<bool> (statusLogName());
+      m_periods.reset( periods );
+      m_status.reset( status );
+
+      const Kernel::TimeSeriesProperty<std::string>* icpLog = dynamic_cast<const Kernel::TimeSeriesProperty<std::string>*>(log);
+      if (!icpLog || icpLog->size() == 0)
+      {
+        periods->addValue(Kernel::DateAndTime(),1);
+        status->addValue(Kernel::DateAndTime(),true);
+        g_log.warning()<<"Cannot process ICPevent log. Period 1 assumed for all data.\n";
+        return;
+      }
+
+      /// Command map. BEGIN means start recording, END is stop recording, CHANGE_PERIOD - the period changed
+      CommandMap command_map = createCommandMap();
+
+      m_nOfPeriods = 1;
+
+      std::map<Kernel::DateAndTime, std::string> logm = icpLog->valueAsMap();
+      std::map<Kernel::DateAndTime, std::string>::const_iterator it = logm.begin();
+
+      for(;it!=logm.end();++it)
+      {
+        std::string scom;
+        std::istringstream idata(it->second);
+        idata >> scom;
+        commands com = command_map[scom];
+        if (com == CHANGE_PERIOD)
+        {
+          tryParsePeriod(scom, it->first, idata, periods);
+        }
+        else if (com == BEGIN)
+        {
+          status->addValue(it->first,true);
+        }
+        else if (com == END)
+        {
+          status->addValue(it->first,false);
+        }
+      };
+
+      if (periods->size() == 0) periods->addValue(icpLog->firstTime(),1);
+      if (status->size() == 0) status->addValue(icpLog->firstTime(),true);
+    }
+
+
+
 
     /** Creates a TimeSeriesProperty<bool> showing times when a particular period was active.
      *  @param period :: The data period
      *  @return times requested period was active
      */
-    Kernel::Property* LogParser::createPeriodLog(int period)const
+    Kernel::TimeSeriesProperty<bool> * LogParser::createPeriodLog(int period) const
     {
       Kernel::TimeSeriesProperty<int>* periods = dynamic_cast< Kernel::TimeSeriesProperty<int>* >(m_periods.get());
       std::ostringstream ostr;
       ostr<<period;
-      Kernel::TimeSeriesProperty<bool>* p = new Kernel::TimeSeriesProperty<bool> ("period "+ostr.str());
+      Kernel::TimeSeriesProperty<bool>* p = new Kernel::TimeSeriesProperty<bool> ("period " + ostr.str());
       std::map<Kernel::DateAndTime, int> pMap = periods->valueAsMap();
       std::map<Kernel::DateAndTime, int>::const_iterator it = pMap.begin();
       if (it->second != period)
@@ -278,22 +323,26 @@ namespace Mantid
       return p;
     }
 
+    /**
+    Create a log vale for the current period.
+    @param period: The period number to create the log entry for.
+    */
+    Kernel::Property* LogParser::createCurrentPeriodLog(const int& period) const
+    {
+      Kernel::PropertyWithValue<int>* currentPeriodProperty = new Kernel::PropertyWithValue<int>("current_period", period);
+      return currentPeriodProperty;
+    }
+
     /// Ctreates a TimeSeriesProperty<int> with all data periods
     Kernel::Property* LogParser::createAllPeriodsLog()const
     {
-      Kernel::TimeSeriesProperty<int>* p = new Kernel::TimeSeriesProperty<int> ("periods");
-      Kernel::TimeSeriesProperty<int>* periods = dynamic_cast< Kernel::TimeSeriesProperty<int>* >(m_periods.get());
-      std::map<Kernel::DateAndTime, int> pMap = periods->valueAsMap();
-      std::map<Kernel::DateAndTime, int>::const_iterator it = pMap.begin();
-      for(;it!=pMap.end();++it)
-        p->addValue(it->first, it->second);
-      return p;
+      return m_periods->clone();
     }
 
-    /// Ctreates a TimeSeriesProperty<bool> with running status
-    Kernel::Property* LogParser::createRunningLog()const
+    /// Creates a TimeSeriesProperty<bool> with running status
+    Kernel::TimeSeriesProperty<bool>* LogParser::createRunningLog() const
     {
-      return dynamic_cast<Kernel::TimeSeriesProperty<bool>*>(m_status.get())->clone();
+      return m_status->clone();
     }
 
 

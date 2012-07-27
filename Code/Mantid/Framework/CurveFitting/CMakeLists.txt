@@ -1,11 +1,13 @@
 set ( SRC_FILES
 	#	src/CostFuncIgnorePosPeaks.cpp
 	#	src/SCDPanelErrors.cpp
+	# src/ChebyshevPolynomialBackground.cpp
 	src/Abragam.cpp
 	src/BFGS_Minimizer.cpp
 	src/BackToBackExponential.cpp
 	src/BackgroundFunction.cpp
 	src/BivariateNormal.cpp
+	src/Bk2BkExpConvPV.cpp
 	src/BoundaryConstraint.cpp
 	src/Chebyshev.cpp
 	src/Convolution.cpp
@@ -31,9 +33,13 @@ set ( SRC_FILES
 	src/Gaussian.cpp
 	src/Gaussian1D.cpp
 	src/GaussianLinearBG1D.cpp
+	src/HighOrderPolynomialBackground.cpp
 	src/IDomainCreator.cpp
 	src/IFuncMinimizer.cpp
 	src/IkedaCarpenterPV.cpp
+	src/LeBailFit.cpp
+	src/LeBailFit2.cpp
+	src/LeBailFunction.cpp
 	src/LevenbergMarquardtMDMinimizer.cpp
 	src/LevenbergMarquardtMinimizer.cpp
 	src/Linear.cpp
@@ -47,6 +53,8 @@ set ( SRC_FILES
 	src/ParDomain.cpp
 	src/PlotPeakByLogValue.cpp
 	src/ProductFunction.cpp
+	src/ProductLinearExp.cpp
+	src/ProductQuadraticExp.cpp
 	src/Quadratic.cpp
 	src/QuadraticBackground.cpp
 	src/Resolution.cpp
@@ -58,7 +66,7 @@ set ( SRC_FILES
 	src/SteepestDescentMinimizer.cpp
 	src/StretchExp.cpp
 	src/StretchExpMuon.cpp
-	src/ThermoNeutronBackToBackExpPV.cpp
+	src/ThermalNeutronBk2BkExpConvPV.cpp
 	src/UserFunction.cpp
 	src/UserFunction1D.cpp
 	src/UserFunctionMD.cpp
@@ -69,11 +77,13 @@ set ( SRC_UNITY_IGNORE_FILES src/Fit1D.cpp src/GSLFunctions.cpp )
 set ( INC_FILES
 	#	inc/MantidCurveFitting/CostFuncIgnorePosPeaks.h
 	#	inc/MantidCurveFitting/SCDPanelErrors.h
+	# inc/MantidCurveFitting/ChebyshevPolynomialBackground.h
 	inc/MantidCurveFitting/Abragam.h
 	inc/MantidCurveFitting/BFGS_Minimizer.h
 	inc/MantidCurveFitting/BackToBackExponential.h
 	inc/MantidCurveFitting/BackgroundFunction.h
 	inc/MantidCurveFitting/BivariateNormal.h
+	inc/MantidCurveFitting/Bk2BkExpConvPV.h
 	inc/MantidCurveFitting/BoundaryConstraint.h
 	inc/MantidCurveFitting/Chebyshev.h
 	inc/MantidCurveFitting/CompositeValues.h
@@ -105,10 +115,14 @@ set ( INC_FILES
 	inc/MantidCurveFitting/Gaussian.h
 	inc/MantidCurveFitting/Gaussian1D.h
 	inc/MantidCurveFitting/GaussianLinearBG1D.h
+	inc/MantidCurveFitting/HighOrderPolynomialBackground.h
 	inc/MantidCurveFitting/IDomainCreator.h
 	inc/MantidCurveFitting/IFuncMinimizer.h
 	inc/MantidCurveFitting/IkedaCarpenterPV.h
 	inc/MantidCurveFitting/Jacobian.h
+	inc/MantidCurveFitting/LeBailFit.h
+	inc/MantidCurveFitting/LeBailFit2.h
+	inc/MantidCurveFitting/LeBailFunction.h
 	inc/MantidCurveFitting/LevenbergMarquardtMDMinimizer.h
 	inc/MantidCurveFitting/LevenbergMarquardtMinimizer.h
 	inc/MantidCurveFitting/Linear.h
@@ -122,6 +136,8 @@ set ( INC_FILES
 	inc/MantidCurveFitting/ParDomain.h
 	inc/MantidCurveFitting/PlotPeakByLogValue.h
 	inc/MantidCurveFitting/ProductFunction.h
+	inc/MantidCurveFitting/ProductLinearExp.h
+	inc/MantidCurveFitting/ProductQuadraticExp.h
 	inc/MantidCurveFitting/Quadratic.h
 	inc/MantidCurveFitting/QuadraticBackground.h
 	inc/MantidCurveFitting/Resolution.h
@@ -133,24 +149,26 @@ set ( INC_FILES
 	inc/MantidCurveFitting/SteepestDescentMinimizer.h
 	inc/MantidCurveFitting/StretchExp.h
 	inc/MantidCurveFitting/StretchExpMuon.h
-	inc/MantidCurveFitting/ThermoNeutronBackToBackExpPV.h
+	inc/MantidCurveFitting/ThermalNeutronBk2BkExpConvPV.h
 	inc/MantidCurveFitting/UserFunction.h
 	inc/MantidCurveFitting/UserFunction1D.h
 	inc/MantidCurveFitting/UserFunctionMD.h
 )
               
 set ( TEST_FILES
-	test/IkedaCarpenterPVTest.h
+	# test/ChebyshevPolynomialBackgroundTest.h
 	#test/SCDPanelErrorsTest.h
 	test/AbragamTest.h
 	test/BFGSTest.h
 	test/BivariateNormalTest.h
+	test/Bk2BkExpConvPVTest.h
 	test/BoundaryConstraintTest.h
 	test/ChebyshevTest.h
 	test/CompositeFunctionTest.h
 	test/ConvolutionTest.h
 	test/DeltaFunctionTest.h
 	test/DiffSphereTest.h
+	test/EndErfcTest.h
 	test/ExpDecayMuonTest.h
 	test/ExpDecayOscTest.h
 	test/ExpDecayTest.h
@@ -165,6 +183,11 @@ set ( TEST_FILES
 	test/GausOscTest.h
 	test/Gaussian1DTest.h
 	test/GaussianTest.h
+	test/HighOrderPolynomialBackgroundTest.h
+	test/IkedaCarpenterPVTest.h
+	test/LeBailFit2Test.h
+	test/LeBailFitTest.h
+	test/LeBailFunctionTest.h
 	test/LeastSquaresTest.h
 	test/LevenbergMarquardtMDTest.h
 	test/LevenbergMarquardtTest.h
@@ -179,6 +202,8 @@ set ( TEST_FILES
 	test/PRConjugateGradientTest.h
 	test/PlotPeakByLogValueTest.h
 	test/ProductFunctionTest.h
+	test/ProductLinearExpTest.h
+	test/ProductQuadraticExpTest.h
 	test/QuadraticBackgroundTest.h
 	test/QuadraticTest.h
 	test/ResolutionTest.h
@@ -188,7 +213,7 @@ set ( TEST_FILES
 	test/StaticKuboToyabeTest.h
 	test/StretchExpMuonTest.h
 	test/StretchExpTest.h
-	test/ThermoNeutronBackToBackExpPVTest.h
+	test/ThermalNeutronBk2BkExpConvPVTest.h
 	test/UserFunction1DTest.h
 	test/UserFunctionTest.h
 )
@@ -215,7 +240,7 @@ target_link_libraries ( CurveFitting ${MANTIDLIBS} ${GSL_LIBRARIES} )
 if ( CXXTEST_FOUND )
   include_directories ( ../DataHandling/inc ../TestHelpers/inc )
   cxxtest_add_test ( CurveFittingTest ${TEST_FILES} )
-  target_link_libraries( CurveFittingTest CurveFitting DataHandling DataObjects)
+  target_link_libraries( CurveFittingTest CurveFitting DataHandling DataObjects ${GMOCK_LIBRARIES} ${GTEST_LIBRARIES})
   add_dependencies ( FrameworkTests CurveFittingTest )
   # Add to the 'FrameworkTests' group in VS
   set_property ( TARGET CurveFittingTest PROPERTY FOLDER "UnitTests" )

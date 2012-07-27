@@ -124,10 +124,16 @@ class RefLReduction(PythonAlgorithm):
         # Steps for TOF rebin
         TOFsteps = 100.0
 
+        #use now a global q binning (user does not have control over it)
+        #q_min = 0.005
+        #q_step = -0.01
+
         # Q binning for output distribution
         q_min = self.getProperty("QMin")
         q_step = self.getProperty("QStep")
-          
+        if (q_step > 0):
+            q_step = -q_step
+        
         #dimension of the detector (256 by 304 pixels)
         maxX = 304
         maxY = 256
@@ -182,10 +188,9 @@ class RefLReduction(PythonAlgorithm):
 
                 ##############################################################
                 # Find full path to event NeXus data file
-                _File = FileFinder.findRuns("REF_L%d" %_run)
-                if len(_File)>0 and os.path.isfile(_File[0]): 
-                    data_file = _File[0]
-                else:
+                try:
+                    data_file = FileFinder.findRuns("REF_L%d" %_run)[0]
+                except RuntimeError:
                     msg = "RefLReduction: could not find run %d\n" % _run
                     msg += "Add your data folder to your User Data Directories in the File menu"
                     raise RuntimeError(msg)
@@ -203,13 +208,12 @@ class RefLReduction(PythonAlgorithm):
                          OutputWorkspace=ws_event_data)
         else:
 
-            print '** Working with data runs: ' + str(run_numbers[0])
+            print '** Working with data run: ' + str(run_numbers[0])
             
-            _File = FileFinder.findRuns("REF_L%d" %run_numbers[0])
-            if len(_File)>0 and os.path.isfile(_File[0]): 
-                data_file = _File[0]    
-            else:
-                msg = "RefLReduction: could not find run %d\n" % _run
+            try:
+                data_file = FileFinder.findRuns("REF_L%d" %run_numbers[0])[0]
+            except RuntimeError:
+                msg = "RefLReduction: could not find run %d\n" %run_numbers[0]
                 msg += "Add your data folder to your User Data Directories in the File menu"
                 raise RuntimeError(msg)
 
@@ -290,6 +294,18 @@ class RefLReduction(PythonAlgorithm):
         dMD = dSD + dSM
 
         ws_data = '_' + ws_name + '_DataWks'
+
+        #Even if user select Background subtraction
+        #make sure there is a background selection (peak != back selection)        
+
+        _LfromPx = data_back[0]
+        _LtoPx = data_peak[0]
+        _RfromPx = data_peak[1]
+        _RtoPx = data_back[1]
+
+        if ((_LfromPx == _LtoPx) and (_RfromPx == _RtoPx)):
+            subtract_data_bck = False
+        
         if (subtract_data_bck and (backSubMethod == 1)):
 
             print '-> substract background'
@@ -455,7 +471,7 @@ class RefLReduction(PythonAlgorithm):
             else:
                 if (bLeftBack):
                     _y_px_range = _Larray
-                else:
+                else: 
                     _y_px_range = _Rarray
 
             for i in _tof_range:
@@ -518,8 +534,8 @@ class RefLReduction(PythonAlgorithm):
             ConvertToMatrixWorkspace(InputWorkspace=ws_data,
                                      OutputWorkspace=ws_data)
             
-            ConvertToMatrixWorkspace(InputWorkspace=ws_data,
-                                     OutputWorkspace=ws_data)
+#            ConvertToMatrixWorkspace(InputWorkspace=ws_data,
+#                                     OutputWorkspace=ws_data)
 
             if mtd.workspaceExists(ws_histo_data):
                 mtd.deleteWorkspace(ws_histo_data)
@@ -530,10 +546,9 @@ class RefLReduction(PythonAlgorithm):
 
             print '-> normalization file is ' + str(normalization_run)
             # Find full path to event NeXus data file
-            f = FileFinder.findRuns("REF_L%d" %normalization_run)
-            if len(f)>0 and os.path.isfile(f[0]): 
-                norm_file = f[0]
-            else:
+            try:
+                norm_file = FileFinder.findRuns("REF_L%d" %normalization_run)[0]
+            except RuntimeError:
                 msg = "RefLReduction: could not find run %d\n" %normalization_run
                 msg += "Add your data folder to your User Data Directories in the File menu"
                 raise RuntimeError(msg)
@@ -943,6 +958,12 @@ class RefLReduction(PythonAlgorithm):
         
         output_ws = self.getPropertyValue("OutputWorkspace")        
         
+        #add a unique time stamp to the data to sort them for the 
+        #stitching process
+        import time
+        _time = int(time.time())
+        output_ws = output_ws + '_#' + str(_time) + 'ts'
+        
         if mtd.workspaceExists(output_ws):
             mtd.deleteWorkspace(output_ws)
             
@@ -1009,3 +1030,5 @@ class RefLReduction(PythonAlgorithm):
         print
         
 mtd.registerPyAlgorithm(RefLReduction())
+
+
