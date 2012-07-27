@@ -54,6 +54,24 @@ private:
     delete it;
   }
 
+ 
+  /// Helper method to make a 1D workspace filled with events.
+  MDEventWorkspace1Lean::sptr make_1D_workspace()
+  {
+    MDEventWorkspace1Lean::sptr ws = MDEventsTestHelper::makeMDEW<1>(2, 0.0, 1.0, 0);
+    BoxController_sptr bc = ws->getBoxController();
+    bc->setSplitThreshold(2);
+    ws->splitBox();
+
+    coord_t centers[1] = {0};
+    for (size_t i=0; i<10; i++)
+    {
+      centers[0] = coord_t(i*0.001);
+      ws->addEvent(MDEvent<1>(1.0, 1.0, centers) );
+    }
+    return ws;
+  }
+
 public:
   // This pair of boilerplate methods prevent the suite being created statically
   // This means the constructor isn't called when running other tests
@@ -190,17 +208,8 @@ public:
 
   void test_splitTrackedBoxes()
   {
-    MDEventWorkspace1Lean::sptr ew = MDEventsTestHelper::makeMDEW<1>(2, 0.0, 1.0, 0);
+    MDEventWorkspace1Lean::sptr ew = make_1D_workspace();
     BoxController_sptr bc = ew->getBoxController();
-    bc->setSplitThreshold(10);
-    ew->splitBox();
-
-    coord_t centers[1] = {0};
-    for (size_t i=0; i<10; i++)
-    {
-      centers[0] = coord_t(i*0.001);
-      ew->addEvent(MDEvent<1>(1.0, 1.0, centers) );
-    }
 
     TS_ASSERT_EQUALS( bc->getBoxesToSplit().size(), 1);
 
@@ -208,7 +217,6 @@ public:
     const size_t nOriginalMDBoxes = bc->getTotalNumMDBoxes();
 
     TSM_ASSERT_THROWS_NOTHING("splitTrackedBoxes should not throw anything.", ew->splitTrackedBoxes(NULL));
-    TSM_ASSERT_EQUALS("Hit list of boxes to split should be cleared after splitting.", bc->getBoxesToSplit().size(), 0);
 
     const size_t nCurrrentGriddedBoxes = bc->getTotalNumMDGridBoxes();
     const size_t nCurrentMDBoxes = bc->getTotalNumMDBoxes();
@@ -222,52 +230,33 @@ public:
   /** Test that splitTrackedBoxes does the same thing as the older splitAllIfNeeded */
   void test_consistencySplitTrackedBoxes()
   {
-    MDEventWorkspace1Lean::sptr A = MDEventsTestHelper::makeMDEW<1>(2, 0.0, 1.0, 0);
-    BoxController_sptr bc = A->getBoxController();
-    bc->setSplitThreshold(2);
-    A->splitBox();
+    MDEventWorkspace1Lean::sptr A = make_1D_workspace();
 
-    coord_t centers[1] = {0};
-    for (size_t i=0; i<10; i++)
-    {
-      centers[0] = coord_t(i*0.001);
-      A->addEvent(MDEvent<1>(1.0, 1.0, centers) );
-    }
-
-    MDEventWorkspace1Lean::sptr cloneA = MDEventWorkspace1Lean::sptr(new MDEventWorkspace1Lean(*A));
+    MDEventWorkspace1Lean::sptr B = make_1D_workspace();
 
     A->splitAllIfNeeded(NULL);
-    cloneA->splitTrackedBoxes(NULL);
+    B->splitAllIfNeeded(NULL);
 
     Mantid::API::BoxController_sptr ABoxController = A->getBoxController();
-    BoxController_sptr cloneABoxController = A->getBoxController();
+    BoxController_sptr BBoxController = B->getBoxController();
 
     //Splitting either way should yield the same results.
-    TS_ASSERT_EQUALS(ABoxController->getAverageDepth(), cloneABoxController->getAverageDepth());
-    TS_ASSERT_EQUALS(ABoxController->getMaxDepth(), cloneABoxController->getMaxDepth());
-    TS_ASSERT_EQUALS(ABoxController->getMaxId(), cloneABoxController->getMaxId());
-    TS_ASSERT_EQUALS(ABoxController->getTotalNumMDBoxes(), cloneABoxController->getTotalNumMDBoxes());
-    TS_ASSERT_EQUALS(ABoxController->getTotalNumMDGridBoxes(), cloneABoxController->getTotalNumMDGridBoxes());
+    TS_ASSERT_EQUALS(ABoxController->getAverageDepth(), BBoxController->getAverageDepth());
+    TS_ASSERT_EQUALS(ABoxController->getMaxDepth(), BBoxController->getMaxDepth());
+    TS_ASSERT_EQUALS(ABoxController->getMaxId(), BBoxController->getMaxId());
+    TS_ASSERT_EQUALS(ABoxController->getTotalNumMDBoxes(), BBoxController->getTotalNumMDBoxes());
+    TS_ASSERT_EQUALS(ABoxController->getTotalNumMDGridBoxes(), BBoxController->getTotalNumMDGridBoxes());
+    TS_ASSERT_EQUALS(BBoxController->getNumBoxesToSplit(), 0);
   }
 
   //-------------------------------------------------------------------------------------
   /** Runs in a multithreaded context, gets the same results as in the single threaded context. */
   void test_spitTrackedBoxesParallel()
   {
-    MDEventWorkspace1Lean::sptr A = MDEventsTestHelper::makeMDEW<1>(2, 0.0, 1.0, 0);
-    BoxController_sptr bc = A->getBoxController();
-    bc->setSplitThreshold(2);
-    A->splitBox();
-
-    coord_t centers[1] = {0};
-    for (size_t i=0; i<1000; i++)
-    {
-      centers[0] = coord_t(i*0.0001);
-      A->addEvent(MDEvent<1>(1.0, 1.0, centers) );
-    }
+    MDEventWorkspace1Lean::sptr A = make_1D_workspace();
 
     //Now we should have two identical input workspaces.
-    MDEventWorkspace1Lean::sptr cloneA = MDEventWorkspace1Lean::sptr(new MDEventWorkspace1Lean(*A));
+    MDEventWorkspace1Lean::sptr B = make_1D_workspace();
 
     //Split in single threaded context
     A->splitTrackedBoxes(NULL);
@@ -275,18 +264,19 @@ public:
     //Split in multithreaded context
     ThreadScheduler* tScheduler = new ThreadSchedulerFIFO();
     ThreadPool tPool(tScheduler);
-    cloneA->splitTrackedBoxes(tScheduler);
+    B->splitTrackedBoxes(tScheduler);
     tPool.joinAll();
 
     //Get the respective box controllers prior to comparsison
     Mantid::API::BoxController_sptr ABoxController = A->getBoxController();
-    BoxController_sptr cloneABoxController = A->getBoxController();
+    BoxController_sptr BBoxController = B->getBoxController();
   
     //Compare via the box controller.
-    TS_ASSERT_EQUALS(ABoxController->getTotalNumMDBoxes(), cloneABoxController->getTotalNumMDBoxes());
-    TS_ASSERT_EQUALS(ABoxController->getTotalNumMDGridBoxes(), cloneABoxController->getTotalNumMDGridBoxes());
-    TS_ASSERT_EQUALS(ABoxController->getAverageDepth(), cloneABoxController->getAverageDepth());
-    TS_ASSERT_EQUALS(ABoxController->getMaxDepth(), cloneABoxController->getMaxDepth());
+    TS_ASSERT_EQUALS(ABoxController->getTotalNumMDBoxes(), BBoxController->getTotalNumMDBoxes());
+    TS_ASSERT_EQUALS(ABoxController->getTotalNumMDGridBoxes(), BBoxController->getTotalNumMDGridBoxes());
+    TS_ASSERT_EQUALS(ABoxController->getAverageDepth(), BBoxController->getAverageDepth());
+    TS_ASSERT_EQUALS(ABoxController->getMaxDepth(), BBoxController->getMaxDepth());
+    TS_ASSERT_EQUALS(ABoxController->getNumBoxesToSplit(), BBoxController->getNumBoxesToSplit());
   }
 
 

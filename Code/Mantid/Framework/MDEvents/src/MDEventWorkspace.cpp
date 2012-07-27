@@ -597,9 +597,12 @@ namespace MDEvents
   {
     // Get a COPY of the vector (to avoid thread-safety issues)
     Mantid::API::BoxController_sptr boxController = this->getBoxController();
+    // Create a temporary copy of all the boxes to split.
     std::set<Mantid::API::IMDBox*> boxes = boxController->getBoxesToSplit();
+    // Clear the boxes to split. This will mean that any boxes to split identified during the splitting operation itself will be useable on the next call to splitTrackedBoxes.
+    boxController->clearBoxesToSplit();
     std::set<Mantid::API::IMDBox*>::iterator it;
-    //PRAGMA_OMP( parallel for )
+    // Loop through the boxes that have already been identified as needing splitting.
     for (it=boxes.begin(); it != boxes.end(); it++)
     {
       MDBox<MDE,nd> * box = dynamic_cast<MDBox<MDE,nd> *>(*it);
@@ -619,16 +622,6 @@ namespace MDEvents
         }
       }
     }
-    if (!ts)
-    {
-      /*
-       Note that i've just introduced a different behaviour in a multi-threaded context! however, clear boxes must be the last operation.
-       one option would be to dynamic cast the ts to a ThreadSchedulerFIFO, we could that way ensure that adding a task would get executed last?
-      */
-      //These boxes do not need tracking any longer.
-      boxController->clearBoxesToSplit();
-    }
-    
   }
 
   //-----------------------------------------------------------------------------------------------

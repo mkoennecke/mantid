@@ -10,6 +10,7 @@
 #include <boost/shared_ptr.hpp>
 #include <vector>
 #include <set>
+#include <Poco/Mutex.h>
 
 namespace Mantid
 {
@@ -438,8 +439,18 @@ namespace API
     void clearBoxesToSplit()
     {
       m_boxesToSplitMutex.lock();
-      m_boxesToSplit.clear();
+      std::set<Mantid::API::IMDBox*> tmp;
+      m_boxesToSplit = tmp;
       m_boxesToSplitMutex.unlock();
+    }
+
+    /**
+    Get the number of pending boxes to be split. Useful for diagnostics.
+    @return The size of the pending boxes to split collection.
+    */
+    size_t getNumBoxesToSplit() const
+    {
+      return m_boxesToSplit.size();
     }
 
     //-----------------------------------------------------------------------------------
