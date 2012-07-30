@@ -18,6 +18,7 @@
 #include <iomanip>
 #include <functional>
 #include <algorithm>
+#include <vector>
 #include "MantidMDEvents/MDBoxIterator.h"
 #include "MantidKernel/Memory.h"
 
@@ -77,7 +78,8 @@ namespace MDEvents
       }
     };
 
-    std::vector<MDBoxBase<MDE, nd>* > boxes;
+    typedef std::vector<MDBoxBase<MDE, nd>* > VecMDBoxBase;
+    VecMDBoxBase boxes;
     this->data->getBoxes(boxes, this->getBoxController()->getMaxDepth(), false);
 
     std::set<IMDBox*> otherSplit = other.getBoxController()->getBoxesToSplit();
@@ -90,7 +92,7 @@ namespace MDEvents
       {
         size_t id = pBox->getId();
         FindBoxById boxFinder(id);
-        typename std::vector<MDBoxBase<MDE, nd>* >::iterator found = std::find_if(boxes.begin(), boxes.end(), boxFinder);
+        VecMDBoxBase::iterator found = std::find_if(boxes.begin(), boxes.end(), boxFinder);
         if(found != boxes.end())
         {
           this->getBoxController()->addBoxToSplit(*found);
