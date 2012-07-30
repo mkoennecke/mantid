@@ -72,7 +72,7 @@ namespace MDEvents
       FindBoxById(const size_t& _id): m_id(_id) 
       {
       }
-      bool operator()(IMDBox * const box) const
+      bool operator()(IMDBox *  box) const
       {
         return box->getId() == m_id;
       }
