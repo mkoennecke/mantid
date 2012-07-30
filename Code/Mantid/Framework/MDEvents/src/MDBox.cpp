@@ -470,7 +470,7 @@ namespace MDEvents
    * @param event :: reference to a MDEvent to add.
    * */
   TMDE(
-  void MDBox)::addEvent( const MDE & event)
+    void MDBox)::addEvent( const MDE & event)
   {
     dataMutex.lock();
     this->data.push_back(event);
@@ -480,7 +480,7 @@ namespace MDEvents
 
     // When we reach the split threshold exactly, track that the MDBox is too small
     // We check on equality and not >= to only add a box once.
-    if (shouldSplit())
+    if ((m_BoxController != NULL) && shouldSplit())
     {
       this->m_BoxController->addBoxToSplit(this);
     }
