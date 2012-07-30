@@ -72,7 +72,7 @@ namespace MDEvents
       FindBoxById(const size_t& _id): m_id(_id) 
       {
       }
-      bool operator()(MDBoxBase<MDE, nd>*  box) const
+      bool operator()(const MDBoxBase<MDE, nd>*  box) const
       {
         return box->getId() == m_id;
       }
