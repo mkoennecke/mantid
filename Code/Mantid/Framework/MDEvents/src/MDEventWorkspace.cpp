@@ -90,7 +90,7 @@ namespace MDEvents
       {
         size_t id = pBox->getId();
         FindBoxById boxFinder(id);
-        std::vector<MDBoxBase<MDE, nd>* >::iterator found = std::find_if(boxes.begin(), boxes.end(), boxFinder);
+        typename std::vector<MDBoxBase<MDE, nd>* >::iterator found = std::find_if(boxes.begin(), boxes.end(), boxFinder);
         if(found != boxes.end())
         {
           this->getBoxController()->addBoxToSplit(*found);
