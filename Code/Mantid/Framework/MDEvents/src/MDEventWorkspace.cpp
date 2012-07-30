@@ -585,8 +585,8 @@ namespace MDEvents
   TMDE(
   void MDEventWorkspace)::splitAllIfNeeded(Kernel::ThreadScheduler * ts)
   {
-    // Use split tracked boxes instead.
-    this->splitTrackedBoxes(ts);
+    data->splitAllIfNeeded(ts);	
+    this->m_BoxController->clearBoxesToSplit();
   }
 
   //-----------------------------------------------------------------------------------------------
