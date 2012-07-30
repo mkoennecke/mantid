@@ -64,7 +64,7 @@ namespace MDEvents
     /*
     Comparitor for finding IMD boxes with a given id.
     */
-    class FindBoxById 
+    class FindBoxById : public std::unary_function<MDBoxBase<MDE, nd>*,bool>
     {
     private:
       const size_t m_id;
@@ -72,7 +72,7 @@ namespace MDEvents
       FindBoxById(const size_t& _id): m_id(_id) 
       {
       }
-      bool operator()(IMDBox *  box) 
+      bool operator()(MDBoxBase<MDE, nd>*  box) const
       {
         return box->getId() == m_id;
       }
