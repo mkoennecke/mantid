@@ -33,6 +33,23 @@ namespace Mantid
 namespace MDEvents
 {
 
+  /**
+  Comparitor for finding IMD boxes with a given id.
+  */
+  class FindBoxById 
+  {
+  private:
+    const size_t m_id;
+  public:
+    FindBoxById(const size_t& _id): m_id(_id) 
+    {
+    }
+    bool operator()(IMDBox const * const  box) const
+    {
+      return box->getId() == m_id;
+    }
+  };
+
   //-----------------------------------------------------------------------------------------------
   /** Default constructor
    */
@@ -61,23 +78,6 @@ namespace MDEvents
     else
       throw std::runtime_error("MDEventWorkspace::copy_ctor(): unexpected data box type found.");
 
-    /*
-    Comparitor for finding IMD boxes with a given id.
-    */
-    class FindBoxById : public std::unary_function<MDBoxBase<MDE, nd>*,bool>
-    {
-    private:
-      const size_t m_id;
-    public:
-      FindBoxById(const size_t& _id): m_id(_id) 
-      {
-      }
-      bool operator()(const MDBoxBase<MDE, nd>*  box) const
-      {
-        return box->getId() == m_id;
-      }
-    };
-
     typedef std::vector<MDBoxBase<MDE, nd>* > VecMDBoxBase;
     VecMDBoxBase boxes;
     this->data->getBoxes(boxes, this->getBoxController()->getMaxDepth(), false);
@@ -92,7 +92,7 @@ namespace MDEvents
       {
         size_t id = pBox->getId();
         FindBoxById boxFinder(id);
-        typename VecMDBoxBase::iterator found = std::find_if(boxes.begin(), boxes.end(), boxFinder);
+        VecMDBoxBase::iterator found = std::find_if(boxes.begin(), boxes.end(), boxFinder);
         if(found != boxes.end())
         {
           this->getBoxController()->addBoxToSplit(*found);
