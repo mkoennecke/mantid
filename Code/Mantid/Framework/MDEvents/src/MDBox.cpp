@@ -480,7 +480,7 @@ namespace MDEvents
 
     // When we reach the split threshold exactly, track that the MDBox is too small
     // We check on equality and not >= to only add a box once.
-    if ((m_BoxController != NULL) && shouldSplit())
+    if ((this->m_BoxController != NULL) && shouldSplit())
     {
       this->m_BoxController->addBoxToSplit(this);
     }
