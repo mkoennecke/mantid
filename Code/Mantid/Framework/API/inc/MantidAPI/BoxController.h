@@ -296,7 +296,12 @@ namespace API
       const size_t newDepth = depth + 1;
       if(depth >= m_maxDepth)
       {
-        this->setMaxDepth(newDepth);
+    	  m_maxDepth = newDepth;
+    	  m_numMDBoxes.clear();
+    	  m_numMDBoxes.resize(m_maxDepth + 1, 0); // Reset to 0
+    	  m_numMDGridBoxes.resize(m_maxDepth + 1, 0); // Reset to 0
+    	  m_numMDBoxes[0] = 1; // Start at 1 at depth 0.
+    	  resetMaxNumBoxes(); // Also the maximums
       }
       m_numMDBoxes[newDepth] += m_numSplit;
       m_mutexNumMDBoxes.unlock();
