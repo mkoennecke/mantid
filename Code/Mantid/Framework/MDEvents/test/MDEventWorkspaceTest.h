@@ -235,7 +235,7 @@ public:
     MDEventWorkspace1Lean::sptr B = make_1D_workspace();
 
     A->splitAllIfNeeded(NULL);
-    B->splitAllIfNeeded(NULL);
+    B->splitTrackedBoxes(NULL);
 
     Mantid::API::BoxController_sptr ABoxController = A->getBoxController();
     BoxController_sptr BBoxController = B->getBoxController();
@@ -246,7 +246,6 @@ public:
     TS_ASSERT_EQUALS(ABoxController->getMaxId(), BBoxController->getMaxId());
     TS_ASSERT_EQUALS(ABoxController->getTotalNumMDBoxes(), BBoxController->getTotalNumMDBoxes());
     TS_ASSERT_EQUALS(ABoxController->getTotalNumMDGridBoxes(), BBoxController->getTotalNumMDGridBoxes());
-    TS_ASSERT_EQUALS(BBoxController->getNumBoxesToSplit(), 0);
   }
 
   //-------------------------------------------------------------------------------------

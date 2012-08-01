@@ -570,6 +570,7 @@ namespace MDEvents
       if (!box) throw
           std::runtime_error("MDEventWorkspace::splitBox() expected its data to be a MDBox* to split to MDGridBox.");
       gridBox = new MDGridBox<MDE,nd>(box);
+      this->m_BoxController->removeTrackedBox(data);
       delete data;
       data = gridBox;
     }
@@ -585,8 +586,7 @@ namespace MDEvents
   TMDE(
   void MDEventWorkspace)::splitAllIfNeeded(Kernel::ThreadScheduler * ts)
   {
-    data->splitAllIfNeeded(ts);	
-    this->m_BoxController->clearBoxesToSplit();
+    this->splitTrackedBoxes(ts);
   }
 
   //-----------------------------------------------------------------------------------------------

@@ -454,6 +454,17 @@ namespace API
       m_boxesToSplitMutex.unlock();
     }
 
+    //-----------------------------------------------------------------------------------
+    /** Remove a tracked box. 
+    @param box : pointer to IMDBox to remove.
+    */
+    void removeTrackedBox(Mantid::API::IMDBox* box)
+    {
+      m_boxesToSplitMutex.lock();
+      m_boxesToSplit.erase(box);
+      m_boxesToSplitMutex.unlock();
+    }
+
     /**
     Get the number of pending boxes to be split. Useful for diagnostics.
     @return The size of the pending boxes to split collection.
