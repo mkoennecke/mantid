@@ -6,6 +6,7 @@
 #include <cxxtest/TestSuite.h>
 #include <map>
 #include <memory>
+#include <gmock/gmock.h>
 
 using namespace Mantid;
 using namespace Mantid::API;
@@ -13,6 +14,19 @@ using namespace Mantid::Kernel;
 
 class BoxControllerTest :    public CxxTest::TestSuite
 {
+
+private:
+
+  class MockIMDBox : public IMDBox
+  {
+    MOCK_CONST_METHOD0(save, void());
+    MOCK_METHOD0(load, void());
+    MOCK_CONST_METHOD0(flushData, void());
+    MOCK_CONST_METHOD0(dataBusy, bool());
+    MOCK_CONST_METHOD0(getFilePosition, uint64_t());
+    MOCK_CONST_METHOD0(getMRUMemorySize, uint64_t());
+  };
+
 public:
 
   void test_Constructor()
@@ -214,6 +228,29 @@ public:
     TS_ASSERT_EQUALS(1, box_controller.getNumSplit());
     TS_ASSERT_EQUALS(0, box_controller.getMaxId());
     TS_ASSERT_EQUALS(true, box_controller.useWriteBuffer());
+  }
+
+  void test_remove_tracked_if_present()
+  {
+    BoxController box_controller(1);
+    MockIMDBox a;
+    box_controller.addBoxToSplit(&a);
+    TS_ASSERT_EQUALS(1, box_controller.getNumBoxesToSplit());
+    box_controller.removeTrackedBox(&a);
+    TS_ASSERT_EQUALS(0, box_controller.getNumBoxesToSplit());
+  }
+
+  void test_doesnt_remove_tracked_if_gone()
+  {
+    BoxController box_controller(1);
+    MockIMDBox a, b;
+    box_controller.addBoxToSplit(&a);
+    box_controller.addBoxToSplit(&b);
+    TS_ASSERT_EQUALS(2, box_controller.getNumBoxesToSplit());
+    box_controller.removeTrackedBox(&a);
+    TS_ASSERT_EQUALS(1, box_controller.getNumBoxesToSplit());
+    box_controller.removeTrackedBox(&a);
+    TSM_ASSERT_EQUALS("Shouldn't remove the same box twice.", 1, box_controller.getNumBoxesToSplit());
   }
 
 

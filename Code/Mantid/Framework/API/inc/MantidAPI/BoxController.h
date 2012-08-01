@@ -461,7 +461,10 @@ namespace API
     void removeTrackedBox(Mantid::API::IMDBox* box)
     {
       m_boxesToSplitMutex.lock();
-      m_boxesToSplit.erase(box);
+      if(m_boxesToSplit.find(box) != m_boxesToSplit.end())
+      {
+        m_boxesToSplit.erase(box);
+      }
       m_boxesToSplitMutex.unlock();
     }
 
