@@ -66,7 +66,7 @@ private:
     coord_t centers[1] = {0};
     for (size_t i=0; i<10; i++)
     {
-      centers[0] = coord_t(i*0.001);
+      centers[0] = coord_t(double(i)*0.001);
       ws->addEvent(MDEvent<1>(1.0, 1.0, centers) );
     }
     return ws;
@@ -196,7 +196,7 @@ public:
     coord_t centers[1] = {0};
     for (size_t i=0; i<99; i++)
     {
-      centers[0] = coord_t(i*0.001);
+      centers[0] = coord_t(double(i)*0.001);
       ew->addEvent(MDEvent<1>(1.0, 1.0, centers) );
     }
     TS_ASSERT_EQUALS( bc->getBoxesToSplit().size(), 0);
