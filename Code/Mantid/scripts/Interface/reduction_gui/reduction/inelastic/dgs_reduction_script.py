@@ -61,8 +61,8 @@ class DgsReductionScripter(BaseReductionScripter):
 
         script += "ephi_1D = plotBin('Ephi',52,True)\n"
 
-        script += "total_counts = plot('sum',0)\n"
-        script += "inst_view = getInstrumentView('reb2')\n"
-        script += "inst_view.show()\n"
+        #script += "total_counts = plot('sum',0)\n"
+        #script += "inst_view = getInstrumentView('reb2')\n"
+        #script += "inst_view.show()\n"
 
         return script
