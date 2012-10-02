@@ -409,6 +409,12 @@ class BaseReductionScripter(object):
 
         return script
     
+    def set_options(self):
+        return ""
+
+    def to_options_script(self):
+        return ""
+
     def apply(self):
         """
             Apply the reduction process to a Mantid SANSReducer
@@ -433,6 +439,10 @@ class BaseReductionScripter(object):
                 raise RuntimeError, sys.exc_value
         else:
             raise RuntimeError, "Reduction could not be executed: Mantid could not be imported"
+
+    def live_reduce(self):
+        script = self.to_live_script()
+        self.execute_script(script)
 
     def execute_script(self, script):
         """

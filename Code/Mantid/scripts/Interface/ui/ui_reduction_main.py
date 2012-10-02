@@ -2,8 +2,8 @@
 
 # Form implementation generated from reading ui file 'ui/reduction_main.ui'
 #
-# Created: Tue Apr 10 13:22:25 2012
-#      by: PyQt4 UI code generator 4.7.2
+# Created: Tue Sep 25 11:54:26 2012
+#      by: PyQt4 UI code generator 4.7.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -53,6 +53,9 @@ class Ui_SANSReduction(object):
         self.horizontalLayout.addWidget(self.progress_bar)
         spacerItem1 = QtGui.QSpacerItem(40, 20, QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem1)
+        self.live_button = QtGui.QPushButton(self.centralwidget)
+        self.live_button.setObjectName("live_button")
+        self.horizontalLayout.addWidget(self.live_button)
         self.reduce_button = QtGui.QPushButton(self.centralwidget)
         self.reduce_button.setEnabled(True)
         self.reduce_button.setObjectName("reduce_button")
@@ -68,7 +71,7 @@ class Ui_SANSReduction(object):
         self.verticalLayout.addLayout(self.horizontalLayout)
         SANSReduction.setCentralWidget(self.centralwidget)
         self.menubar = QtGui.QMenuBar(SANSReduction)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1062, 25))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1062, 26))
         self.menubar.setObjectName("menubar")
         self.file_menu = QtGui.QMenu(self.menubar)
         self.file_menu.setObjectName("file_menu")
@@ -103,6 +106,8 @@ class Ui_SANSReduction(object):
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt;\"> or the Instrument Dialog to continue.</span></p></body></html>", None, QtGui.QApplication.UnicodeUTF8))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), QtGui.QApplication.translate("SANSReduction", "No Instrument Selected", None, QtGui.QApplication.UnicodeUTF8))
         self.interface_chk.setText(QtGui.QApplication.translate("SANSReduction", "Advanced interface", None, QtGui.QApplication.UnicodeUTF8))
+        self.live_button.setToolTip(QtGui.QApplication.translate("SANSReduction", "Click to start reduction from the live stream", None, QtGui.QApplication.UnicodeUTF8))
+        self.live_button.setText(QtGui.QApplication.translate("SANSReduction", "Live!", None, QtGui.QApplication.UnicodeUTF8))
         self.reduce_button.setToolTip(QtGui.QApplication.translate("SANSReduction", "Click to execute reduction.", None, QtGui.QApplication.UnicodeUTF8))
         self.reduce_button.setText(QtGui.QApplication.translate("SANSReduction", "Reduce", None, QtGui.QApplication.UnicodeUTF8))
         self.save_button.setToolTip(QtGui.QApplication.translate("SANSReduction", "Click to save your reduction parameters.", None, QtGui.QApplication.UnicodeUTF8))

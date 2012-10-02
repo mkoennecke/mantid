@@ -160,6 +160,20 @@ class InstrumentInterface(object):
         # Update widgets
         self.scripter.push_state()
                 
+    def live_reduce(self):
+        self.scripter.update()
+        
+        # Save the last reduction for later
+        try:
+            red_path = os.path.join(self.ERROR_REPORT_DIR, self.LAST_REDUCTION_NAME)
+            self.save_file(red_path)
+        except:
+            print "Could not save last reduction\n  %s" % str(traceback.format_exc())        
+        
+        self.scripter.live_reduce()
+        # Update widgets
+        self.scripter.push_state()
+
     def _error_report(self, trace=''):
         """
             Try to dump the state of the UI to a file, with a traceback

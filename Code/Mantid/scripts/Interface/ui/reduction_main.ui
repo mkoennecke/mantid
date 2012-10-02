@@ -107,6 +107,16 @@ p, li { white-space: pre-wrap; }
        </spacer>
       </item>
       <item>
+       <widget class="QPushButton" name="live_button">
+        <property name="toolTip">
+         <string>Click to start reduction from the live stream</string>
+        </property>
+        <property name="text">
+         <string>Live!</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="reduce_button">
         <property name="enabled">
          <bool>true</bool>
@@ -155,7 +165,7 @@ p, li { white-space: pre-wrap; }
      <x>0</x>
      <y>0</y>
      <width>1062</width>
-     <height>25</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="file_menu">

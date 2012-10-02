@@ -42,3 +42,6 @@ class DgsReductionScripter(BaseReductionScripter):
             f.close()
         
         return script
+    
+    def to_live_script(self):
+        raise RuntimeError, "Not done yet!"

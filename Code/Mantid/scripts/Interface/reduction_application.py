@@ -92,6 +92,7 @@ class ReductionGUI(QtGui.QMainWindow, ui.ui_reduction_main.Ui_SANSReduction):
             self.reduce_button.hide()
         self.connect(self.export_button, QtCore.SIGNAL("clicked()"), self._export)
         self.connect(self.reduce_button, QtCore.SIGNAL("clicked()"), self.reduce_clicked)  
+        self.connect(self.live_button, QtCore.SIGNAL("clicked()"), self.live_clicked)  
         self.connect(self.save_button, QtCore.SIGNAL("clicked()"), self._save)  
         self.connect(self.interface_chk, QtCore.SIGNAL("clicked(bool)"), self._interface_choice)  
         
@@ -395,18 +396,21 @@ class ReductionGUI(QtGui.QMainWindow, ui.ui_reduction_main.Ui_SANSReduction):
         self.interface_chk.setEnabled(False)
         self.file_menu.setEnabled(False)
         self.tools_menu.setEnabled(False)
-        if IS_IN_MANTIDPLOT:
-            mantidplot.app.mantidUI.setIsRunning(True)
+        
         if self._interface is not None:
             self._interface.reduce()
-        if IS_IN_MANTIDPLOT:
-            mantidplot.app.mantidUI.setIsRunning(False)
+            
         self.reduce_button.setEnabled(True)   
         self.export_button.setEnabled(True)
         self.save_button.setEnabled(True)
         self.interface_chk.setEnabled(True)
         self.file_menu.setEnabled(True)
         self.tools_menu.setEnabled(True)
+
+    def live_clicked(self):
+        # TODO: Add any setEnabled calls (or consider whether the gui should just close when this button is clicked
+        if self._interface is not None:
+            self._interface.live_reduce()
 
     def open_file(self, file_path=None):
         """

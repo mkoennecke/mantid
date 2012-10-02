@@ -58,6 +58,16 @@ class EQSANSReductionScripter(BaseReductionScripter):
         
         return script
     
+    def to_live_script(self):
+        script = "from mantidsimple import *\n"
+        script += "EQSANSLiveSetup(SensitivityFile='/home/tr9/EQSANS/Sensitivity_patched_15629_event.nxs')\n"
+        script += "StartLiveData(UpdateEvery='5',Instrument='FileEventDataListener',ProcessingAlgorithm='EQSANSLiveReduce',PostProcessingAlgorithm='EQSANSLiveReduce',PostProcessingProperties='ReductionProcess=0;PostProcess=1',EndRunBehavior='Stop',AccumulationWorkspace='__accum',OutputWorkspace='live!')\n"
+        script += "mantidplot.plotSpectrum(mtd['live!'],0,True)"
+        return script
+    
+    def to_options_script(self):
+        pass
+    
     def set_options(self):
         """
             Set up the reduction options, without executing
@@ -82,6 +92,7 @@ class EQSANSReductionScripter(BaseReductionScripter):
 
             script += "ReductionProperties='%s')" % table_ws
             
+            self.to_options_script()
             exec script
             return table_ws
         else:
