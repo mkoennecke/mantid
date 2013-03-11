@@ -245,16 +245,11 @@ namespace Algorithms
     std::string s_inpt0 = this->getProperty("StartTime");
     std::string s_inptf = this->getProperty("StopTime");
 
-    g_log.debug() << "Start time = " << s_inpt0 << endl;
-    cout << "Start time = " << s_inpt0 << endl;
-
     // 2. Run info
     Kernel::TimeSeriesProperty<double>* protonchargelog =
         dynamic_cast<Kernel::TimeSeriesProperty<double> *>(mEventWS->run().getProperty("proton_charge"));
     Kernel::DateAndTime runstarttime = protonchargelog->firstTime();
     Kernel::DateAndTime runendtime = protonchargelog->lastTime();
-
-    // int64_t runtime_ns = runend.totalNanoseconds()-runstarttime.totalNanoseconds();
 
     // 3. Set up time-convert unit
     std::string timeunit = this->getProperty("UnitOfTime");
@@ -270,30 +265,23 @@ namespace Algorithms
       m_convertfactor = 1.0;
     }
 
-    cout << "convert factor = " << m_convertfactor << " unit of time = " << timeunit << endl;
-
     // 4. Run start time
     if (s_inpt0.size() == 0)
     {
       // Default
-      cout << "Use default." << endl;
       mStartTime = runstarttime;
     }
     else
     {
-      cout << "Use input " << s_inpt0 << endl;
       bool istimestring = s_inpt0.find(':') == std::string::npos;
-      cout << istimestring << endl;
       if (s_inpt0.find(':') != std::string::npos)
       {
         // In string format
-        cout << "Branch 1\n";
         Kernel::DateAndTime t0(s_inpt0);
         mStartTime = t0;
       }
       else
       {
-        cout << "Branch 2\n";
         // In double (second, nanosecond, or ...)
         double inpt0 = atof(s_inpt0.c_str());
         int64_t temptimens = 0;
@@ -303,7 +291,6 @@ namespace Algorithms
           if (inpt0 >= 0)
           {
             temptimens = runstarttime.totalNanoseconds() + static_cast<int64_t>(inpt0*m_convertfactor);
-            cout << "Branch 1A: " << temptimens << endl;
           }
           else
           {
@@ -323,8 +310,6 @@ namespace Algorithms
       }
     } // ENDIFELSE: Starting time
 
-    cout << "run time start = " << mStartTime.toSimpleString() << "\n";
-
     // 4. Run end time
     if (s_inptf.size() == 0)
     {
@@ -336,8 +321,8 @@ namespace Algorithms
       if (s_inptf.find(':') != std::string::npos)
       {
         // In string format
-        Kernel::DateAndTime tf(s_inpt0);
-        mStartTime = tf;
+        Kernel::DateAndTime tf(s_inptf);
+        mStopTime = tf;
       }
       else
       {
@@ -373,8 +358,8 @@ namespace Algorithms
     if (mStartTime.totalNanoseconds() >= mStopTime.totalNanoseconds())
     {
       stringstream errmsg;
-      errmsg << "Use input starting time " << s_inpt0
-             << " is equal or later than stoping time " << s_inptf << ".\n";
+      errmsg << "Use input starting time " << s_inpt0 << " / " << mStartTime.toSimpleString()
+             << " is equal or later than stoping time " << s_inptf << "/ " << mStopTime.toSimpleString() << ".\n";
       throw runtime_error(errmsg.str());
     }
     else
