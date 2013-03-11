@@ -79,7 +79,7 @@ namespace Algorithms
     // Implement abstract Algorithm methods
     void exec();
 
-    void processInputTime(Kernel::DateAndTime runstarttime);
+    void processInputTime();
     void setFilterByTimeOnly();
     void setFilterByLogValue(std::string logname);
 

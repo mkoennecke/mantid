@@ -47,6 +47,8 @@ using namespace Mantid;
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
 
+using namespace std;
+
 namespace Mantid
 {
 namespace Algorithms
@@ -92,12 +94,12 @@ namespace Algorithms
                     "Optional output for the information of each splitter workspace index");
 
     // 1. Time
-    declareProperty("StartTime", "0.0",
+    declareProperty("StartTime", "",
         "The start time, in (a) seconds, (b) nanoseconds or (c) percentage of total run time\n"
         "since the start of the run. OR (d) absolute time. \n"
         "Events before this time are filtered out.");
 
-    declareProperty("StopTime", "-1.0",
+    declareProperty("StopTime", "",
         "The stop time, in (2) seconds, (b) nanoseconds or (c) percentage of total run time\n"
         "since the start of the run. OR (d) absolute time. \n"
         "Events at or after this time are filtered out.");
@@ -138,7 +140,10 @@ namespace Algorithms
     declareProperty("TimeTolerance", 0.0,
         "Tolerance in time for the event times to keep. It is used in the case to filter by single value.");
 
-    declareProperty("LogBoundary", "centre",
+    vector<string> boundaryoptions;
+    boundaryoptions.push_back("centre");
+    boundaryoptions.push_back("edge");
+    declareProperty("LogBoundary", "centre", boost::make_shared<StringListValidator>(boundaryoptions),
         "How to treat log values as being measured in the centre of time.");
 
     declareProperty("LogValueTolerance", EMPTY_DBL(),
@@ -184,7 +189,7 @@ namespace Algorithms
     }
 
     Kernel::DateAndTime runstart(mEventWS->run().getProperty("run_start")->value());
-    g_log.debug() << "DB9441 Run Start = " << runstart << " / " << runstart.totalNanoseconds()
+    g_log.debug() << "DB9441 Log Run Start = " << runstart << " / " << runstart.totalNanoseconds()
                   << std::endl;
 
     std::string title = getProperty("TitleOfSplitters");
@@ -206,7 +211,7 @@ namespace Algorithms
     mFilterInfoWS->addColumn("str", "title");
 
     // 2. Get Time
-    processInputTime(runstart);
+    processInputTime();
 
     double prog = 0.1;
     progress(prog);
@@ -230,92 +235,153 @@ namespace Algorithms
     return;
   }
 
-  /*
-   * Process the input for time.  A smart but complicated default rule
+  /** Process the input for time.  A smart but complicated default rule
+    * (1) If the time is in unit of second, nanosecond or percent, then it is
+    *     relative time to FIRST proton charge, but NOT run_start.
    */
-  void GenerateEventsFilter::processInputTime(Kernel::DateAndTime runstarttime)
+  void GenerateEventsFilter::processInputTime()
   {
     // 1. Get input
     std::string s_inpt0 = this->getProperty("StartTime");
     std::string s_inptf = this->getProperty("StopTime");
 
-    // 2. Check if input are in double or string
-    bool instringformat = true;
-    if (s_inpt0.find(':') == std::string::npos)
+    g_log.debug() << "Start time = " << s_inpt0 << endl;
+    cout << "Start time = " << s_inpt0 << endl;
+
+    // 2. Run info
+    Kernel::TimeSeriesProperty<double>* protonchargelog =
+        dynamic_cast<Kernel::TimeSeriesProperty<double> *>(mEventWS->run().getProperty("proton_charge"));
+    Kernel::DateAndTime runstarttime = protonchargelog->firstTime();
+    Kernel::DateAndTime runendtime = protonchargelog->lastTime();
+
+    // int64_t runtime_ns = runend.totalNanoseconds()-runstarttime.totalNanoseconds();
+
+    // 3. Set up time-convert unit
+    std::string timeunit = this->getProperty("UnitOfTime");
+    m_convertfactor = 1.0;
+    if (timeunit.compare("Seconds") == 0)
     {
-      instringformat = false;
+      // a) In unit of seconds
+      m_convertfactor = 1.0E9;
+    }
+    else if (timeunit.compare("Nanoseconds") == 0)
+    {
+      // b) In unit of nano-seconds
+      m_convertfactor = 1.0;
     }
 
-    if (instringformat)
+    cout << "convert factor = " << m_convertfactor << " unit of time = " << timeunit << endl;
+
+    // 4. Run start time
+    if (s_inpt0.size() == 0)
     {
-      // 1. In absolute time ISO format
-      Kernel::DateAndTime t0(s_inpt0);
-      Kernel::DateAndTime t1(s_inptf);
-      mStartTime = t0;
-      mStopTime = t1;
+      // Default
+      cout << "Use default." << endl;
+      mStartTime = runstarttime;
     }
     else
     {
-      // 2. In double relative time format
-      std::string timeunit = this->getProperty("UnitOfTime");
-      double inpt0 = atof(s_inpt0.c_str());
-      double inptf = atof(s_inptf.c_str());
-
-      if (inpt0 < 0)
+      cout << "Use input " << s_inpt0 << endl;
+      bool istimestring = s_inpt0.find(':') == std::string::npos;
+      cout << istimestring << endl;
+      if (s_inpt0.find(':') != std::string::npos)
       {
-        throw std::invalid_argument("Input StartTime cannot be negative!");
-      }
-
-      // 2. Find maximum time by proton charge
-      // FIXME Use this simple method may miss the events in the last pulse
-      Kernel::TimeSeriesProperty<double>* protonchargelog =
-          dynamic_cast<Kernel::TimeSeriesProperty<double> *>(mEventWS->run().getProperty("proton_charge"));
-      Kernel::DateAndTime runend = protonchargelog->lastTime();
-
-      // 3. Set up time-convert unit
-      m_convertfactor = 1.0;
-      if (timeunit.compare("Seconds") == 0)
-      {
-        // a) In unit of seconds
-        m_convertfactor = 1.0E9;
-      }
-      else if (timeunit.compare("Nanoseconds") == 0)
-      {
-        // b) In unit of nano-seconds
-        m_convertfactor = 1.0;
-      }
-      else if (timeunit.compare("Percent") == 0)
-      {
-        // c) In unit of percent of total run time
-        int64_t runtime_ns = runend.totalNanoseconds()-runstarttime.totalNanoseconds();
-        double runtimed_ns = static_cast<double>(runtime_ns);
-        m_convertfactor = 0.01*runtimed_ns;
+        // In string format
+        cout << "Branch 1\n";
+        Kernel::DateAndTime t0(s_inpt0);
+        mStartTime = t0;
       }
       else
       {
-        // d) Not defined
-        g_log.error() << "TimeType " << timeunit << " is not supported!" << std::endl;
-        throw std::runtime_error("Input TimeType is not supported");
+        cout << "Branch 2\n";
+        // In double (second, nanosecond, or ...)
+        double inpt0 = atof(s_inpt0.c_str());
+        int64_t temptimens = 0;
+        if (timeunit.compare("Percent"))
+        {
+          // Not in percent
+          if (inpt0 >= 0)
+          {
+            temptimens = runstarttime.totalNanoseconds() + static_cast<int64_t>(inpt0*m_convertfactor);
+            cout << "Branch 1A: " << temptimens << endl;
+          }
+          else
+          {
+            // Exception
+            throw std::invalid_argument("Input StartTime cannot be negative!");
+          }
+        }
+        else
+        {
+          // In percentage of run time
+          int64_t runtime_ns = runendtime.totalNanoseconds()-runstarttime.totalNanoseconds();
+          double runtime_ns_dbl = static_cast<double>(runtime_ns);
+          temptimens = runstarttime.totalNanoseconds() + static_cast<int64_t>(inpt0*runtime_ns_dbl*0.01);
+        }
+        Kernel::DateAndTime temptime(temptimens);
+        mStartTime = temptime;
       }
+    } // ENDIFELSE: Starting time
 
-      // 4. Process second round
-      int64_t t0_ns = runstarttime.totalNanoseconds() + static_cast<int64_t>(inpt0*m_convertfactor);
-      Kernel::DateAndTime tmpt0(t0_ns);
-      mStartTime = tmpt0;
+    cout << "run time start = " << mStartTime.toSimpleString() << "\n";
 
-      if (inptf < inpt0)
-      {
-        mStopTime = runend;
-      }
-      else
-      {
-        int64_t tf_ns = runstarttime.totalNanoseconds()+static_cast<int64_t>(inptf*m_convertfactor);
-        Kernel::DateAndTime tmptf(tf_ns);
-        mStopTime = tmptf;
-      }
+    // 4. Run end time
+    if (s_inptf.size() == 0)
+    {
+      // Default
+      mStopTime = runendtime;
     }
+    else
+    {
+      if (s_inptf.find(':') != std::string::npos)
+      {
+        // In string format
+        Kernel::DateAndTime tf(s_inpt0);
+        mStartTime = tf;
+      }
+      else
+      {
+        // In double (second, nanosecond, or ...)
+        double inptf = atof(s_inptf.c_str());
+        int64_t temptimens = 0;
+        if (timeunit.compare("Percent"))
+        {
+          // Not in percent
+          if (inptf >= 0)
+          {
+            temptimens = runstarttime.totalNanoseconds() + static_cast<int64_t>(inptf*m_convertfactor);
+          }
+          else
+          {
+            // Exception
+            throw std::invalid_argument("Input StartTime cannot be negative!");
+          }
+        }
+        else
+        {
+          // In percentage of run time
+          int64_t runtime_ns = runendtime.totalNanoseconds()-runstarttime.totalNanoseconds();
+          double runtime_ns_dbl = static_cast<double>(runtime_ns);
+          temptimens = runstarttime.totalNanoseconds() + static_cast<int64_t>(inptf*runtime_ns_dbl*0.01);
+        }
+        Kernel::DateAndTime temptime(temptimens);
+        mStopTime = temptime;
+      }
+    } // ENDIFELSE: Starting time
 
-    g_log.debug() << "DB8147 StartTime = " << mStartTime << ", StopTime = " << mStopTime << std::endl;
+    // 5. Validate
+    if (mStartTime.totalNanoseconds() >= mStopTime.totalNanoseconds())
+    {
+      stringstream errmsg;
+      errmsg << "Use input starting time " << s_inpt0
+             << " is equal or later than stoping time " << s_inptf << ".\n";
+      throw runtime_error(errmsg.str());
+    }
+    else
+    {
+      g_log.notice() << "Start time = " << mStartTime.totalNanoseconds() << ", \t"
+                     << "Stop  time = " << mStopTime.totalNanoseconds() << "\n";
+    }
 
     return;
   }
@@ -479,14 +545,13 @@ namespace Algorithms
     int64_t timetolerance_ns = static_cast<int64_t>(timetolerance*m_convertfactor);
 
     std::string logboundary = this->getProperty("LogBoundary");
-    std::transform(logboundary.begin(), logboundary.end(), logboundary.begin(), tolower);
 
     // 2. Generate filter
     std::vector<Kernel::SplittingInterval> splitters;
     int wsindex = 0;
     makeFilterByValue(mlog, splitters, minvalue, maxvalue, static_cast<double>(timetolerance_ns)*1.0E-9,
-        logboundary.compare("centre")==0,
-        filterincrease, filterdecrease, mStartTime, mStopTime, wsindex);
+                      logboundary.compare("centre")==0,
+                      filterincrease, filterdecrease, mStartTime, mStopTime, wsindex);
 
     // 3. Add to output
     for (size_t isp = 0; isp < splitters.size(); isp ++)
@@ -594,7 +659,6 @@ namespace Algorithms
     // 3. Call
     Kernel::TimeSplitterType splitters;
     std::string logboundary = this->getProperty("LogBoundary");
-    transform(logboundary.begin(), logboundary.end(), logboundary.begin(), tolower);
 
     makeMultipleFiltersByValues(mlog, splitters, indexwsindexmap, logvalueranges,
                                 logboundary.compare("centre") == 0,

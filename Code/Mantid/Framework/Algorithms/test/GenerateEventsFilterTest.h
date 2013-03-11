@@ -201,7 +201,7 @@ public:
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("MaximumLogValue",  "0.25"));
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("FilterLogValueByChangingDirection", "Increase"));
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("TimeTolerance", 1.0E-8));
-    TS_ASSERT_THROWS_NOTHING(alg.setProperty("LogBoundary",  "Centre"));
+    TS_ASSERT_THROWS_NOTHING(alg.setProperty("LogBoundary",  "centre"));
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("InformationWorkspace", "Information"));
 
     // 3. Running and get result
@@ -232,6 +232,7 @@ public:
      TS_ASSERT_EQUALS(infows->rowCount(), 1);
 
      // 6. Clean
+     AnalysisDataService::Instance().remove("TestWorkspace");
      AnalysisDataService::Instance().remove("Splitters03");
      AnalysisDataService::Instance().remove("Information");
 
@@ -246,8 +247,6 @@ public:
    */
   void test_genMultipleLogValuesFilter()
   {
-    std::cout << "\n==== Test Multiple Log Value Filter ====\n" << std::endl;
-
     // 1. Create input
     DataObjects::EventWorkspace_sptr eventWS = createEventWorkspace();
 
@@ -265,7 +264,7 @@ public:
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("LogValueTolerance", 0.05));
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("FilterLogValueByChangingDirection", "Increase"));
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("TimeTolerance", 1.0E-8));
-    TS_ASSERT_THROWS_NOTHING(alg.setProperty("LogBoundary",  "Centre"));
+    TS_ASSERT_THROWS_NOTHING(alg.setProperty("LogBoundary",  "centre"));
 
     // 3. Running and get result
     TS_ASSERT_THROWS_NOTHING(alg.execute());
