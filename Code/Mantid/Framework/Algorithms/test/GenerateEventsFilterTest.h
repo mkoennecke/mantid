@@ -130,7 +130,7 @@ public:
 
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("InputWorkspace", eventWS));
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("OutputWorkspace", "Splitters01"));
-    TS_ASSERT_THROWS_NOTHING(alg.setProperty("TimeInterval", 15000.0));
+    TS_ASSERT_THROWS_NOTHING(alg.setProperty("Interval", 15000.0));
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("UnitOfTime", "Nanoseconds"));
 
     // 3. Running and get result
@@ -201,7 +201,7 @@ public:
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("MaximumLogValue",  "0.25"));
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("FilterLogValueByChangingDirection", "Increase"));
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("TimeTolerance", 1.0E-8));
-    TS_ASSERT_THROWS_NOTHING(alg.setProperty("LogBoundary",  "centre"));
+    TS_ASSERT_THROWS_NOTHING(alg.setProperty("LogBoundary",  "Centre"));
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("InformationWorkspace", "Information"));
 
     // 3. Running and get result
@@ -260,11 +260,11 @@ public:
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("LogName", "FastSineLog"));
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("MinimumLogValue", "-1.0"));
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("MaximumLogValue",  "1.0"));
-    TS_ASSERT_THROWS_NOTHING(alg.setProperty("LogValueInterval", 0.2));
+    TS_ASSERT_THROWS_NOTHING(alg.setProperty("Interval", 0.2));
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("LogValueTolerance", 0.05));
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("FilterLogValueByChangingDirection", "Increase"));
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("TimeTolerance", 1.0E-8));
-    TS_ASSERT_THROWS_NOTHING(alg.setProperty("LogBoundary",  "centre"));
+    TS_ASSERT_THROWS_NOTHING(alg.setProperty("LogBoundary",  "Centre"));
 
     // 3. Running and get result
     TS_ASSERT_THROWS_NOTHING(alg.execute());
