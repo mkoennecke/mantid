@@ -127,6 +127,8 @@ namespace Algorithms
                               new VisibleWhenProperty("LogName", IS_NOT_EQUAL_TO,  ""));
 
     declareProperty("MaximumLogValue", EMPTY_DBL(), "Maximum log value for which to keep events.");
+    setPropertySettings("MaximumLogValue",
+                              new VisibleWhenProperty("LogName", IS_NOT_EQUAL_TO,  ""));
 
     std::vector<std::string> filteroptions;
     filteroptions.push_back("Both");
@@ -135,21 +137,31 @@ namespace Algorithms
     declareProperty("FilterLogValueByChangingDirection", "Both",
                     boost::make_shared<Kernel::StringListValidator>(filteroptions),
                     "d(log value)/dt can be positive and negative.  They can be put to different splitters.");
-
-    declareProperty("TimeTolerance", 0.0,
-        "Tolerance in time for the event times to keep. It is used in the case to filter by single value.");
-
-    declareProperty("LogValueTolerance", EMPTY_DBL(),
-        "Tolerance of the log value to be included in filter.  It is used in the case to filter by multiple values.");
+    setPropertySettings("FilterLogValueByChangingDirection",
+                              new VisibleWhenProperty("LogName", IS_NOT_EQUAL_TO,  ""));
 
     vector<string> boundaryoptions;
     boundaryoptions.push_back("Centre");
     boundaryoptions.push_back("Edge");
     declareProperty("LogBoundary", "Centre", boost::make_shared<StringListValidator>(boundaryoptions),
         "How to treat log values as being measured in the centre of time.");
+    setPropertySettings("LogBoundary",
+                        new VisibleWhenProperty("LogName", IS_NOT_EQUAL_TO,  ""));
+
+    declareProperty("TimeTolerance", 0.0,
+        "Tolerance in time for the event times to keep. It is used in the case to filter by single value.");
+    setPropertySettings("TimeTolerance",
+                        new VisibleWhenProperty("LogName", IS_NOT_EQUAL_TO,  ""));
+
+    declareProperty("LogValueTolerance", EMPTY_DBL(),
+        "Tolerance of the log value to be included in filter.  It is used in the case to filter by multiple values.");
+    setPropertySettings("LogValueTolerance",
+                        new VisibleWhenProperty("LogName", IS_NOT_EQUAL_TO,  ""));
 
     declareProperty("LogValueTimeSections", 1,
         "In one log value interval, it can be further divided into sections in even time slice.");
+    setPropertySettings("LogValueTimeSections",
+                        new VisibleWhenProperty("LogName", IS_NOT_EQUAL_TO,  ""));
 
     // Output workspaces' title and name
     declareProperty("TitleOfSplitters", "",
