@@ -354,8 +354,8 @@ namespace Algorithms
     }
     else
     {
-      g_log.notice() << "Start time = " << mStartTime.totalNanoseconds() << ", \t"
-                     << "Stop  time = " << mStopTime.totalNanoseconds() << "\n";
+      g_log.information() << "Start time = " << mStartTime.totalNanoseconds() << ", \t"
+                          << "Stop  time = " << mStopTime.totalNanoseconds() << "\n";
     }
 
     return;
@@ -485,74 +485,7 @@ namespace Algorithms
       filterDecrease = true;
     }
 
-#if 0
-    bool toProcessSingleValueFilter = false;
-    if (deltaValue <= 0)
-    {
-      toProcessSingleValueFilter = true;
-    }
-
-    // 2. Generate filters
-    if (toProcessSingleValueFilter)
-    {
-      // a) Generate a filter for a single log value
-      processSingleValueFilter(mLog, minvalue, maxvalue, filterIncrease, filterDecrease);
-    }
-    else
-    {
-      // b) Generate filters for a series of log value
-      processMultipleValueFilters(mLog, minvalue, maxvalue, filterIncrease, filterDecrease);
-    }
-#endif
-
     processMultipleValueFilters(logtofilter, minvalue, maxvalue, filterIncrease, filterDecrease);
-
-    return;
-  }
-
-  //----------------------------------------------------------------------------------------------
-  /** Generate filters by single log value
-    */
-  void GenerateEventsFilter::processSingleValueFilter(Kernel::TimeSeriesProperty<double>* mlog,
-                                                      double minvalue, double maxvalue,
-                                                      bool filterincrease, bool filterdecrease)
-  {
-    // 1. Validity & value
-    double timetolerance = this->getProperty("TimeTolerance");
-    int64_t timetolerance_ns = static_cast<int64_t>(timetolerance*m_convertfactor);
-
-    std::string logboundary = this->getProperty("LogBoundary");
-
-    // 2. Generate filter
-    std::vector<Kernel::SplittingInterval> splitters;
-    int wsindex = 0;
-    makeFilterByValue(mlog, splitters, minvalue, maxvalue, static_cast<double>(timetolerance_ns)*1.0E-9,
-                      logboundary.compare("Centre")==0,
-                      filterincrease, filterdecrease, mStartTime, mStopTime, wsindex);
-
-    // 3. Add to output
-    for (size_t isp = 0; isp < splitters.size(); isp ++)
-    {
-      mSplitters->addSplitter(splitters[isp]);
-    }
-
-    // 4. Add information
-    API::TableRow row = mFilterInfoWS->appendRow();
-    std::stringstream ss;
-    ss << "Log " << mlog->name() << " From " << minvalue << " To " << maxvalue << "  Value-change-direction ";
-    if (filterincrease && filterdecrease)
-    {
-      ss << " both ";
-    }
-    else if (filterincrease)
-    {
-      ss << " increase";
-    }
-    else
-    {
-      ss << " decrease";
-    }
-    row << 0 << ss.str();
 
     return;
   }
@@ -639,7 +572,7 @@ namespace Algorithms
       API::TableRow newrow = mFilterInfoWS->appendRow();
       newrow << wsindex << ss.str();
 
-      g_log.notice() << "Add filter range " << rangeindex << ": " << ss.str() << "\n";
+      g_log.debug() << "Add filter range " << rangeindex << ": " << ss.str() << "\n";
 
       // Update loop variables
       curvalue += valueinterval;
@@ -676,160 +609,6 @@ namespace Algorithms
     // 4. Put to SplittersWorkspace
     for (size_t i = 0; i < splitters.size(); i ++)
       mSplitters->addSplitter(splitters[i]);
-
-    return;
-  }
-
-
-  //-----------------------------------------------------------------------------------------------
-  /**
-   * Fill a TimeSplitterType that will filter the events by matching
-   * SINGLE log values >= min and < max. Creates SplittingInterval's where
-   * times match the log values, and going to index==0.
-   *
-   * @param mlog :: Log.
-   * @param filterIncrease :: As log value increase, and within (min, max), include this range in the filter.
-   * @param filterDecrease :: As log value increase, and within (min, max), include this range in the filter.
-   * @param startTime :: Start time.
-   * @param stopTime :: Stop time.
-   * @param wsindex :: Workspace index.
-   * @param split :: Splitter that will be filled.
-   * @param min :: Min value.
-   * @param max :: Max value.
-   * @param TimeTolerance :: Offset added to times in seconds.
-   * @param centre :: Whether the log value time is considered centred or at the beginning.
-   */
-  void GenerateEventsFilter::makeFilterByValue(Kernel::TimeSeriesProperty<double>* mlog,
-      Kernel::TimeSplitterType& split, double min, double max, double TimeTolerance, bool centre,
-      bool filterIncrease, bool filterDecrease, Kernel::DateAndTime startTime, Kernel::DateAndTime stopTime,
-      int wsindex)
-  {
-    // 1. Do nothing if the log is empty.
-    if (mlog->size() == 0)
-    {
-      g_log.warning() << "There is no entry in this property " << this->name() << std::endl;
-      return;
-    }
-
-    // 2. Do the rest
-    bool lastGood = false;
-    bool isGood = false;;
-    time_duration tol = DateAndTime::durationFromSeconds( TimeTolerance );
-    int numgood = 0;
-    DateAndTime lastTime, t;
-    DateAndTime start, stop;
-
-    size_t progslot = 0;
-
-    for (int i = 0; i < mlog->size(); i ++)
-    {
-      lastTime = t;
-      //The new entry
-      t = mlog->nthTime(i);
-      double val = mlog->nthValue(i);
-
-      // A good value?
-      if (filterIncrease && filterDecrease)
-      {
-        // a) Including both sides
-        isGood = ((val >= min) && (val < max)) && t >= startTime && t <= stopTime;
-      }
-      else if (filterIncrease)
-      {
-        if (i == 0)
-          isGood = false;
-        else
-          isGood = ((val >= min) && (val < max)) && t >= startTime && t <= stopTime && val-mlog->nthValue(i-1) > 0;
-      }
-      else if (filterDecrease)
-      {
-        if (i == 0)
-          isGood = false;
-        else
-          isGood = ((val >= min) && (val < max)) && t >= startTime && t <= stopTime && val-mlog->nthValue(i-1) < 0;
-      }
-      else
-      {
-        g_log.error() << "Neither increasing nor decreasing is selected.  It is empty!" << std::endl;
-      }
-
-      if (isGood)
-        numgood++;
-
-      if (isGood != lastGood)
-      {
-        //We switched from bad to good or good to bad
-
-        if (isGood)
-        {
-          //Start of a good section
-          if (centre)
-            start = t - tol;
-          else
-            start = t;
-        }
-        else
-        {
-          //End of the good section
-          if (centre)
-          {
-            stop = t - tol;
-          }
-          else
-          {
-            stop = t;
-          }
-          split.push_back( SplittingInterval(start, stop, wsindex) );
-
-          /*
-          if (numgood == 1)
-          {
-            //There was only one point with the value. Use the last time, - the tolerance, as the end time
-            if (centre)
-            {
-              stop = t-tol;
-              // stop = lastTime - tol;
-            }
-            else
-            {
-              stop = t;
-            }
-            split.push_back( SplittingInterval(start, stop, wsindex) );
-          }
-          else
-          {
-            //At least 2 good values. Save the end time
-            XXX XXX
-          }
-          */
-
-          //Reset the number of good ones, for next time
-          numgood = 0;
-        }
-        lastGood = isGood;
-      }
-
-      // Progress bar..
-      size_t tmpslot = i*90/mlog->size();
-      if (tmpslot > progslot)
-      {
-        progslot = tmpslot;
-        double prog = double(progslot)/100.0+0.1;
-        progress(prog);
-      }
-
-    } // ENDFOR
-
-    if (numgood > 0)
-    {
-      //The log ended on "good" so we need to close it using the last time we found
-      if (centre)
-        stop = t - tol;
-      else
-        stop = t;
-      split.push_back( SplittingInterval(start, stop, wsindex) );
-      numgood = 0;
-    }
 
     return;
   }
@@ -955,10 +734,8 @@ namespace Algorithms
                 << ", Previous data arange index = " << prevdatarangeindex
                 << ", Start Time = " << start.totalNanoseconds();
           g_log.debug(dbmsg.str());
-          cout << dbmsg.str() << "\n";
 
           bool valuewithin2boundaries = currdatarangeindex < static_cast<int>(logvalueranges.size());
-          cout << "DB1025 Value Inside Boundary = " << valuewithin2boundaries << "\n";
 
           if (currdatarangeindex%2 == 0 && valuewithin2boundaries)
           {
@@ -967,16 +744,16 @@ namespace Algorithms
             {
               // ia) A new region. and might close the old parenthesis
               newsplitter = true;
-              cout << "DB1007A: New splitter is to be started.\n";
+              // cout << "DB1007A: New splitter is to be started.\n";
               if (start.totalNanoseconds() > 0)
               {
                 completehalf = true;
-                cout << "DB1007B: Existing splitter is to generate. \n";
+                // cout << "DB1007B: Existing splitter is to generate. \n";
               }
               else
               {
                 completehalf = false;
-                cout << "DB1007C: No half-generated splitter does exist.\n";
+                // cout << "DB1007C: No half-generated splitter does exist.\n";
               }
             }
             else
@@ -991,12 +768,12 @@ namespace Algorithms
             if (start.totalNanoseconds() > 0)
             {
               completehalf = true;
-              cout << "DB1007D: Outside of boundary/interval.  Complete a splitter.\n";
+              // cout << "DB1007D: Outside of boundary/interval.  Complete a splitter.\n";
             }
             else
             {
               completehalf = false;
-              cout << "DB1007D: Outside of boundary/interval.  Do nothing.\n";
+              // cout << "DB1007D: Outside of boundary/interval.  Do nothing.\n";
             }
           }
         } // ENDIF... Direction
@@ -1031,7 +808,7 @@ namespace Algorithms
              << static_cast<double>(stop.totalNanoseconds()-start.totalNanoseconds())*1.0E-9
              << "(s), Workgroup = " << wsindex;
         g_log.debug(msgx.str());
-        cout << msgx.str() << "\n";
+        // cout << msgx.str() << "\n";
 
         // reset
         start = ZeroTime;
@@ -1079,9 +856,6 @@ namespace Algorithms
   {
     size_t outrange = sorteddata.size()+1;
 
-    for (size_t i = 0; i < sorteddata.size(); ++i)
-      cout << "Range value " << i << " = " << sorteddata[i] << "\n";
-
     // 1. Extreme case
     if (value < sorteddata[0] || value > sorteddata.back())
       return outrange;
@@ -1089,47 +863,12 @@ namespace Algorithms
       return outrange;
 
     // 2. Binary search
-
-#if 0
-    bool found = false;
-    size_t start = 0;
-    size_t stop = sorteddata.size()-1;
-
-    while (!found)
-    {
-      if (start == stop || start+1 == stop)
-      {
-        // a) Found
-        if (value == sorteddata[stop])
-        {
-          // std::cout << "DB450  Found @ A " << dataranges[stop] << "  Index = " << stop << std::endl;
-          return stop;
-        }
-        else
-        {
-          // std::cout << "DB450  Found @ B " << dataranges[start] << "  Index = " << start << std::endl;
-          return start;
-        }
-      }
-
-      size_t mid = (start+stop)/2;
-      if (value < sorteddata[mid])
-      {
-        stop = mid;
-      }
-      else
-      {
-        start = mid;
-      }
-    }
-#else
     vector<double>::iterator fiter = lower_bound(sorteddata.begin(), sorteddata.end(), value);
     size_t findex = static_cast<size_t>(fiter-sorteddata.begin());
     if (findex >= sorteddata.size())
       throw runtime_error("This situation is weird. ");
     if (findex >= 1)
       findex -= 1;
-#endif
 
     return findex;
   }

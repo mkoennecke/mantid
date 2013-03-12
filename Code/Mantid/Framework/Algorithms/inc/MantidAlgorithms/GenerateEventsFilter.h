@@ -83,16 +83,8 @@ namespace Algorithms
     void setFilterByTimeOnly();
     void setFilterByLogValue(std::string logname);
 
-    void processSingleValueFilter(Kernel::TimeSeriesProperty<double>* mlog, double minvalue, double maxvalue,
-        bool filterincrease, bool filterdecrease);
-
     void processMultipleValueFilters(Kernel::TimeSeriesProperty<double>* mlog, double minvalue, double maxvalue,
         bool filterincrease, bool filterdecrease);
-
-    void makeFilterByValue(Kernel::TimeSeriesProperty<double>* mlog,
-        Kernel::TimeSplitterType& split, double min, double max, double TimeTolerance, bool centre,
-        bool filterIncrease, bool filterDecrease, Kernel::DateAndTime startTime, Kernel::DateAndTime stopTime,
-        int wsindex);
 
     void makeMultipleFiltersByValues(Kernel::TimeSeriesProperty<double>* mlog,
         Kernel::TimeSplitterType& split, std::map<size_t, int> indexwsindexmap, std::vector<double> logvalueranges,
