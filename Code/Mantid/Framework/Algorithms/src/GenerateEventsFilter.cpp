@@ -901,7 +901,7 @@ namespace Algorithms
     // 2. Binary search
     vector<double>::iterator fiter = lower_bound(sorteddata.begin(), sorteddata.end(), value);
     int findex = static_cast<int>(fiter-sorteddata.begin());
-    if (findex >= sorteddata.size())
+    if (findex >= static_cast<int>(sorteddata.size()))
       throw runtime_error("This situation is weird. ");
     if (findex >= 1)
       findex -= 1;
