@@ -888,9 +888,9 @@ namespace Algorithms
    *
    * return:  if value is out of range, then return datarange.size() + 1
    */
-  size_t GenerateEventsFilter::searchValue(std::vector<double> sorteddata, double value)
+  int GenerateEventsFilter::searchValue(std::vector<double> sorteddata, double value)
   {
-    size_t outrange = sorteddata.size()+1;
+    int outrange = static_cast<int>(sorteddata.size())+1;
 
     // 1. Extreme case
     if (value < sorteddata[0] || value > sorteddata.back())
@@ -900,7 +900,7 @@ namespace Algorithms
 
     // 2. Binary search
     vector<double>::iterator fiter = lower_bound(sorteddata.begin(), sorteddata.end(), value);
-    size_t findex = static_cast<size_t>(fiter-sorteddata.begin());
+    int findex = static_cast<int>(fiter-sorteddata.begin());
     if (findex >= sorteddata.size())
       throw runtime_error("This situation is weird. ");
     if (findex >= 1)

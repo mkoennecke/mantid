@@ -90,7 +90,7 @@ namespace Algorithms
         Kernel::TimeSplitterType& split, std::map<size_t, int> indexwsindexmap, std::vector<double> logvalueranges,
         bool centre, bool filterIncrease, bool filterDecrease, Kernel::DateAndTime startTime, Kernel::DateAndTime stopTime);
 
-    size_t searchValue(std::vector<double> sorteddata, double value);
+    int searchValue(std::vector<double> sorteddata, double value);
 
     DataObjects::EventWorkspace_const_sptr mEventWS;
     API::ISplittersWorkspace_sptr mSplitters;
