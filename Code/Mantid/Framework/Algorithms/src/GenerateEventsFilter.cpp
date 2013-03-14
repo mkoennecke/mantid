@@ -730,22 +730,29 @@ namespace Algorithms
         // c2) See whether this value falls into any range
         if (!correctdir && start.totalNanoseconds() > 0)
         {
-          // Condition to generate a Splitter (close parenthesis)
+          // Wrong direction.  But meet condition to generate a Splitter (close parenthesis)
+          prevdatarangeindex = currdatarangeindex;
           stop = currTime;
           completehalf = true;
+          stringstream dbmsg;
+          dbmsg << "DBx257B Examine Log Index " << i <<  ", Value = "
+                << currValue << ", direction is wrong. ";
+          g_log.debug(dbmsg.str());
+          cout << dbmsg.str() << "\n";
         }
         else if (correctdir)
         {
-          // Check log values to determine
+          // Direction is correct. Check log values to determine
           prevdatarangeindex = currdatarangeindex;
           currdatarangeindex = searchValue(logvalueranges, currValue);
 
           stringstream dbmsg;
-          dbmsg << "DBx257 Examine Log Index " << i << ", Value = " << currValue
+          dbmsg << "DBx257A Examine Log Index " << i << ", Value = " << currValue
                 << ", Current data range index   = " << currdatarangeindex
                 << ", Previous data arange index = " << prevdatarangeindex
                 << ", Start Time = " << start.totalNanoseconds();
           g_log.debug(dbmsg.str());
+          cout << dbmsg.str() << "\n";
 
           bool valuewithin2boundaries = currdatarangeindex < static_cast<int>(logvalueranges.size());
 
@@ -788,7 +795,18 @@ namespace Algorithms
               // cout << "DB1007D: Outside of boundary/interval.  Do nothing.\n";
             }
           }
-        } // ENDIF... Direction
+        }
+        else
+        {
+          // Wrong direction.  Not meet requirement to complete a splitter.
+          stringstream dbmsg;
+          dbmsg << "DBx257C Examine Log Index " << i << ", Value = " << currValue
+                << ": Wrong direction. "
+                << "Start time = " << start.totalNanoseconds();
+          g_log.debug(dbmsg.str());
+          cout << dbmsg.str() << "\n";
+
+        }// ENDIF... Direction
       } // ENDIF... Time range
 
       // d) Create Splitter
@@ -800,7 +818,13 @@ namespace Algorithms
         map<size_t, int>::iterator mapiter = indexwsindexmap.find(dataindex);
         int wsindex = 0;
         if (mapiter == indexwsindexmap.end())
-          throw runtime_error("Impossible to have a section index with no workspace index in pair.");
+        {
+          stringstream errmsg;
+          errmsg << "Impossible to have a splitter index (" << dataindex
+                 << ") with no workspace index in pair. Map size = " << indexwsindexmap.size()
+                 << " Current value = " << currValue << ", Previous data index = " << prevdatarangeindex;
+          throw runtime_error(errmsg.str());
+        }
         else
         {
           wsindex = mapiter->second;
