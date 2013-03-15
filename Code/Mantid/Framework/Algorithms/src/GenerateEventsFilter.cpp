@@ -738,7 +738,6 @@ namespace Algorithms
           dbmsg << "DBx257B Examine Log Index " << i <<  ", Value = "
                 << currValue << ", direction is wrong. ";
           g_log.debug(dbmsg.str());
-          cout << dbmsg.str() << "\n";
         }
         else if (correctdir)
         {
@@ -752,7 +751,6 @@ namespace Algorithms
                 << ", Previous data arange index = " << prevdatarangeindex
                 << ", Start Time = " << start.totalNanoseconds();
           g_log.debug(dbmsg.str());
-          cout << dbmsg.str() << "\n";
 
           bool valuewithin2boundaries = currdatarangeindex < static_cast<int>(logvalueranges.size());
 
@@ -804,7 +802,6 @@ namespace Algorithms
                 << ": Wrong direction. "
                 << "Start time = " << start.totalNanoseconds();
           g_log.debug(dbmsg.str());
-          cout << dbmsg.str() << "\n";
 
         }// ENDIF... Direction
       } // ENDIF... Time range
