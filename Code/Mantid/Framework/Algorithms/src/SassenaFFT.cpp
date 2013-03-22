@@ -139,8 +139,18 @@ void SassenaFFT::exec()
   // Set the Energy unit for the X-axis
   sqw->getAxis(0)->unit() = Kernel::UnitFactory::Instance().create("Energy");
 
-  // Add to group workspace
-  gws->add( sqwName );
+  // Add to group workspace, except if we are replacing the workspace. In this case, the group workspace
+  // is already notified of the changes by the analysis data service.
+  if(!gws->contains(sqwName))
+  {
+    gws->add( sqwName );
+  }
+  else
+  {
+    this->g_log.information("Workspace "+sqwName+" replaced with new contents");
+  }
+
+
 }
 
 } // namespacce Mantid
