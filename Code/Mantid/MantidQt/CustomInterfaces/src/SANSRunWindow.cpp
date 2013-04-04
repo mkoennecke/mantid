@@ -64,6 +64,7 @@ Logger& SANSRunWindow::g_log = Logger::get("SANSRunWindow");
 ///Constructor
 SANSRunWindow::SANSRunWindow(QWidget *parent) :
   UserSubWindow(parent), m_addFilesTab(NULL), m_displayTab(NULL), m_diagnosticsTab(NULL),
+  m_EventSlicing(NULL),
   m_saveWorkspaces(NULL), m_ins_defdir(""), m_last_dir(""),
   m_cfg_loaded(true), m_userFname(false), m_sample_file(),
   m_warnings_issued(false), m_force_reload(false),
@@ -196,6 +197,14 @@ void SANSRunWindow::initLayout()
   connect(m_uiForm.detbank_sel, SIGNAL(currentIndexChanged(int)), this, SLOT(phiMaskingChanged(int))); 
   connect(m_uiForm.phi_min, SIGNAL(editingFinished()), this, SLOT(phiMaskingChanged())); 
   connect(m_uiForm.phi_max, SIGNAL(editingFinished()), this, SLOT(phiMaskingChanged())); 
+
+
+  m_EventSlicing = new SANSEventSlicing(this);
+  connect(m_uiForm.sliceAdvPushButton,SIGNAL(clicked()),this, SLOT(showEventSlicing()));
+  connect(m_uiForm.sliceLineEdit, SIGNAL(textChanged(QString)),m_EventSlicing, SLOT(changeSlicingString(QString)));
+  connect(m_EventSlicing, SIGNAL(slicingString(QString)),m_uiForm.sliceLineEdit,SLOT(setText(QString)));
+  connect(m_uiForm.scatterSample,SIGNAL(fileTextChanged(QString)),m_EventSlicing,SLOT(changeRun(QString)));
+  
 
   readSettings();
 }
@@ -3492,6 +3501,13 @@ void SANSRunWindow::phiMaskingChanged(int i)
   Q_UNUSED(i);
   updateMaskTable(); 
 }  
+
+/** Raise and show the Event Slicing Widget    
+ */
+void SANSRunWindow::showEventSlicing(void){
+  m_EventSlicing->show(); 
+  m_EventSlicing->activateWindow(); 
+}
 
 } //namespace CustomInterfaces
 

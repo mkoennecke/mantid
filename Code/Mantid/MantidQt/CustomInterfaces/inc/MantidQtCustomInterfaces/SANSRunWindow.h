@@ -10,7 +10,7 @@
 #include "MantidQtMantidWidgets/SaveWorkspaces.h"
 #include "MantidQtCustomInterfaces/SANSDiagnostics.h"
 #include "MantidQtCustomInterfaces/SANSPlotSpecial.h"
-
+#include "MantidQtCustomInterfaces/SANSEventSlicing.h"
 #include <QHash>
 #include <QSettings>
 #include <QStringList>
@@ -255,7 +255,9 @@ private slots:
   /// So user can decide to use fixed q range or not
   void updateFrontDetQrange(int state);
   void checkList();
-  
+
+  void showEventSlicing(void); 
+
 private:
   /// used to specify the range of validation to do
   enum ValCheck
@@ -275,6 +277,9 @@ private:
   SANSPlotSpecial* m_displayTab;
 
   SANSDiagnostics* m_diagnosticsTab;
+
+  SANSEventSlicing * m_EventSlicing;
+
   /// this points to a saveWorkspaces, which allows users to save any workspace, when one is opened
   MantidWidgets::SaveWorkspaces *m_saveWorkspaces;
   /// The data directory (as an absolute path)
