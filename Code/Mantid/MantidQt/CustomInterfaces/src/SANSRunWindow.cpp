@@ -2228,11 +2228,21 @@ void SANSRunWindow::handleReduceButtonClick(const QString & typeStr)
     {
       py_code += ", verbose=True";
     }
-    py_code += ", reducer=i.ReductionSingleton().reference(),";
+    py_code += ", reducer=i.ReductionSingleton().reference()";
 
 
-    py_code += "combineDet=";
+    py_code += ", combineDet=";
     py_code += combineDetOption;
+
+
+    // deal with slicing... 
+    if (!m_uiForm.sliceLineEdit->text().isEmpty())
+    {
+      py_code += ", slices='";
+      // FIXME: translate the line edit... 
+      py_code += m_uiForm.sliceLineEdit->text() + "'";      
+    }
+    
     py_code += ")";
   }
 
