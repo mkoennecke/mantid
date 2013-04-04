@@ -16,6 +16,7 @@ import isis_instrument
 import os
 import math
 import copy
+import sys
 
 def _issueWarning(msg):
     """
@@ -77,34 +78,46 @@ class LoadRun(object):
         if period == self.UNSET_PERIOD:
             period = 1
 
-        if os.path.splitext(self._data_file)[1].lower().startswith('.r') or os.path.splitext(self._data_file)[1].lower().startswith('.s'):
-            try:
-                outWs = LoadRaw(Filename=self._data_file, 
+
+        require_load = True
+        if self._data_file in mtd:
+            if not self._reload:
+                workspace = RenameWorkspace(self._data_file,OutputWorkspace=workspace)
+                require_load = False
+                try:
+                    self._data_file = workspace.getHistory()[0].getPropertyValue('Filename')                
+                except:
+                    logger.warning("SANS: failed to get the file name of workspace " + str(workspace) + str(sys.exc_info()))
+                workspace = str(workspace)
+
+        if require_load:
+            if os.path.splitext(self._data_file)[1].lower().startswith('.r') or os.path.splitext(self._data_file)[1].lower().startswith('.s'):
+                try:
+                    outWs = LoadRaw(Filename=self._data_file, 
                                 OutputWorkspace=workspace, 
                                 SpectrumMin=self._spec_min, 
                                 SpectrumMax=self._spec_max)
-            except ValueError:
-                # MG - 2011-02-24: Temporary fix to load .sav or .s* files. Lets the file property
-                # work it out
-                file_hint = os.path.splitext(self._data_file)[0]
-                outWs = LoadRaw(Filename=file_hint, 
+                except ValueError:
+                    # MG - 2011-02-24: Temporary fix to load .sav or .s* files. Lets the file property
+                    # work it out
+                    file_hint = os.path.splitext(self._data_file)[0]
+                    outWs = LoadRaw(Filename=file_hint, 
                                 OutputWorkspace=workspace, 
                                 SpectrumMin=self._spec_min, 
                                 SpectrumMax=self._spec_max)
                 
-            alg = outWs.getHistory().lastAlgorithm()
-            self._data_file = alg.getPropertyValue("Filename")
-            LoadSampleDetailsFromRaw(InputWorkspace=workspace, Filename=self._data_file)
+                alg = outWs.getHistory().lastAlgorithm()
+                self._data_file = alg.getPropertyValue("Filename")
+                LoadSampleDetailsFromRaw(InputWorkspace=workspace, Filename=self._data_file)
 
-            workspace = self._leaveSinglePeriod(workspace, period)
-        else:
-            outWs = LoadNexus(Filename=self._data_file, 
-                              OutputWorkspace=workspace,
-                SpectrumMin=self._spec_min, SpectrumMax=self._spec_max, 
-                EntryNumber=period)
-            alg = outWs.getHistory().lastAlgorithm()            
-            self._data_file = alg.getPropertyValue("Filename")
-
+                workspace = self._leaveSinglePeriod(workspace, period)
+            else:
+                outWs = LoadNexus(Filename=self._data_file, 
+                              OutputWorkspace=workspace, SpectrumMin=self._spec_min, 
+                                  SpectrumMax=self._spec_max, EntryNumber=period)
+                alg = outWs.getHistory().lastAlgorithm()            
+                self._data_file = alg.getPropertyValue("Filename")
+        
         SANS2D_log_file = mtd[workspace]
        
         numPeriods  = self._find_workspace_num_periods(workspace)
@@ -158,8 +171,9 @@ class LoadRun(object):
                 run_number_width=reducer.instrument.run_number_width)
         except AttributeError:
             raise AttributeError('No instrument has been assign, run SANS2D or LOQ first')
-
-        if not self._reload:
+        
+        
+        if not self._reload and False: # disable this, in order to try the reload approach
             raise NotImplementedError('Raw workspaces must be reloaded, run with reload=True')
             #this old code should be checked before reimplementing not reloading raw workspaces 
             #if self._period > 1:
@@ -248,6 +262,12 @@ class LoadRun(object):
             @param prefix: expect this string to come before the run number (normally instrument name)
             @param run_number_width: ISIS instruments often produce files with a fixed number of digits padded with zeros
         """
+        if run_string in mtd:
+            #update the shortrun_no because it will be used.
+            self.shortrun_no = mtd[run_string].getRunNumber()
+            self.ext="nxs"
+            return run_string;
+
         pieces = run_string.split('.')
         if len(pieces) != 2:
              raise RuntimeError, "Invalid run specified: " + run_string + ". Please use RUNNUMBER.EXT format"
@@ -1019,7 +1039,7 @@ class LoadSample(LoadRun, ReductionStep):
                 raise RuntimeError('Sample logs cannot be loaded, cannot continue')
             reducer.instrument.apply_detector_logs(logs)           
 
-        if not self._reload:
+        if not self._reload and False: #disable this line to allow reload
             raise NotImplementedError('Moving components needs to be made compatible with not reloading the sample')
         beamcoords = reducer.get_beam_center()
         reducer.instrument.move_components(self.wksp_name, beamcoords[0], beamcoords[1])

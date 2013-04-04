@@ -94,7 +94,7 @@ def addRunToStore(parts, run_store):
     run_store.append(inputdata)
     return 0
 
-def BatchReduce(filename, format, plotresults=False, saveAlgs={'SaveRKH':'txt'},verbose=False, centreit=False, reducer=None, combineDet=None):
+def BatchReduce(filename, format, plotresults=False, saveAlgs={'SaveRKH':'txt'},verbose=False, centreit=False, reducer=None, combineDet=None, slices=None):
     """
         @param filename: the CSV file with the list of runs to analyse
         @param format: type of file to load, nxs for Nexus, etc.
@@ -104,6 +104,7 @@ def BatchReduce(filename, format, plotresults=False, saveAlgs={'SaveRKH':'txt'},
         @param centreit: do centre finding (default=False)
         @param reducer: if to use the command line (default) or GUI reducer object
         @param combineDet: that will be forward to WavRangeReduction (rear, front, both, merged, None)
+        @param slices: Allow to slice for event based data. A csv string with the ranges to slice. Ex: 1-10,50-300
         @return final_setings: A dictionary with some values of the Reduction - Right Now:(scale, shift)
     """     
     if not format.startswith('.'):
@@ -127,107 +128,117 @@ def BatchReduce(filename, format, plotresults=False, saveAlgs={'SaveRKH':'txt'},
     scale_shift = {'scale':1.0000, 'shift':0.0000}
     #first copy the user settings in case running the reductionsteps can change it
     settings = copy.deepcopy(ReductionSingleton().reference())
-
+    ##process slices...
+    if slices:
+        aux_d = slices.split(',')
+        dec_slices = []
+        for single_slice in aux_d:
+            t1,t2 = single_slice.split('-')
+            dec_slices.append((float(t1), float(t2)))
+    else:
+        dec_slices = [None,]
     # Now loop over all the lines and do a reduction (hopefully) for each
     for run in runinfo:
-        raw_workspaces = []
-        try:
-            # Load in the sample runs specified in the csv file
-            raw_workspaces.append(read_run(run, 'sample_sans', format))
-            
-            #Transmission runs to be applied to the sample
-            raw_workspaces += read_trans_runs(run, 'sample', format)
-            
-            # Can run 
-            raw_workspaces.append(read_run(run, 'can_sans', format))
-    
-            #Transmission runs for the can
-            raw_workspaces += read_trans_runs(run, 'can', format)
-    
-            if centreit == 1:
-                if verbose == 1:
-                    FindBeamCentre(50.,170.,12)
-                    
-            
-            # WavRangeReduction runs the reduction for the specified wavelength range where the final argument can either be DefaultTrans or CalcTrans:
-            reduced = WavRangeReduction(combineDet=combineDet, out_fit_settings=scale_shift)
+        for slic in dec_slices:
+            raw_workspaces = []
+            try:
+                # Load in the sample runs specified in the csv file
+                raw_workspaces.append(read_run(run, 'sample_sans', format, slic))
 
-        except SkipEntry, reason:
-            #this means that a load step failed, the warning and the fact that the results aren't there is enough for the user
-            issueWarning(str(reason)+ ', skipping entry')
-            continue
-        except SkipReduction, reason:
-            #this means that a load step failed, the warning and the fact that the results aren't there is enough for the user
-            issueWarning(str(reason)+ ', skipping reduction')
-            continue
-        except ValueError, reason:
-            issueWarning('Cannot load file :'+str(reason))
-            #when we are all up to Python 2.5 replace the duplicated code below with one finally:
+                #Transmission runs to be applied to the sample
+                raw_workspaces += read_trans_runs(run, 'sample', format)
+
+                # Can run 
+                raw_workspaces.append(read_run(run, 'can_sans', format, slic))
+
+                #Transmission runs for the can
+                raw_workspaces += read_trans_runs(run, 'can', format)
+
+                if centreit == 1:
+                    if verbose == 1:
+                        FindBeamCentre(50.,170.,12)
+
+
+                # WavRangeReduction runs the reduction for the specified wavelength range where the final argument can either be DefaultTrans or CalcTrans:
+                reduced = WavRangeReduction(combineDet=combineDet, out_fit_settings=scale_shift)
+
+            except SkipEntry, reason:
+                #this means that a load step failed, the warning and the fact that the results aren't there is enough for the user
+                issueWarning(str(reason)+ ', skipping entry')
+                continue
+            except SkipReduction, reason:
+                #this means that a load step failed, the warning and the fact that the results aren't there is enough for the user
+                issueWarning(str(reason)+ ', skipping reduction')
+                continue
+            except ValueError, reason:
+                issueWarning('Cannot load file :'+str(reason))
+                #when we are all up to Python 2.5 replace the duplicated code below with one finally:
+                delete_workspaces(raw_workspaces)
+                raise
+
             delete_workspaces(raw_workspaces)
-            raise
-        
-        delete_workspaces(raw_workspaces)
-            
 
-        if verbose:
-            logger.notice('::SANS::' + createColetteScript(run, format, reduced, centreit, plotresults, filename))
-        # Rename the final workspace
-        final_name = run['output_as']
-        if final_name == '':
-            final_name = reduced
-        
-        #convert the names from the default one, to the agreement
-        names = [final_name]
-        if combineDet == 'rear':
-            names = [final_name+'_rear']
-            RenameWorkspace(InputWorkspace=reduced,OutputWorkspace= final_name+'_rear')
-        elif combineDet == 'front':
-            names = [final_name+'_front']
-            RenameWorkspace(InputWorkspace=reduced,OutputWorkspace= final_name+'_front')
-        elif combineDet == 'both':
-            names = [final_name+'_front', final_name+'_rear']
-            if ins_name == 'SANS2D':
-                rear_reduced = reduced.replace('front','rear')
-            else: #if ins_name == 'lOQ':
-                rear_reduced = reduced.replace('HAB','main')
-            RenameWorkspace(InputWorkspace=reduced,OutputWorkspace=final_name+'_front')
-            RenameWorkspace(InputWorkspace=rear_reduced,OutputWorkspace=final_name+'_rear')
-        elif combineDet == 'merged':            
-            names = [final_name + '_merged', final_name + '_rear',  final_name+'_front']
-            if ins_name == 'SANS2D':
-                rear_reduced = reduced.replace('merged','rear')
-                front_reduced = reduced.replace('merged','front')
-            else:
-                rear_reduced = reduced.replace('_merged','')
-                front_reduced = rear_reduced.replace('main','HAB')
-            RenameWorkspace(InputWorkspace=reduced,OutputWorkspace= final_name + '_merged')
-            RenameWorkspace(InputWorkspace=rear_reduced,OutputWorkspace= final_name + '_rear')
-            RenameWorkspace(InputWorkspace=front_reduced,OutputWorkspace= final_name+'_front')            
-        else:            
-            RenameWorkspace(InputWorkspace=reduced,OutputWorkspace=final_name)
+            if verbose:
+                logger.notice('::SANS::' + createColetteScript(run, format, reduced, centreit, plotresults, filename))
+            # Rename the final workspace
+            final_name = run['output_as']
+            if final_name == '':
+                final_name = reduced
+            if slic:
+                final_name += "_t"+str(slic[0])+"_t"+str(slic[1])
 
-        file = run['output_as']
-        #saving if optional and doesn't happen if the result workspace is left blank. Is this feature used?
-        if file:
-            for algor in saveAlgs.keys():
-                for workspace_name in names:
-                    #add the file extension, important when saving different types of file so they don't over-write each other
-                    ext = saveAlgs[algor]
-                    if not ext.startswith('.'):
-                        ext = '.' + ext
-                    if algor == "SaveCanSAS1D":
-                        SaveCanSAS1D(workspace_name, workspace_name+ext, DetectorNames=detnames)
-                    elif algor == "SaveRKH":
-                        SaveRKH(workspace_name, workspace_name+ext, Append=False)
-                    else:
-                        exec(algor+'(workspace_name, workspace_name+ext)')
+            #convert the names from the default one, to the agreement
+            names = [final_name]
+            if combineDet == 'rear':
+                names = [final_name+'_rear']
+                RenameWorkspace(InputWorkspace=reduced,OutputWorkspace= final_name+'_rear')
+            elif combineDet == 'front':
+                names = [final_name+'_front']
+                RenameWorkspace(InputWorkspace=reduced,OutputWorkspace= final_name+'_front')
+            elif combineDet == 'both':
+                names = [final_name+'_front', final_name+'_rear']
+                if ins_name == 'SANS2D':
+                    rear_reduced = reduced.replace('front','rear')
+                else: #if ins_name == 'lOQ':
+                    rear_reduced = reduced.replace('HAB','main')
+                RenameWorkspace(InputWorkspace=reduced,OutputWorkspace=final_name+'_front')
+                RenameWorkspace(InputWorkspace=rear_reduced,OutputWorkspace=final_name+'_rear')
+            elif combineDet == 'merged':            
+                names = [final_name + '_merged', final_name + '_rear',  final_name+'_front']
+                if ins_name == 'SANS2D':
+                    rear_reduced = reduced.replace('merged','rear')
+                    front_reduced = reduced.replace('merged','front')
+                else:
+                    rear_reduced = reduced.replace('_merged','')
+                    front_reduced = rear_reduced.replace('main','HAB')
+                RenameWorkspace(InputWorkspace=reduced,OutputWorkspace= final_name + '_merged')
+                RenameWorkspace(InputWorkspace=rear_reduced,OutputWorkspace= final_name + '_rear')
+                RenameWorkspace(InputWorkspace=front_reduced,OutputWorkspace= final_name+'_front')            
+            else:            
+                RenameWorkspace(InputWorkspace=reduced,OutputWorkspace=final_name)
 
-        if plotresults == 1:
-            for final_name in names:
-                PlotResult(final_name)
+            file = run['output_as']
+            #saving if optional and doesn't happen if the result workspace is left blank. Is this feature used?
+            if file:
+                for algor in saveAlgs.keys():
+                    for workspace_name in names:
+                        #add the file extension, important when saving different types of file so they don't over-write each other
+                        ext = saveAlgs[algor]
+                        if not ext.startswith('.'):
+                            ext = '.' + ext
+                        if algor == "SaveCanSAS1D":
+                            SaveCanSAS1D(workspace_name, workspace_name+ext, DetectorNames=detnames)
+                        elif algor == "SaveRKH":
+                            SaveRKH(workspace_name, workspace_name+ext, Append=False)
+                        else:
+                            exec(algor+'(workspace_name, workspace_name+ext)')
 
-        #the call to WaveRang... killed the reducer so copy back over the settings
-        ReductionSingleton().replace(copy.deepcopy(settings))
+            if plotresults == 1:
+                for final_name in names:
+                    PlotResult(final_name)
+
+            #the call to WaveRang... killed the reducer so copy back over the settings
+            ReductionSingleton().replace(copy.deepcopy(settings))
 
     #end of reduction of all entries of batch file
     return scale_shift
@@ -254,17 +265,19 @@ def parse_run(run_num, ext):
 
     return run_spec, period 
 
-def read_run(runs, run_role, format):
+def read_run(runs, run_role, format, slic):
     """
         Load a run specified in the CSV file
         @param runs: a line from a CSV file
         @param run_role: type of run, e.g. sample
         @param format: extension to add to the end of the run number specification
+        @param slic: definition of the slice for the event mode data or None if not aplicable.
         @return: name of the workspace that was loaded
         @throw SkipReduction: if there is a problem with the line that means a reduction is impossible
         @throw SkipEntry: if the sample is entry is empty
     """
     run_file = runs[run_role]
+    reload = True
     if len(run_file) == 0:
         if run_role == 'sample_sans':
             raise SkipEntry('Empty ' + run_role + ' run given')
@@ -273,7 +286,23 @@ def read_run(runs, run_role, format):
             return
 
     run_file, period = parse_run(run_file, format)
-    run_ws = eval(COMMAND[run_role] + 'run_file, period=period)[0]')
+    if slic:
+        #try to load and slice this dta, if it pass, change
+        #change the run_file to the workspace and the flag reload to false
+        #to use the workspace and not reload again.
+        try:
+            aux_file = run_file[:-len(format)] # remove extension
+            ws, tt, xt, tc, xc = sliceSANS2D(filename=run_file,
+                                             outWs=aux_file,
+                                             time_start = slic[0],
+                                             time_stop = slic[1])
+            logger.notice("Sliced workspace = "+str(ws))
+            run_file = str(ws)
+            reload = False
+        except:
+            logger.warning("Failed to slice: " + str(sys.exc_info()))            
+            pass
+    run_ws = eval(COMMAND[run_role] + 'run_file, period=period, reload=reload)[0]')
     if not run_ws:
         raise SkipReduction('Cannot load ' + run_role + ' run "' + run_file + '"')
     return run_ws

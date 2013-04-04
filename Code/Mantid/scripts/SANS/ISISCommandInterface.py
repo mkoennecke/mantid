@@ -10,9 +10,10 @@ import isis_reducer
 from centre_finder import CentreFinder as CentreFinder
 #import SANSReduction
 from mantid.simpleapi import *
-from mantid.api import WorkspaceGroup
+from mantid.api import WorkspaceGroup, IEventWorkspace, MatrixWorkspace
 import copy
 from SANSadd2 import *
+import sys
 
 # disable plotting if running outside Mantidplot
 try:
@@ -1100,6 +1101,156 @@ def FindBeamCentre(rlow, rupp, MaxIter = 10, xstart = None, ystart = None):
     _printMessage("Centre coordinates updated: [" + str(XNEW)+ ", "+ str(YNEW) + ']')
     
     return XNEW, YNEW
+
+
+
+def getInfo(ws):
+	#get the usefull information from this data
+	r = ws.getRun()
+	charges = r.getLogData('proton_charge')
+	unit = charges.units
+	total_charge = sum(charges.value)
+	time_passed = (charges.times[-1] - charges.times[0]).total_microseconds()
+	time_passed /= 1e6		
+	return total_charge, time_passed
+
+
+def sliceSANS2D(filename=None, outWs="out",
+	time_start=None, time_stop=None):
+	"""
+	Allow to slice the event data on SANS2D. 
+	
+	Almost all the inputs are optional, but, it will work only if corrected set. 
+	This function allow to slice the SANS2D event data passing the time to filter. 
+	It return also usefull information (the experiment duration, the sliced duration,
+	the experiment current, and the sliced current)
+	
+	Some strategies will be used to enhance the velocity of loading the workspace.
+	Given the OutputName it will check if there is already a Event Workspace with 
+	that name as well as a monitor workspace with that name plus _mon suffix. 
+	
+	If the workspace exists and its history has only one Load Method, it means that it can
+	be used to produce the sliced data. By doing this we can avoid loading the whole file again. 	
+	
+	This method will return the sliced workspace, as well as a list of the following values: experiment_duration,
+	sliced_duration (in seconds), experiment_charge, sliced_charge. 
+	
+	
+	
+	"""
+	#check that eventWs is a string or workspace
+	event_workspace_name = "__"+str(outWs)
+	if event_workspace_name in mtd:
+		eventWs = mtd[event_workspace_name]
+                logger.debug("Event workspace found")
+	else:
+		eventWs = ""
+		
+	#if outWs has an associated EventWorkspace with just one algorithm 
+	# in its history called Load and there is also a 
+	# monitor workspace related, we do not need to load the event file
+	# again.
+	load_required = True
+	if isinstance(eventWs, IEventWorkspace):
+            logger.debug("Checking that event workspace can be used as it is")
+            try:
+                firstalg = eventWs.getHistory()[0]
+                secondalg = eventWs.getHistory()[1]
+
+                if 'Load' in firstalg.name() and 'CropWorkspace' in secondalg.name():
+                    
+                    if not filename:
+                        filename = firstalg.getPropertyValue('FileName')
+                    monitor_name = eventWs.getName()+'_monitors'
+                    if monitor_name in mtd:
+                        monitor = mtd[monitor_name]
+                        if isinstance(monitor, MatrixWorkspace):
+                            lastalg = monitor.getHistory().lastAlgorithm()
+                            if lastalg.name() == "LoadNexus":
+                                load_required = False
+            except:
+                # it should have just one algorithm, this means that we can not 'trust' this event workspace has not been changed.
+                print sys.exc_info()
+                pass
+	
+	if load_required:
+		#load the event workspace and the monitor (if it is possible)
+		if not filename:
+			raise ValueError("Can not load data, invalid file name: ")
+		try:
+			eventWs, monitor = LoadEventNexus(Filename=filename, OutputWorkspace=event_workspace_name, LoadMonitors=True)
+			#in event mode, there are twice the number of detectors, so, crop workspace
+			num = eventWs.getNumberHistograms()/2 - 1
+			eventWs = CropWorkspace(eventWs, StartWorkspaceIndex=0,
+			                                            EndWorkspaceIndex=num, OutputWorkspace=eventWs.getName())
+			#the LoadEvent does not give all the metadata information for the monitor, so we have to load the 
+			#monitor using the LoadNexus (in future should be fixed)
+			
+			number_of_monitors = monitor.getNumberHistograms()
+                        monitor = LoadNexus(filename,0,number_of_monitors,OutputWorkspace=monitor.getName())
+		except :
+			print sys.exc_info()
+			raise RuntimeError("The file does not contain event data: "+str(filename))
+        else:
+            logger.notice("Using cached loaded event workspace " + str(eventWs))
+	
+	# from now on, the slice part. 
+	
+	# define the output name
+	outputName = outWs
+
+	if time_start or time_stop:
+		param = dict()
+		suffix = ""
+		if time_start :
+		    param['StartTime'] = time_start
+		    suffix += "_t"+str(time_start)
+		if time_stop :
+		    param['StopTime'] = time_stop
+		    suffix += "_t"+str(time_stop)
+		 
+		outputName += suffix
+		param['OutputWorkspace'] = outputName
+		slicedWs = FilterByTime(eventWs, **param)
+	else:
+		slicedWs = eventWs
+
+	#get information about charge and time
+	t_charge, t_time = getInfo(eventWs)
+	s_charge, s_time = getInfo(slicedWs)
+
+	# we assume that we have access to 
+	# monitor (workspace with only the monitors loaded)
+	# eventWs (event workspace for SANS2D)
+	
+	# calculate the parameters for rebin
+	# the rebin ask for a param a little bit strange, but may be calculated as follow (thrust me)
+	x_values = monitor.readX(0)
+	step = 0
+	rebin_param = []
+	for i in range(len(x_values)-1):
+		if x_values[i+1] - x_values[i] == step: continue
+		rebin_param.append(x_values[i])
+		step = x_values[i+1] - x_values[i]
+		rebin_param.append(step)
+	rebin_param.append(x_values[-1])
+	
+	# rebin the event data to produce histograms
+	hist = Rebin(slicedWs, Params=rebin_param, PreserveEvents=False)
+	
+
+	# conjoin expands the first workspace by tagging the second to the end of it, time channels I think have to
+	# be identical and spectrum number ranges must not overlap.
+        output = Scale(monitor, OutputWorkspace=outputName, factor=s_charge/t_charge)
+        name = output.getName()
+	ConjoinWorkspaces(output,hist)
+	outWs = mtd[name]
+	
+	return outWs, t_time, s_time, t_charge, s_charge
+
+
+
+
 
 #this is like a #define I'd like to get rid of it because it seems meaningless here
 DefaultTrans = 'True'
