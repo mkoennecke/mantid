@@ -158,16 +158,6 @@ def confirm(prompt=None, resp=False, continueconfirm=False):
         if ans == 'n' or ans == 'N':
             return False
     
-    
-#======================================================================
-def make_redirect(from_page, to_page):
-    """Make a redirect from_page to to_page"""
-    print "Making a redirect from %s to %s" % (from_page, to_page)
-    site = wiki_tools.site
-    page = site.Pages[from_page]
-    contents = "#REDIRECT [[%s]]" % to_page
-    page.save(contents, summary = 'Bot: created redirect to the latest version.' )
-    
 #======================================================================
 def page_exists(page):
     # Determine if the wikipage exists or not.
@@ -194,90 +184,34 @@ def wiki_maker_page(page):
     for rev in revisions: 
         return re.search("^Bot", rev['comment'])
 
-#======================================================================
-def create_function_signature(alg, algo_name):
-    """
-    create the function signature for the algorithm.
-    """
-    from mantid.simpleapi import _get_function_spec
-    import mantid.simpleapi
-    _alg = getattr(mantid.simpleapi, algo_name)
-    prototype =  algo_name + _get_function_spec(_alg)
-    
-    # Replace every nth column with a newline.
-    nth = 3
-    commacount = 0
-    prototype_reformated = ""
-    for char in prototype:
-        if char == ',':
-            commacount += 1
-            if (commacount % nth == 0):
-                prototype_reformated += ",\n  "
-            else:
-                prototype_reformated += char
-        else: 
-           prototype_reformated += char
-           
-    # Strip out the version.
-    prototype_reformated = prototype_reformated.replace(",[Version]", "")
-    prototype_reformated = prototype_reformated.replace(",\n  [Version]", "")
-    
-    # Add the output properties
-    props = alg._ProxyObject__obj.getProperties()
-    allreturns = []
-    workspacereturn = None
-    # Loop through all the properties looking for output properties
-    for prop in props:
-        if (direction_string[prop.direction] == OutputDirection):
-            allreturns.append(prop.name)
-            # Cache the last workspace property seen.
-            if isinstance(prop, IWorkspaceProperty): 
-                workspacereturn = prop.name
-                
-    lhs = ""
-    comments = ""
-    if not allreturns:
-        pass
-    elif (len(allreturns) == 1) and (workspacereturn is not None): 
-        lhs =   workspacereturn + " = "
-    else :
-        lhs = "result = "
-        comments = "\n "
-        comments += "\n # -------------------------------------------------- \n"
-        comments += " # result is a tuple containing\n"
-        comments += " # (" + ",".join(allreturns ) + ")\n"
-        comments += " # To access individual outputs use result[i], where i is the index of the required output.\n"
-        
-    return lhs + prototype_reformated + comments
     
 #======================================================================
 def do_algorithm(args, algo, version):
     """ Do the wiki page
     @param algo :: the name of the algorithm, and it's version as a tuple"""
     is_latest_version = True
+    
     # Find the latest version        
     latest_version = find_latest_alg_version(algo)
     if (version == noversion): 
         version = latest_version
-
+    # Abort if a version has bee requested that is not the latest version.
+    elif version < latest_version:
+        print "Warning: You are trying to use wiki maker on an old version of an algorithm."
+        return
+        
     print "Latest version of %s is %d. You are making version %d." % (algo, latest_version, version)
 
     # What should the name on the wiki page be?
     wiki_page_name = algo
-    if latest_version > 1:
-        wiki_page_name = algo + " v." + str(version)
-        # Make sure there is a redirect to latest version
-        if not args.dryrun:
-            make_redirect(algo, algo + " v." + str(latest_version))
         
-    
     print "Generating wiki page for %s at http://www.mantidproject.org/%s" % (algo, wiki_page_name)
     site = wiki_tools.site
     new_contents = make_wiki(algo, version, latest_version) 
     
     #Open the page with the name of the algo
     page = site.Pages[wiki_page_name]
-    if not page_exists(page):
+    if args.dryrun and (not page_exists(page)):
         print "Error: Wiki Page wiki_page_name %s does not exist on the wiki." % wiki_page_name
         reporter.addFailureNoPage(algo, wiki_page_name)
         return
@@ -308,6 +242,8 @@ def do_algorithm(args, algo, version):
             if not last_modifier == None:
                 # Report a failure test case
                 reporter.addFailureTestCase(algo, version, last_modifier, ''.join(diff_list))
+            else:
+                print "This looks like a new wiki page."
         else:
             print "The last edit was automatic via a script. Last edit was done by WIKIMAKER script."
         print "Last change by ", last_modifier
