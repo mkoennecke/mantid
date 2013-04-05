@@ -166,7 +166,7 @@ private:
   /// Run an assign command
   bool runAssign(int key, QString & logs);
   /// Load a scatter sample file or can run via Python objects using the passed Python command
-  bool assignDetBankRun(MantidWidgets::MWRunFiles & runFile, const QString & assignFn, QString & logs);
+  bool assignDetBankRun(MantidWidgets::MWRunFiles & runFile, const QString & assignFn, QString & logs, QString slice_opt = "");
   /// runs that contain only monitor counts can be direct or transmission runs
   bool assignMonitorRun(MantidWidgets::MWRunFiles & trans, MantidWidgets::MWRunFiles & direct, const QString & assignFn);
   /// Get the detectors' names
@@ -216,7 +216,7 @@ private slots:
   ///deals with the save workspaces dialog box closing
   void saveWorkspacesClosed();
   /// Receive a load button click
-  bool handleLoadButtonClick();
+  bool handleLoadButtonClick(QString = "last");
   /// Reduce button clicked
   void handleReduceButtonClick(const QString & type);
   /// Find centre button click handler
@@ -352,6 +352,15 @@ private:
   bool entriesAreValid(ValMap & vals);
   bool runFilesAreValid();
   QString reduceSingleRun() const;
+
+  struct ReductionOutput{
+    QString workspace; 
+    QString shift; 
+    QString scale; 
+  };
+
+  ReductionOutput executeSingleModeReduction(const States type, QString python_code_head); 
+  ReductionOutput executeBatchModeReduction(const States type, QString python_code_head); 
 
   //A reference to a logger
   static Mantid::Kernel::Logger & g_log;

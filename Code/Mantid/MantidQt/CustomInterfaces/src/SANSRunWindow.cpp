@@ -1805,8 +1805,10 @@ bool SANSRunWindow::browseForFile(const QString & box_title, QLineEdit* file_fie
 }
 /**
  * Receive a load button click signal
+ *
+ * @param slice_str: a string defining how to slice (in event mode) the data to load.
  */
-bool SANSRunWindow::handleLoadButtonClick()
+bool SANSRunWindow::handleLoadButtonClick(QString slice_str)
 {
   // this function looks for and reports any errors to the user
   if ( ! entriesAreValid(LOAD) )
@@ -1826,6 +1828,7 @@ bool SANSRunWindow::handleLoadButtonClick()
 
   if( m_force_reload ) cleanup();
 
+
   bool is_loaded(true);
   if ( ( ! m_uiForm.transmis->isEmpty() ) && m_uiForm.direct->isEmpty() )
   {
@@ -1834,7 +1837,23 @@ bool SANSRunWindow::handleLoadButtonClick()
     m_uiForm.load_dataBtn->setText("Load Data");
     return false;
   }
-
+  // process slices option: pass to the loader, the option for the 
+  // event time mode slicing.
+  QString slice_opt; 
+  if (m_uiForm.sliceLineEdit->text().isEmpty())
+    slice_opt = ""; // no slicing defined. Emtpy string
+  else{
+    //slice_str is last?
+    if (slice_str == "last"){
+      // get the last slice defined at sliceLineEdit
+      slice_opt = m_uiForm.sliceLineEdit->text().split(',').last();
+    }
+    else{
+      slice_opt = slice_str; 
+    }
+  }
+  
+  g_log.notice() << "Loading data with slice_opt = " << slice_opt.toStdString() << std::endl; 
   QString error;
   // set the detector just before loading so to correctly move the instrument
   runReduceScriptFunction("\ni.ReductionSingleton().instrument.setDetector('" +
@@ -1843,7 +1862,7 @@ bool SANSRunWindow::handleLoadButtonClick()
   QString sample = m_uiForm.scatterSample->getFirstFilename();
   try
   {//preliminarly error checking is over try to load that data
-    is_loaded &= assignDetBankRun(*(m_uiForm.scatterSample), "AssignSample", sample_logs);
+    is_loaded &= assignDetBankRun(*(m_uiForm.scatterSample), "AssignSample", sample_logs, slice_opt);
     readNumberOfEntries("get_sample().loader", m_uiForm.scatterSample);
     if (m_uiForm.scatCan->isEmpty())
     {
@@ -2123,6 +2142,191 @@ QString SANSRunWindow::readSampleObjectGUIChanges()
  
   return exec_reduce;
 }
+
+SANSRunWindow::ReductionOutput SANSRunWindow::executeBatchModeReduction(const States type, QString py_code_head){
+  ReductionOutput output; 
+  //  if ( ! entriesAreValid(RUN) )
+  //   throw std::runtime_error("Not all entries valid");
+
+  QString py_code = py_code_head; 
+  const static QString PYTHON_SEP("C++handleReduceButtonClickC++");
+  //copy the user setting to use as a base for future reductions after the one that is about to start
+  py_code += "\n_user_settings_copy = copy.deepcopy(i.ReductionSingleton().user_settings)";
+  const QString verb = m_uiForm.verbose_check ? "True" : "False";
+  py_code += "\ni.SetVerboseMode(" + verb + ")";
+
+  //Have we got anything to reduce?
+  if( m_uiForm.batch_table->rowCount() == 0 ){
+    
+    showInformationBox("Error: No run information specified.");
+    throw std::runtime_error("No run information specified"); 
+  }
+
+  // check for the detectors combination option
+  // transform the SANS Diagnostic gui option in: 'rear', 'front' , 'both', 'merged', None WavRangeReduction option
+  QString combineDetOption, combineDetGuiOption;
+  combineDetGuiOption = m_uiForm.detbank_sel->currentText();
+  if (combineDetGuiOption == "main-detector-bank" || combineDetGuiOption == "rear-detector")
+    combineDetOption = "'rear'";
+  else if (combineDetGuiOption == "HAB" || combineDetGuiOption=="front-detector")
+    combineDetOption = "'front'";
+  else if (combineDetGuiOption == "both")
+    combineDetOption = "'both'";
+  else if (combineDetGuiOption == "merged")
+    combineDetOption = "'merged'";
+  else
+    combineDetOption = "None";
+  
+  QString csv_file(m_uiForm.csv_filename->text());
+  if( m_dirty_batch_grid )
+    {
+      QString selected_file = MantidQt::API::FileDialogHandler::getSaveFileName(this, "Save as CSV", m_last_dir);
+      csv_file = saveBatchGrid(selected_file);
+    }
+  py_code.prepend("import SANSBatchMode as batch\n");
+  const int fileFormat = m_uiForm.file_opt->currentIndex();
+  // create a instance of fit_settings, so it will not complain if the reduction fails
+  // when restoring the scale and fit.
+  QString fit = QString("\nfit_settings={'scale':%1,'shift':%2}").arg(m_uiForm.frontDetRescale->text()).arg(m_uiForm.frontDetShift->text());
+  py_code += fit;
+  py_code += "\nfit_settings = batch.BatchReduce('" + csv_file + "','" +
+    m_uiForm.file_opt->itemData(fileFormat).toString() + "'";
+  if( m_uiForm.plot_check->isChecked() )
+    {
+      py_code += ", plotresults=True";
+    }
+  
+  py_code += ", saveAlgs={";
+  QStringList algs(getSaveAlgs());
+  for ( QStringList::const_iterator it = algs.begin(); it != algs.end(); ++it)
+    {// write a Python dict object in the form { algorithm_name : file extension , ... ,}
+      py_code += "'"+*it+"':'"+SaveWorkspaces::getSaveAlgExt(*it)+"',";
+    }
+  py_code += "}";
+  
+  if( m_uiForm.log_colette->isChecked() )
+    {
+      py_code += ", verbose=True";
+    }
+  py_code += ", reducer=i.ReductionSingleton().reference()";
+  
+  
+  py_code += ", combineDet=";
+  py_code += combineDetOption;
+  
+  
+  // deal with slicing... 
+  if (!m_uiForm.sliceLineEdit->text().isEmpty())
+    {
+      py_code += ", slices='";
+      // FIXME: translate the line edit... 
+      py_code += m_uiForm.sliceLineEdit->text() + "'";      
+    }
+    
+  py_code += ")";
+  
+  //Disable buttons so that interaction is limited while processing data
+  setProcessingState(type);
+
+  QString pythonStdOut = runReduceScriptFunction(py_code);
+  
+  output.scale = runReduceScriptFunction("print fit_settings['scale']").trimmed();
+  output.shift = runReduceScriptFunction("print fit_settings['shift']").trimmed();
+  
+  
+  // first process pythonStdOut
+  QStringList pythonDiag = pythonStdOut.split(PYTHON_SEP);
+  if ( pythonDiag.count() > 1 ){
+    
+    QString reducedWS = pythonDiag[1];
+    reducedWS = reducedWS.split("\n")[0];
+    output.workspace = reducedWS; 
+  }
+  //If we used a temporary file in batch mode, remove it
+  if( m_uiForm.batch_mode_btn->isChecked() && !m_tmp_batchfile.isEmpty() ){
+    
+    QFile tmp_file(m_tmp_batchfile);
+    tmp_file.remove();
+  }
+  return output;
+}
+
+
+SANSRunWindow::ReductionOutput SANSRunWindow::executeSingleModeReduction(const States type, QString py_code_head){
+  ReductionOutput output;
+  const static QString PYTHON_SEP("C++handleReduceButtonClickC++");
+
+  QString pythonStdOut;
+  QStringList slices; 
+  QString reducedWS;
+  if (m_uiForm.sliceLineEdit->text().isEmpty())
+    slices << ""; // no slice
+  else{
+    QStringList auxSlices = m_uiForm.sliceLineEdit->text().split(",");
+    for (unsigned short i = 0; i<auxSlices.size(); i++){
+      if (auxSlices[i].contains("-")) // the default option 5-10
+        slices << auxSlices[i];
+      else{
+        QString lower_bound = auxSlices[i];        
+        if (i < auxSlices.size()-1)// there is another value: 1,2,3,4
+          slices << lower_bound + "-"+auxSlices[i+1]; // 1-2,2-3,3-4
+      }
+    }
+  }
+  foreach(QString slice_opt, slices){
+  // Currently the components are moved with each reduce click. Check if a load is necessary
+  // This must be done before the script is written as we need to get correct values from the
+  // loaded raw data
+  if ( ! handleLoadButtonClick(slice_opt) )
+    throw std::runtime_error("Failed to Load Data");
+  if ( ! entriesAreValid(RUN) )
+     throw std::runtime_error("Not all entries valid");
+     
+  QString py_code = py_code_head; 
+  //copy the user setting to use as a base for future reductions after the one that is about to start
+  py_code += "\n_user_settings_copy = copy.deepcopy(i.ReductionSingleton().user_settings)";
+  const QString verb = m_uiForm.verbose_check ? "True" : "False";
+  py_code += "\ni.SetVerboseMode(" + verb + ")";
+
+  // reduce code
+  py_code += readSampleObjectGUIChanges();
+  py_code += reduceSingleRun();
+  //output the name of the output workspace, this is returned up by the runPythonCode() call below
+  py_code += "\nprint '"+PYTHON_SEP+"'+reduced+'"+PYTHON_SEP+"'";
+
+  //Disable buttons so that interaction is limited while processing data
+  setProcessingState(type);
+  pythonStdOut = runReduceScriptFunction(py_code);
+  g_log.notice() << "Reduction output = " << pythonStdOut.toStdString() << std::endl; 
+  // first process pythonStdOut
+  QStringList pythonDiag = pythonStdOut.split(PYTHON_SEP);  
+  if ( pythonDiag.count() > 1 )
+  {
+    reducedWS = pythonDiag[1];
+    reducedWS = reducedWS.split("\n")[0];
+  }
+  
+  if (!slice_opt.isEmpty()){
+    // rename
+    QString suffix = QString("_t")+slice_opt.replace("-","_t"); 
+    py_code = "RenameWorkspace('"+reducedWS+"', OutputWorkspace='"+reducedWS+suffix+"')"; 
+    g_log.notice() << "Rename workspace " << py_code.toStdString() << std::endl; 
+    runReduceScriptFunction(py_code);
+    reducedWS += suffix; 
+  }
+
+  }
+
+  // update front rescale and fit values
+  output.scale = runReduceScriptFunction("print i.ReductionSingleton().instrument.getDetector('FRONT').rescaleAndShift.scale").trimmed();
+  output.shift = runReduceScriptFunction(
+      "print i.ReductionSingleton().instrument.getDetector('FRONT').rescaleAndShift.shift").trimmed();
+
+  output.workspace = reducedWS;
+
+  return output; 
+}
+
 /**
  * Run the analysis script
  * @param typeStr :: The data reduction type, 1D or 2D
@@ -2133,151 +2337,30 @@ void SANSRunWindow::handleReduceButtonClick(const QString & typeStr)
   //new reduction is going to take place, remove the results from the last reduction
   resetDefaultOutput();
 
-  //The possiblities are batch mode or single run mode
-  const RunMode runMode =
-    m_uiForm.single_mode_btn->isChecked() ? SingleMode : BatchMode;
-  if ( runMode == SingleMode )
-  {
-    // Currently the components are moved with each reduce click. Check if a load is necessary
-    // This must be done before the script is written as we need to get correct values from the
-    // loaded raw data
-    if ( ! handleLoadButtonClick() )
-    {
-      return;
-    }
-  }
-  
-  if ( ! entriesAreValid(RUN) )
-  {
-    return;
-  }
-
   QString py_code = readUserFileGUIChanges(type);
-  if( py_code.isEmpty() )
-  {
+  if( py_code.isEmpty() ){  
     showInformationBox("Error: An error occurred while constructing the reduction code, please check installation.");
     return;
   }
+  ReductionOutput output; 
 
-  const static QString PYTHON_SEP("C++handleReduceButtonClickC++");
 
-  //copy the user setting to use as a base for future reductions after the one that is about to start
-  py_code += "\n_user_settings_copy = copy.deepcopy(i.ReductionSingleton().user_settings)";
-  const QString verb = m_uiForm.verbose_check ? "True" : "False";
-  py_code += "\ni.SetVerboseMode(" + verb + ")";
-  //Need to check which mode we're in
-  if ( runMode == SingleMode )
-  {
-    py_code += readSampleObjectGUIChanges();
-    py_code += reduceSingleRun();
-    //output the name of the output workspace, this is returned up by the runPythonCode() call below
-    py_code += "\nprint '"+PYTHON_SEP+"'+reduced+'"+PYTHON_SEP+"'";
-  }
-  else
-  {
-    //Have we got anything to reduce?
-    if( m_uiForm.batch_table->rowCount() == 0 )
-    {
-      showInformationBox("Error: No run information specified.");
-      return;
+  //The possiblities are batch mode or single run mode
+  const RunMode runMode =
+    m_uiForm.single_mode_btn->isChecked() ? SingleMode : BatchMode;
+  try{
+    if ( runMode == SingleMode )
+      {
+        output = executeSingleModeReduction(type, py_code); 
+      }else{
+      output = executeBatchModeReduction(type, py_code);
     }
-
-    // check for the detectors combination option
-    // transform the SANS Diagnostic gui option in: 'rear', 'front' , 'both', 'merged', None WavRangeReduction option
-    QString combineDetOption, combineDetGuiOption;
-    combineDetGuiOption = m_uiForm.detbank_sel->currentText();
-    if (combineDetGuiOption == "main-detector-bank" || combineDetGuiOption == "rear-detector")
-      combineDetOption = "'rear'";
-    else if (combineDetGuiOption == "HAB" || combineDetGuiOption=="front-detector")
-      combineDetOption = "'front'";
-    else if (combineDetGuiOption == "both")
-      combineDetOption = "'both'";
-    else if (combineDetGuiOption == "merged")
-      combineDetOption = "'merged'";
-    else
-      combineDetOption = "None";
-
-    QString csv_file(m_uiForm.csv_filename->text());
-    if( m_dirty_batch_grid )
-    {
-      QString selected_file = MantidQt::API::FileDialogHandler::getSaveFileName(this, "Save as CSV", m_last_dir);
-      csv_file = saveBatchGrid(selected_file);
-    }
-    py_code.prepend("import SANSBatchMode as batch\n");
-    const int fileFormat = m_uiForm.file_opt->currentIndex();
-    // create a instance of fit_settings, so it will not complain if the reduction fails
-    // when restoring the scale and fit.
-    QString fit = QString("\nfit_settings={'scale':%1,'shift':%2}").arg(m_uiForm.frontDetRescale->text()).arg(m_uiForm.frontDetShift->text());
-    py_code += fit;
-    py_code += "\nfit_settings = batch.BatchReduce('" + csv_file + "','" +
-      m_uiForm.file_opt->itemData(fileFormat).toString() + "'";
-    if( m_uiForm.plot_check->isChecked() )
-    {
-      py_code += ", plotresults=True";
-    }
-
-    py_code += ", saveAlgs={";
-    QStringList algs(getSaveAlgs());
-    for ( QStringList::const_iterator it = algs.begin(); it != algs.end(); ++it)
-    {// write a Python dict object in the form { algorithm_name : file extension , ... ,}
-      py_code += "'"+*it+"':'"+SaveWorkspaces::getSaveAlgExt(*it)+"',";
-    }
-    py_code += "}";
-
-    if( m_uiForm.log_colette->isChecked() )
-    {
-      py_code += ", verbose=True";
-    }
-    py_code += ", reducer=i.ReductionSingleton().reference()";
-
-
-    py_code += ", combineDet=";
-    py_code += combineDetOption;
-
-
-    // deal with slicing... 
-    if (!m_uiForm.sliceLineEdit->text().isEmpty())
-    {
-      py_code += ", slices='";
-      // FIXME: translate the line edit... 
-      py_code += m_uiForm.sliceLineEdit->text() + "'";      
-    }
-    
-    py_code += ")";
-  }
-
-  //Disable buttons so that interaction is limited while processing data
-  setProcessingState(type);
-
-  //std::cout << "\n\n" << py_code.toStdString() << "\n\n";
-  QString pythonStdOut = runReduceScriptFunction(py_code);
-
-  // update fields in GUI as a consequence of results obtained during reduction
-  double scale, shift;
-  if (runMode == SingleMode) 
-  {
-    // update front rescale and fit values
-    scale = runReduceScriptFunction(
-      "print i.ReductionSingleton().instrument.getDetector('FRONT').rescaleAndShift.scale").trimmed().toDouble();
-
-    shift = runReduceScriptFunction(
-      "print i.ReductionSingleton().instrument.getDetector('FRONT').rescaleAndShift.shift").trimmed().toDouble();
-
-  }else{
-    scale = runReduceScriptFunction("print fit_settings['scale']").trimmed().toDouble();
-    shift = runReduceScriptFunction("print fit_settings['shift']").trimmed().toDouble();
+  }catch(std::runtime_error & ex){
+    return; // silent
   }
   // update gui
-  m_uiForm.frontDetRescale->setText(QString::number(scale, 'f', 3));
-  m_uiForm.frontDetShift->setText(QString::number(shift, 'f', 3));
-  // first process pythonStdOut
-  QStringList pythonDiag = pythonStdOut.split(PYTHON_SEP);
-  if ( pythonDiag.count() > 1 )
-  {
-    QString reducedWS = pythonDiag[1];
-    reducedWS = reducedWS.split("\n")[0];
-    resetDefaultOutput(reducedWS);
-  }
+  m_uiForm.frontDetRescale->setText(output.scale);
+  m_uiForm.frontDetShift->setText(output.shift);
 
   //Reset the objects by initialising a new reducer object
   //py_code = "i._refresh_singleton()";
@@ -2294,17 +2377,13 @@ void SANSRunWindow::handleReduceButtonClick(const QString & typeStr)
   std::cout << "\n\n" << py_code.toStdString() << "\n\n";
   runReduceScriptFunction(py_code);
   }
+  //FIXME: comment
+  resetDefaultOutput(output.workspace);
   // Mark that a reload is necessary to rerun the same reduction
   forceDataReload();
   //Reenable stuff
   setProcessingState(Ready);
 
-  //If we used a temporary file in batch mode, remove it
-  if( m_uiForm.batch_mode_btn->isChecked() && !m_tmp_batchfile.isEmpty() )
-  {
-    QFile tmp_file(m_tmp_batchfile);
-    tmp_file.remove();
-  }
   checkLogFlags();
 }
 /** Iterates through the validators and stops if it finds one that is shown and enabled
@@ -3103,19 +3182,65 @@ bool SANSRunWindow::assignMonitorRun(MantidWidgets::MWRunFiles & trans, MantidWi
   return status;
 }
 /** 
- * Load a scatter sample file or can run via Python objects using the passed Python command
+ * Load a scatter sample file or can run via Python objects using the passed Python command. 
+ * Optionally, slice the event data.
  * @param[in] runFile name of file to load
  * @param[in] assignFn the Python command to run
  * @param[out] logs information loaded from the file
+ * @param[in] slice_opt: optional parameter (default empty) that defines the slicing to be aplied to the loaded data.
  * @return true if there were no Python errors, false otherwise
  */
-bool SANSRunWindow::assignDetBankRun(MantidWidgets::MWRunFiles & runFile, const QString & assignFn, QString & logs)
+bool SANSRunWindow::assignDetBankRun(MantidWidgets::MWRunFiles & runFile, const QString & assignFn, QString & logs, QString slice_opt)
 {
   //need something to place between names printed by Python that won't be intepreted as the names or removed as white space
   const static QString PYTHON_SEP("C++assignDetBankRunC++");
-  
-  QString assignCom("i."+assignFn+"(r'" + runFile.getFirstFilename() + "'");
-  assignCom.append(", reload = True");
+  QString filename = runFile.getFirstFilename();
+  QString assign_function_run = filename; 
+  QString reload = "True"; 
+  // deal with slice opt
+  if (!slice_opt.isEmpty()){
+    QString lower_bound, upper_bound; 
+    if (slice_opt.contains("-")){
+      QStringList aux = slice_opt.split("-"); 
+      lower_bound = aux.first(); 
+      upper_bound = aux.last(); 
+    }else{
+      lower_bound = slice_opt;
+      upper_bound = "None"; 
+    }
+    //get filename without path
+    QString base_name = QString(filename).replace("\\","/").split("/").last();
+    // remote file extension. (.nxs = 4 characters; .raw = 4 characters)
+    base_name.resize(base_name.size()-4);
+    
+    QString code = QString("\
+try:\n\
+  result = i.sliceSANS2D(filename='%1', outWs='%2', time_start=%3, time_stop=%4)\n\
+  print result[0] # print the workspace name\n\
+except:\n\
+  print 'FAILED',sys.exc_info()\n")
+      .arg(filename)
+      .arg(base_name)
+      .arg(lower_bound)
+      .arg(upper_bound);
+    // run the slice 
+    g_log.debug() << "Performing the slicing with the code: " << code.toStdString() << std::endl; 
+    QString result = runPythonCode(code); 
+    // check if sliced passed well
+    if (result.startsWith("FAILED"))
+      g_log.warning() << "Attempt to slice the run " << filename.toStdString()
+                      << " failed with the following error: " 
+                      << result.toStdString() << ". It will continue with the whole data." << std::endl; 
+    else{
+      // sliced nicely
+      // pass on the loaded workspace and force the load to false
+      assign_function_run = result.trimmed(); 
+      reload = "False"; 
+    }
+  }
+
+  QString assignCom("i."+assignFn+"(r'" + assign_function_run + "'");
+  assignCom.append(", reload = ").append(reload);
   int period = runFile.getEntryNum();
   //we can only do single period reductions now
   if (period == MWRunFiles::ALL_ENTRIES)
