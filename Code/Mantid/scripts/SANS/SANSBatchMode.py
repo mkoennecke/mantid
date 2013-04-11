@@ -149,7 +149,7 @@ def BatchReduce(filename, format, plotresults=False, saveAlgs={'SaveRKH':'txt'},
                 raw_workspaces += read_trans_runs(run, 'sample', format)
 
                 # Can run 
-                raw_workspaces.append(read_run(run, 'can_sans', format, slic))
+                raw_workspaces.append(read_run(run, 'can_sans', format, slic=""))
 
                 #Transmission runs for the can
                 raw_workspaces += read_trans_runs(run, 'can', format)
