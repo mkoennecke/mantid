@@ -447,7 +447,7 @@ class CanSubtraction(ReductionStep):
                 _issueWarning("Can logs could not be loaded, using sample values.")
                 return "()"    
         
-        if not self.workspace._reload:
+        if not self.workspace._reload and False:
             raise NotImplementedError('Moving components needs to be made compatible with not reloading the sample')
         beamcoords = reducer.get_beam_center()
         reducer.instrument.move_components(self.wksp_name, beamcoords[0], beamcoords[1])
