@@ -2816,12 +2816,17 @@ void SANSRunWindow::handleInstrumentChange()
     
     m_uiForm.geom_stack->setCurrentIndex(0);
 
+    m_uiForm.sliceLineEdit->setText(""); 
+    m_uiForm.sliceGroupBox->setHidden(true);
+
   }
   else if ( instClass == "SANS2D()" )
   { 
     m_uiForm.beam_rmax->setText("280");
 
     m_uiForm.geom_stack->setCurrentIndex(1);
+
+    m_uiForm.sliceGroupBox->setHidden(false);
 
   }
   // flag that the user settings file needs to be loaded for this instrument
