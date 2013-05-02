@@ -22,6 +22,7 @@ namespace DataObjects
     this->addColumn("long64", "start");
     this->addColumn("long64", "stop");
     this->addColumn("int", "workspacegroup");
+    this->addColumn("double", "duration");
   }
     
   //----------------------------------------------------------------------------------------------

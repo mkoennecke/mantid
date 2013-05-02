@@ -43,6 +43,8 @@ The option to do interpolation is not supported at this moment.
 #include "MantidAPI/WorkspaceProperty.h"
 #include "MantidAPI/Column.h"
 
+#include "MantidKernel/VisibleWhenProperty.h"
+
 using namespace Mantid;
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
@@ -106,6 +108,8 @@ namespace Algorithms
     // 3. Filter by time (only)
     declareProperty("TimeInterval", -1.0,
         "Length of the time splices if filtered in time only.");
+    setPropertySettings("TimeInterval",
+                        new VisibleWhenProperty("LogName", IS_EQUAL_TO,  ""));
 
     std::vector<std::string> timeoptions;
     timeoptions.push_back("Seconds");
@@ -122,12 +126,16 @@ namespace Algorithms
         "For example, the pulse charge is recorded in 'ProtonCharge'.");
 
     declareProperty("MinimumLogValue", EMPTY_DBL(), "Minimum log value for which to keep events.");
+    setPropertySettings("MinimumLogValue",
+                        new VisibleWhenProperty("LogName", IS_NOT_EQUAL_TO, ""));
 
     declareProperty("MaximumLogValue", EMPTY_DBL(), "Maximum log value for which to keep events.");
 
-    declareProperty("LogValueInterval", -1.0,
+    declareProperty("LogValueInterval", EMPTY_DBL(),
         "Delta of log value to be sliced into from min log value and max log value.\n"
         "If not given, then only value ");
+    setPropertySettings("LogValueInterval",
+                        new VisibleWhenProperty("LogName", IS_NOT_EQUAL_TO, ""));
 
     std::vector<std::string> filteroptions;
     filteroptions.push_back("Both");
