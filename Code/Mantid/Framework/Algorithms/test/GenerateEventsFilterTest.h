@@ -96,19 +96,7 @@ public:
     TS_ASSERT_EQUALS(splittersws->rowCount(), 1);
     TS_ASSERT_EQUALS(splittersinfo->rowCount(), 1);
 
-    /*
-    API::TableRow row = splittersws->getRow(0);
-    int64_t start, stop;
-    int wsgroup;
-    row >> start >> stop >> wsgroup;
-    cout << "SplittersWorkspace:  group = " << wsgroup << endl;
-
-    API::TableRow row2 = splittersinfo->getRow(0);
-    string title;
-    row2 >> wsgroup >> title;
-    cout << "SplittersWorkspace:  group = " << wsgroup << endl;
-    */
-
+    AnalysisDataService::Instance().remove("TestWorkspace");
     AnalysisDataService::Instance().remove("Splitters01");
     AnalysisDataService::Instance().remove("SplittersInformation");
 
@@ -181,6 +169,99 @@ public:
 
     return;
   }
+
+
+  //----------------------------------------------------------------------------------------------
+  /** Test generation of splitters by time
+   */
+  void test_genTime1IntervalCyclicGroup()
+  {
+    // 1. Create input Workspace
+    DataObjects::EventWorkspace_sptr eventWS = createEventWorkspace();
+    AnalysisDataService::Instance().addOrReplace("TestWorkspace03", eventWS);
+    int64_t timeinterval_ns = 15000;
+
+    // 2. Init and set property
+    GenerateEventsFilter alg;
+    alg.initialize();
+
+    TS_ASSERT_THROWS_NOTHING(alg.setProperty("InputWorkspace", "TestWorkspace03"));
+    TS_ASSERT_THROWS_NOTHING(alg.setProperty("OutputWorkspace", "Splitters01"));
+    TS_ASSERT_THROWS_NOTHING(alg.setProperty("TimeInterval", 15000.0));
+    TS_ASSERT_THROWS_NOTHING(alg.setProperty("UnitOfTime", "Nanoseconds"));
+    TS_ASSERT_THROWS_NOTHING(alg.setProperty("NumberOfGroups", 4));
+
+    // 3. Running and get result
+    TS_ASSERT_THROWS_NOTHING(alg.execute());
+    TS_ASSERT(alg.isExecuted());
+
+    // 4. Check output
+    //    retrieve workspace
+    SplittersWorkspace_sptr splittersws =
+        boost::dynamic_pointer_cast<SplittersWorkspace>(AnalysisDataService::Instance().retrieve("Splitters01"));
+
+    TS_ASSERT(splittersws);
+    if (!splittersws)
+      return;
+
+    //    number of splitters
+    size_t numintervals = 67;
+    TS_ASSERT_EQUALS(splittersws->getNumberSplitters(), numintervals);
+
+    //    intervals
+    string runstarttimestr = eventWS->run().getProperty("run_start")->value();
+    Kernel::DateAndTime runstarttime(runstarttimestr);
+    int64_t runstarttime_ns = runstarttime.totalNanoseconds();
+
+    Kernel::TimeSeriesProperty<double> *protonchargelog =
+        dynamic_cast<Kernel::TimeSeriesProperty<double>* >(eventWS->run().getProperty("proton_charge"));
+    Kernel::DateAndTime runstoptime = protonchargelog->lastTime();
+
+    // b) First interval
+    Kernel::SplittingInterval splitter0 = splittersws->getSplitter(0);
+    TS_ASSERT_EQUALS(splitter0.start().totalNanoseconds(), 0+runstarttime_ns);
+    TS_ASSERT_EQUALS(splitter0.stop().totalNanoseconds(), timeinterval_ns+runstarttime_ns);
+    TS_ASSERT_EQUALS(splitter0.index(), 0);
+
+    // c) Last interval
+    Kernel::SplittingInterval splitterf = splittersws->getSplitter(numintervals-1);
+    TS_ASSERT_EQUALS(splitterf.stop(), runstoptime);
+    TS_ASSERT_EQUALS(splitterf.index(), 2);
+
+    // d) Randomly
+    Kernel::SplittingInterval splitterR = splittersws->getSplitter(40);
+    Kernel::DateAndTime t0 = splitterR.start();
+    Kernel::DateAndTime tf = splitterR.stop();
+    int64_t dt_ns = tf.totalNanoseconds()-t0.totalNanoseconds();
+    TS_ASSERT_EQUALS(dt_ns, timeinterval_ns);
+    int64_t dt_runtimestart = t0.totalNanoseconds()-runstarttime_ns;
+    TS_ASSERT_EQUALS(dt_runtimestart, 40*timeinterval_ns);
+
+    // Output for debug
+    int lastgroupindex = -1;
+    for (size_t i = 0; i < numintervals; ++i)
+    {
+      API::TableRow row = splittersws->getRow(i);
+      int64_t start, stop;
+      int wsgroup;
+      row >> start >> stop >> wsgroup;
+      TS_ASSERT_EQUALS(wsgroup, lastgroupindex+1);
+
+      ++ lastgroupindex;
+      if (lastgroupindex == 3)
+        lastgroupindex = -1;
+
+      // cout << "SplittersWorkspace:  group = " << wsgroup << endl;
+    }
+
+    // 5. Clean
+    AnalysisDataService::Instance().remove("Splitters01");
+    AnalysisDataService::Instance().remove("TestWorkspace03");
+
+
+    return;
+  }
+
 
   //----------------------------------------------------------------------------------------------
   /** Generate filter by log value in simple way

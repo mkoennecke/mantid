@@ -38,6 +38,7 @@ The option to do interpolation is not supported at this moment.
 #include "MantidAlgorithms/GenerateEventsFilter.h"
 #include "MantidKernel/System.h"
 #include "MantidKernel/ListValidator.h"
+#include "MantidKernel/BoundedValidator.h"
 #include "MantidAPI/TableRow.h"
 #include "MantidAPI/WorkspaceFactory.h"
 #include "MantidAPI/WorkspaceProperty.h"
@@ -142,7 +143,9 @@ namespace Algorithms
                         new VisibleWhenProperty("LogName", IS_NOT_EQUAL_TO, ""));
 
     //	  Log value interval
-    declareProperty("LogValueInterval", EMPTY_DBL(),
+    boost::shared_ptr<BoundedValidator<double> > logdeltabc(new BoundedValidator<double>());
+    logdeltabc->setLower(0);
+    declareProperty("LogValueInterval", EMPTY_DBL(), logdeltabc,
         "Delta of log value to be sliced into from min log value and max log value.\n"
         "If not given, then only value ");
     setPropertySettings("LogValueInterval",
@@ -175,11 +178,6 @@ namespace Algorithms
     declareProperty("LogValueTolerance", EMPTY_DBL(),
         "Tolerance of the log value to be included in filter.  It is used in the case to filter by multiple values.");
     setPropertySettings("LogValueTolerance",
-                        new VisibleWhenProperty("LogName", IS_NOT_EQUAL_TO, ""));
-
-    declareProperty("LogValueTimeSections", 1,
-        "In one log value interval, it can be further divided into sections in even time slice.");
-    setPropertySettings("LogValueTimeSections",
                         new VisibleWhenProperty("LogName", IS_NOT_EQUAL_TO, ""));
 
     // 5. Output workspaces' title and name
@@ -244,7 +242,7 @@ namespace Algorithms
     if (logname.empty())
     {
       // a) Set filter by time only
-      setFilterByTimeOnly();
+      setFilterByTimeOnly(runstart);
     }
     else
     {
@@ -280,8 +278,8 @@ namespace Algorithms
       // 1. In absolute time ISO format
       Kernel::DateAndTime t0(s_inpt0);
       Kernel::DateAndTime t1(s_inptf);
-      mStartTime = t0;
-      mStopTime = t1;
+      m_filterStartTime = t0;
+      m_filterStopTime = t1;
     }
     else
     {
@@ -330,27 +328,28 @@ namespace Algorithms
       // 4. Process second round
       int64_t t0_ns = runstarttime.totalNanoseconds() + static_cast<int64_t>(inpt0*m_timeUnitConvertFactor);
       Kernel::DateAndTime tmpt0(t0_ns);
-      mStartTime = tmpt0;
+      m_filterStartTime = tmpt0;
 
       if (inptf < inpt0)
       {
-        mStopTime = runend;
+        m_filterStopTime = runend;
       }
       else
       {
         int64_t tf_ns = runstarttime.totalNanoseconds()+static_cast<int64_t>(inptf*m_timeUnitConvertFactor);
         Kernel::DateAndTime tmptf(tf_ns);
-        mStopTime = tmptf;
+        m_filterStopTime = tmptf;
       }
     }
 
-    g_log.information() << "Filter: StartTime = " << mStartTime << ", StopTime = " << mStopTime << std::endl;
+    g_log.information() << "Filter: StartTime = " << m_filterStartTime << ", StopTime = " << m_filterStopTime << std::endl;
 
     return;
   }
 
   //----------------------------------------------------------------------------------------------
   /** Set splitters by time value / interval only
+    * @param runstarttime :: DateAndTime of the run starting time
    */
   void GenerateEventsFilter::setFilterByTimeOnly(DateAndTime runstarttime)
   {
@@ -365,7 +364,7 @@ namespace Algorithms
       cyclicgroup = false;
 
     // Progress
-    int64_t totaltime = mStopTime.totalNanoseconds()-mStartTime.totalNanoseconds();
+    int64_t totaltime = m_filterStopTime.totalNanoseconds()-m_filterStartTime.totalNanoseconds();
     int64_t timeslot = 0;
 
     if (singleslot)
@@ -374,17 +373,17 @@ namespace Algorithms
       int wsindex = 0;
 
       //   splitter
-      Kernel::SplittingInterval ti(mStartTime, mStopTime, wsindex);
+      Kernel::SplittingInterval ti(m_filterStartTime, m_filterStopTime, wsindex);
       m_splitWS->addSplitter(ti);
 
       //    log information
       API::TableRow row = m_filterInfoWS->appendRow();
       std::stringstream ss;
-      time_duration t0 = mStartTime - runstarttime;
-      time_duration t1 = mStopTime - runstarttime;
-      time_duration dt = mStopTime - mStartTime;
-      ss << "Time Interval From " << t0.totalsecond() << " to " << t1.totalsecond() 
-	 << "; Duration = " << dt.totalsecond();
+      time_duration t0 = m_filterStartTime - runstarttime;
+      time_duration t1 = m_filterStopTime - runstarttime;
+      time_duration dt = m_filterStopTime - m_filterStartTime;
+      ss << "Time Interval From " << t0.total_seconds() << " to " << t1.total_seconds()
+         << "; Duration = " << dt.total_seconds();
       row << wsindex << ss.str();
     }
     else
@@ -392,14 +391,14 @@ namespace Algorithms
       //    Use N time interval 
       int64_t deltatime_ns = static_cast<int64_t>(timeinterval*m_timeUnitConvertFactor);
 
-      int64_t curtime_ns = mStartTime.totalNanoseconds();
+      int64_t curtime_ns = m_filterStartTime.totalNanoseconds();
       int wsindex = 0;
-      while (curtime_ns < mStopTime.totalNanoseconds())
+      while (curtime_ns < m_filterStopTime.totalNanoseconds())
       {
         // a) Calculate next.time
         int64_t nexttime_ns = curtime_ns + deltatime_ns;
-        if (nexttime_ns > mStopTime.totalNanoseconds())
-          nexttime_ns = mStopTime.totalNanoseconds();
+        if (nexttime_ns > m_filterStopTime.totalNanoseconds())
+          nexttime_ns = m_filterStopTime.totalNanoseconds();
 
         // b) Create splitter
         Kernel::DateAndTime t0(curtime_ns);
@@ -416,14 +415,14 @@ namespace Algorithms
         // d) Update loop variable
         curtime_ns = nexttime_ns;
         ++ wsindex;
-	if (cyclicgroup && wsindex == numberofgroups)
-	{
-	  // reset workgroup index
-	  wsindex = 0;
-	}
+        if (cyclicgroup && wsindex == numberofgroups)
+        {
+          // reset workgroup index
+          wsindex = 0;
+        }
 
         // e) Update progress
-        int64_t newtimeslot = (curtime_ns-mStartTime.totalNanoseconds())*90/totaltime;
+        int64_t newtimeslot = (curtime_ns-m_filterStartTime.totalNanoseconds())*90/totaltime;
         if (newtimeslot > timeslot)
         {
           // There is change and update progress
@@ -488,7 +487,7 @@ namespace Algorithms
     }
 
     bool toProcessSingleValueFilter = false;
-    if (deltaValue <= 0)
+    if (deltaValue == EMPTY_DBL())
     {
       toProcessSingleValueFilter = true;
     }
@@ -597,7 +596,7 @@ namespace Algorithms
     int wsindex = 0;
     makeFilterByValue(splitters, minvalue, maxvalue, static_cast<double>(timetolerance_ns)*1.0E-9,
         logboundary.compare("centre")==0,
-        filterincrease, filterdecrease, mStartTime, mStopTime, wsindex);
+        filterincrease, filterdecrease, m_filterStartTime, m_filterStopTime, wsindex);
 
     // 3. Add to output
     for (size_t isp = 0; isp < splitters.size(); isp ++)
@@ -637,10 +636,11 @@ namespace Algorithms
                                                          bool filterincrease,
                                                          bool filterdecrease)
   {
-    // 1. Read more input
-    double valueinterval = this->getProperty("LogValueInterval");
-    if (valueinterval <= 0)
-      throw std::invalid_argument("Multiple values filter must have LogValueInterval larger than ZERO.");
+    // Read pertinent input properties
+    double valueinterval = getProperty("LogValueInterval");
+    if (valueinterval == EMPTY_DBL())
+      throw std::invalid_argument("Multiple values filter must have LogValueInterval specified explicitly.");
+
     double valuetolerance = this->getProperty("LogValueTolerance");
 
     if (valuetolerance == EMPTY_DBL())
@@ -648,9 +648,9 @@ namespace Algorithms
     else if (valuetolerance < 0.0)
       throw std::runtime_error("LogValueTolerance cannot be less than zero.");
 
-    // 2. Create log value interval (low/up boundary) list and split information workspace
-    std::map<size_t, int> indexwsindexmap;
-    std::vector<double> logvalueranges;
+    // Create log value interval (low/up boundary) list and split information workspace
+    map<size_t, int> indexwsindexmap;
+    vector<double> logvalueranges;
     int wsindex = 0;
     size_t index = 0;
 
@@ -713,7 +713,7 @@ namespace Algorithms
 
     makeMultipleFiltersByValues(splitters, indexwsindexmap, logvalueranges,
                                 logboundary.compare("centre") == 0,
-                                filterincrease, filterdecrease, mStartTime, mStopTime);
+                                filterincrease, filterdecrease, m_filterStartTime, m_filterStopTime);
 
     // 4. Put to SplittersWorkspace
     for (size_t i = 0; i < splitters.size(); i ++)
@@ -865,31 +865,28 @@ namespace Algorithms
    * @param filterDecrease :: As log value increase, and within (min, max), include this range in the filter.
    * @param startTime :: Start time.
    * @param stopTime :: Stop time.
-   * @param numbertimesegments :: number of time segments to divide in each log value interval
    */
   void GenerateEventsFilter::makeMultipleFiltersByValues(TimeSplitterType& split, map<size_t, int> indexwsindexmap,
                                                          vector<double> logvalueranges,
                                                          bool centre, bool filterIncrease, bool filterDecrease,
-                                                         DateAndTime startTime, DateAndTime stopTime, 
-							 int numbertimesegments)
+                                                         DateAndTime startTime, DateAndTime stopTime)
   {
-    // 0. Set up
-    double timetolerance = 0.0;
-    if (centre)
-    {
-      timetolerance = this->getProperty("TimeTolerance");
-    }
-    time_duration tol = DateAndTime::durationFromSeconds( timetolerance );
-
-    // 1. Do nothing if the log is empty.
+    // Do nothing if the log is empty.
     if (m_dblLog->size() == 0)
     {
-      g_log.warning() << "There is no entry in this property " << m_dblLog->name() << std::endl;
+      g_log.warning() << "There is no entry in this property " << m_dblLog->name() << "\n";
       return;
     }
 
-    // 2. Go through the whole log to set up time intervals
-    Kernel::DateAndTime ZeroTime(0);
+    // Set up
+    double timetolerance = 0.0;
+    if (centre)
+      timetolerance = getProperty("TimeTolerance");
+
+    time_duration tol = DateAndTime::durationFromSeconds( timetolerance );
+
+    // Go through the whole log to set up time intervals
+    DateAndTime ZeroTime(0);
     int lastindex = -1;
     int currindex = -1;
     DateAndTime lastTime, currTime;
@@ -1241,30 +1238,23 @@ namespace Algorithms
       while (logvalue <= maxvalue)
       {
         // For each log value range
-        for (int i = 0; i < numbertimesegments; ++i)
-	{
-	  // For each time segment in same log value range
-          stringstream message;
-          if (logvalue + delta - 1 > logvalue)
-            message << m_intLog->name() << " = [" << logvalue << ", " << logvalue+delta-1 << "]";
-          else
-            message << m_intLog->name() << " = " << logvalue ;
+        stringstream message;
+        if (logvalue + delta - 1 > logvalue)
+          message << m_intLog->name() << " = [" << logvalue << ", " << logvalue+delta-1 << "]";
+        else
+          message << m_intLog->name() << " = " << logvalue ;
 
-          message << ". Value change direction: ";
-          if (filterIncrease && filterDecrease)
-            message << "Both.";
-          else if (filterIncrease)
-            message << "Increasing. ";
-          else if (filterDecrease)
-            message << "Decreasing. ";
+        message << ". Value change direction: ";
+        if (filterIncrease && filterDecrease)
+          message << "Both.";
+        else if (filterIncrease)
+          message << "Increasing. ";
+        else if (filterDecrease)
+          message << "Decreasing. ";
 
-	  message << "Segment = " << i << " (total 0 ~ " << numbertimesegments - 1 << ")";
+        TableRow newrow = m_filterInfoWS->appendRow();
+        newrow << wsindex << message.str();
 
-          TableRow newrow = m_filterInfoWS->appendRow();
-          newrow << wsindex << message.str();
-
-          ++ wsindex;
-	}
         logvalue += delta;
       }
     }

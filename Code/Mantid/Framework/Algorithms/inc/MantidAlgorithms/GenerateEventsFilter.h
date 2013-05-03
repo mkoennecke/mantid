@@ -80,7 +80,7 @@ namespace Algorithms
     void exec();
 
     void processInputTime(Kernel::DateAndTime runstarttime);
-    void setFilterByTimeOnly();
+    void setFilterByTimeOnly(Kernel::DateAndTime runstarttime);
     void setFilterByLogValue(std::string logname);
 
     void processSingleValueFilter(double minvalue, double maxvalue,
@@ -105,8 +105,8 @@ namespace Algorithms
     API::ISplittersWorkspace_sptr m_splitWS;
     API::ITableWorkspace_sptr m_filterInfoWS;
 
-    Kernel::DateAndTime mStartTime;
-    Kernel::DateAndTime mStopTime;
+    Kernel::DateAndTime m_filterStartTime;
+    Kernel::DateAndTime m_filterStopTime;
 
     double m_timeUnitConvertFactor;
 

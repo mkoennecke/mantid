@@ -71,6 +71,7 @@ set ( SRC_FILES
 	src/DiffractionFocussing.cpp
 	src/DiffractionFocussing2.cpp
 	src/Divide.cpp
+	src/DivideSplitters.cpp
 	src/DspacemaptoCal.cpp
 	src/EQSANSResolution.cpp
 	src/EQSANSTofStructure.cpp
@@ -284,6 +285,7 @@ set ( INC_FILES
 	inc/MantidAlgorithms/DiffractionFocussing.h
 	inc/MantidAlgorithms/DiffractionFocussing2.h
 	inc/MantidAlgorithms/Divide.h
+	inc/MantidAlgorithms/DivideSplitters.h
 	inc/MantidAlgorithms/DspacemaptoCal.h
 	inc/MantidAlgorithms/EQSANSResolution.h
 	inc/MantidAlgorithms/EQSANSTofStructure.h
@@ -505,6 +507,7 @@ set ( TEST_FILES
 	DiffractionEventCalibrateDetectorsTest.h
 	DiffractionFocussing2Test.h
 	DiffractionFocussingTest.h
+	DivideSplittersTest.h
 	DivideTest.h
 	DspacemaptoCalTest.h
 	EditInstrumentGeometryTest.h
