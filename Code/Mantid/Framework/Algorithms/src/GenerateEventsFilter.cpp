@@ -105,12 +105,6 @@ namespace Algorithms
         "since the start of the run. OR (d) absolute time. \n"
         "Events at or after this time are filtered out.");
 
-    // 3. Filter by time (only)
-    declareProperty("TimeInterval", -1.0,
-        "Length of the time splices if filtered in time only.");
-    setPropertySettings("TimeInterval",
-                        new VisibleWhenProperty("LogName", IS_EQUAL_TO,  ""));
-
     std::vector<std::string> timeoptions;
     timeoptions.push_back("Seconds");
     timeoptions.push_back("Nanoseconds");
@@ -120,17 +114,34 @@ namespace Algorithms
                     "The unit can be second or nanosecond from run start time."
                     "They can also be defined as percentage of total run time.");
 
+    // 3. Filter by time (only)
+    declareProperty("TimeInterval", EMPTY_DBL(),
+        "Length of the time splices if filtered in time only.");
+    setPropertySettings("TimeInterval",
+                        new VisibleWhenProperty("LogName", IS_EQUAL_TO,  ""));
+
+    declareProperty("NumberOfGroups", EMPTY_INT(),
+	"Number of workspace groups to be splitted to by time.  The default is one workspace per time splitter.");
+    setPropertySettings("NumberOfGroups",
+                        new VisibleWhenProperty("LogName", IS_EQUAL_TO,  ""));
+
+
     // 4. Filter by log value (only)
     declareProperty("LogName", "",
         "Name of the sample log to use to filter.\n"
         "For example, the pulse charge is recorded in 'ProtonCharge'.");
 
+    //	  Minimum log value
     declareProperty("MinimumLogValue", EMPTY_DBL(), "Minimum log value for which to keep events.");
     setPropertySettings("MinimumLogValue",
                         new VisibleWhenProperty("LogName", IS_NOT_EQUAL_TO, ""));
 
+    //	  Maximum log value
     declareProperty("MaximumLogValue", EMPTY_DBL(), "Maximum log value for which to keep events.");
+    setPropertySettings("MaximumLogValue",
+                        new VisibleWhenProperty("LogName", IS_NOT_EQUAL_TO, ""));
 
+    //	  Log value interval
     declareProperty("LogValueInterval", EMPTY_DBL(),
         "Delta of log value to be sliced into from min log value and max log value.\n"
         "If not given, then only value ");
@@ -144,22 +155,32 @@ namespace Algorithms
     declareProperty("FilterLogValueByChangingDirection", "Both",
                     boost::make_shared<Kernel::StringListValidator>(filteroptions),
                     "d(log value)/dt can be positive and negative.  They can be put to different splitters.");
+    setPropertySettings("FilterLogValueByChangingDirection",
+                        new VisibleWhenProperty("LogName", IS_NOT_EQUAL_TO, ""));
 
     declareProperty("TimeTolerance", 0.0,
         "Tolerance in time for the event times to keep. It is used in the case to filter by single value.");
+    setPropertySettings("TimeTolerance",
+                        new VisibleWhenProperty("LogName", IS_NOT_EQUAL_TO, ""));
 
     vector<string> logboundoptions;
     logboundoptions.push_back("Centre");
-    logboundoptions.push_back("other");
+    logboundoptions.push_back("Left");
     auto logvalidator = boost::make_shared<StringListValidator>(logboundoptions);
     declareProperty("LogBoundary", "Centre", logvalidator,
                     "How to treat log values as being measured in the centre of time.");
+    setPropertySettings("LogBoundary",
+                        new VisibleWhenProperty("LogName", IS_NOT_EQUAL_TO, ""));
 
     declareProperty("LogValueTolerance", EMPTY_DBL(),
         "Tolerance of the log value to be included in filter.  It is used in the case to filter by multiple values.");
+    setPropertySettings("LogValueTolerance",
+                        new VisibleWhenProperty("LogName", IS_NOT_EQUAL_TO, ""));
 
     declareProperty("LogValueTimeSections", 1,
         "In one log value interval, it can be further divided into sections in even time slice.");
+    setPropertySettings("LogValueTimeSections",
+                        new VisibleWhenProperty("LogName", IS_NOT_EQUAL_TO, ""));
 
     // 5. Output workspaces' title and name
     declareProperty("TitleOfSplitters", "",
@@ -331,29 +352,44 @@ namespace Algorithms
   //----------------------------------------------------------------------------------------------
   /** Set splitters by time value / interval only
    */
-  void GenerateEventsFilter::setFilterByTimeOnly()
+  void GenerateEventsFilter::setFilterByTimeOnly(DateAndTime runstarttime)
   {
-    double timeinterval = this->getProperty("TimeInterval");
+    double timeinterval = getProperty("TimeInterval");
+    bool singleslot = false;
+    if (timeinterval == EMPTY_DBL())
+      singleslot = true;
+
+    int numberofgroups = getProperty("NumberOfGroups");
+    bool cyclicgroup = true;
+    if (numberofgroups == EMPTY_INT())
+      cyclicgroup = false;
 
     // Progress
     int64_t totaltime = mStopTime.totalNanoseconds()-mStartTime.totalNanoseconds();
     int64_t timeslot = 0;
 
-    if (timeinterval <= 0.0)
+    if (singleslot)
     {
+      // Just one interval (default)
       int wsindex = 0;
-      // 1. Default and thus just one interval
-      Kernel::SplittingInterval ti(mStartTime, mStopTime, 0);
+
+      //   splitter
+      Kernel::SplittingInterval ti(mStartTime, mStopTime, wsindex);
       m_splitWS->addSplitter(ti);
 
+      //    log information
       API::TableRow row = m_filterInfoWS->appendRow();
       std::stringstream ss;
-      ss << "Time Interval From " << mStartTime << " to " << mStopTime;
+      time_duration t0 = mStartTime - runstarttime;
+      time_duration t1 = mStopTime - runstarttime;
+      time_duration dt = mStopTime - mStartTime;
+      ss << "Time Interval From " << t0.totalsecond() << " to " << t1.totalsecond() 
+	 << "; Duration = " << dt.totalsecond();
       row << wsindex << ss.str();
     }
     else
     {
-      // 2. Use N time interval
+      //    Use N time interval 
       int64_t deltatime_ns = static_cast<int64_t>(timeinterval*m_timeUnitConvertFactor);
 
       int64_t curtime_ns = mStartTime.totalNanoseconds();
@@ -379,7 +415,12 @@ namespace Algorithms
 
         // d) Update loop variable
         curtime_ns = nexttime_ns;
-        wsindex ++;
+        ++ wsindex;
+	if (cyclicgroup && wsindex == numberofgroups)
+	{
+	  // reset workgroup index
+	  wsindex = 0;
+	}
 
         // e) Update progress
         int64_t newtimeslot = (curtime_ns-mStartTime.totalNanoseconds())*90/totaltime;
@@ -824,11 +865,13 @@ namespace Algorithms
    * @param filterDecrease :: As log value increase, and within (min, max), include this range in the filter.
    * @param startTime :: Start time.
    * @param stopTime :: Stop time.
+   * @param numbertimesegments :: number of time segments to divide in each log value interval
    */
   void GenerateEventsFilter::makeMultipleFiltersByValues(TimeSplitterType& split, map<size_t, int> indexwsindexmap,
                                                          vector<double> logvalueranges,
                                                          bool centre, bool filterIncrease, bool filterDecrease,
-                                                         DateAndTime startTime, DateAndTime stopTime)
+                                                         DateAndTime startTime, DateAndTime stopTime, 
+							 int numbertimesegments)
   {
     // 0. Set up
     double timetolerance = 0.0;
@@ -1197,24 +1240,31 @@ namespace Algorithms
       int wsindex = 0;
       while (logvalue <= maxvalue)
       {
-        stringstream message;
-        if (logvalue + delta - 1 > logvalue)
-          message << m_intLog->name() << " = [" << logvalue << ", " << logvalue+delta-1 << "]";
-        else
-          message << m_intLog->name() << " = " << logvalue ;
+        // For each log value range
+        for (int i = 0; i < numbertimesegments; ++i)
+	{
+	  // For each time segment in same log value range
+          stringstream message;
+          if (logvalue + delta - 1 > logvalue)
+            message << m_intLog->name() << " = [" << logvalue << ", " << logvalue+delta-1 << "]";
+          else
+            message << m_intLog->name() << " = " << logvalue ;
 
-        message << ". Value change direction: ";
-        if (filterIncrease && filterDecrease)
-          message << "Both.";
-        else if (filterIncrease)
-          message << "Increasing. ";
-        else if (filterDecrease)
-          message << "Decreasing. ";
+          message << ". Value change direction: ";
+          if (filterIncrease && filterDecrease)
+            message << "Both.";
+          else if (filterIncrease)
+            message << "Increasing. ";
+          else if (filterDecrease)
+            message << "Decreasing. ";
 
-        TableRow newrow = m_filterInfoWS->appendRow();
-        newrow << wsindex << message.str();
+	  message << "Segment = " << i << " (total 0 ~ " << numbertimesegments - 1 << ")";
 
-        ++ wsindex;
+          TableRow newrow = m_filterInfoWS->appendRow();
+          newrow << wsindex << message.str();
+
+          ++ wsindex;
+	}
         logvalue += delta;
       }
     }
