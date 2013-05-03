@@ -37,10 +37,12 @@ namespace DataObjects
    */
   void SplittersWorkspace::addSplitter(Mantid::Kernel::SplittingInterval splitter)
   {
+    int64_t start_ns = splitter.start().totalNanoseconds();
+    int64_t stop_ns = splitter.stop().totalNanoseconds();
+    double duration_s = static_cast<double>(stop_ns - start_ns)*1.0E-9;
+
     Mantid::API::TableRow row = this->appendRow();
-    row << splitter.start().totalNanoseconds();
-    row << splitter.stop().totalNanoseconds();
-    row << splitter.index();
+    row << start_ns << stop_ns << splitter.index() << duration_s;
 
     return;
   }
