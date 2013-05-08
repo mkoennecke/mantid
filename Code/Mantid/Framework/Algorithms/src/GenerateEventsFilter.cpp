@@ -407,10 +407,13 @@ namespace Algorithms
         m_splitWS->addSplitter(spiv);
 
         // c) Information
-        API::TableRow row = m_filterInfoWS->appendRow();
-        std::stringstream ss;
-        ss << "Time Interval From " << t0 << " to " << tf;
-        row << wsindex << ss.str();
+        if (!cyclicgroup)
+        {
+          API::TableRow row = m_filterInfoWS->appendRow();
+          std::stringstream ss;
+          ss << "Time Interval From " << t0 << " to " << tf;
+          row << wsindex << ss.str();
+        }
 
         // d) Update loop variable
         curtime_ns = nexttime_ns;
@@ -432,6 +435,18 @@ namespace Algorithms
         }
 
       } // END-WHILE
+
+      // Information table workspace for cyclic group
+      if (cyclicgroup)
+      {
+        for (int i = 0; i < numberofgroups; ++i)
+        {
+          TableRow row = m_filterInfoWS->appendRow();
+          stringstream infoss;
+          infoss << i << "-th group in an even and cyclic time-divided filter.";
+          row << i << infoss.str();
+        }
+      }
 
     } // END-IF-ELSE
 

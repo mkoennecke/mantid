@@ -187,6 +187,7 @@ public:
 
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("InputWorkspace", "TestWorkspace03"));
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("OutputWorkspace", "Splitters01"));
+    TS_ASSERT_THROWS_NOTHING(alg.setProperty("InformationWorkspace", "SplitterInfo03"));
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("TimeInterval", 15000.0));
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("UnitOfTime", "Nanoseconds"));
     TS_ASSERT_THROWS_NOTHING(alg.setProperty("NumberOfGroups", 4));
@@ -254,10 +255,16 @@ public:
       // cout << "SplittersWorkspace:  group = " << wsgroup << endl;
     }
 
+    // Information workspace
+    TableWorkspace_sptr infows = boost::dynamic_pointer_cast<TableWorkspace>(
+          AnalysisDataService::Instance().retrieve("SplitterInfo03"));
+    TS_ASSERT(infows);
+    TS_ASSERT_EQUALS(infows->rowCount(), 4);
+
     // 5. Clean
     AnalysisDataService::Instance().remove("Splitters01");
     AnalysisDataService::Instance().remove("TestWorkspace03");
-
+    AnalysisDataService::Instance().remove("SplitterInfo03");
 
     return;
   }
