@@ -15,6 +15,7 @@ namespace Mantid
 namespace Algorithms
 {
 
+  DECLARE_ALGORITHM(DivideSplitters)
 
   //----------------------------------------------------------------------------------------------
   /** Constructor
