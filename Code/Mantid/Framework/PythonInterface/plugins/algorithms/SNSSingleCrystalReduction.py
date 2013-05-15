@@ -4,8 +4,9 @@ The purpose of this algorithm is to subtract collected background data from the 
 
 *WIKI*"""
 
-from MantidFramework import *
-from mantidsimple import *
+from mantid.kernel import *
+from mantid.api import *
+from mantid.simpleapi import *
 import os
 
 COMPRESS_TOL_TOF = .01
@@ -20,34 +21,36 @@ class SNSSingleCrystalReduction(PythonAlgorithm):
 
     def PyInit(self):
         instruments = ["TOPAZ"]
+        greaterThanZero = IntArrayBoundedValidator()
+        greaterThanZero.setLower(0)
         self.declareProperty("Instrument", "TOPAZ",
-                             Validator=ListValidator(instruments))
-        self.declareListProperty("SampleNumbers", [0], Validator=ArrayBoundedValidator(Lower=0))
-        self.declareProperty("BackgroundNumber", 0, Validator=BoundedValidator(Lower=0),
-                             Description="If specified overrides value in CharacterizationRunsFile")
-        self.declareProperty("VanadiumNumber", 0, Validator=BoundedValidator(Lower=0),
-                             Description="If specified overrides value in CharacterizationRunsFile")
-        self.declareListProperty("Binning", [0.,0.,0.],
-                             Description="Positive is linear bins, negative is logorithmic")
-        self.declareProperty("SubtractBackgroundFromSample", False, Description="Subtract background from sample.  Background always subtracted from vanadium if specified.")
-        self.declareProperty("DivideSamplebyIntegratedVanadium", False, Description="Divide sample by integrated vanadium.")
-        self.declareProperty("LinearScatteringCoef", 0.0, Description="Linear Scattering Coefficient for Anvred correction of sample.")
-        self.declareProperty("LinearAbsorptionCoef", 0.0, Description="Linear Absorption Coefficient for Anvred correction of sample.")
-        self.declareProperty("Radius", 0.0, Description="Radius of sphere for Anvred correction of sample. Set to 0 for no Anvred corrections")
-        self.declareProperty("PowerLambda", 4.0, Description="Power of wavelength for Anvred correction of sample.")
-        self.declareProperty("VanadiumRadius", 0.0, Description="Radius of sphere for Anvred correction of vanadium. Set to 0 for no Anvred corrections")
-        self.declareProperty("MinimumdSpacing", 0.5, Description="Minimum d-spacing.  Default is 0.5")
-        self.declareProperty("MinimumWavelength", 0.6, Description="Minimum Wavelength.  Default is 0.6")
-        self.declareProperty("MaximumWavelength", 3.5, Description="Maximum Wavelength.  Default is 3.5")
-        self.declareProperty("ScaleFactor", 0.01, Description="Multiply FSQ and sig(FSQ) by ScaleFactor.  Default is 0.01")
-        self.declareProperty("EdgePixels", 24, Description="Number of edge pixels to ignore.  Default is 24")
-        self.declareListProperty("LatticeParameters", [4.7582,4.7582,12.9972,90.0,90.0,120.0],
-                             Description="a,b,c,alpha,beta,gamma (Default is Sapphire Lattice Parameters)")
-        self.declareFileProperty("IsawDetCalFile", "", FileAction.OptionalLoad, ['.DetCal'], Description="Isaw style file of location of detectors.")
+                             validator=StringListValidator(instruments))
+        self.declareProperty(IntArrayProperty("SampleNumbers", values=[0], direction=Direction.Input, validator=greaterThanZero))
+        self.declareProperty("BackgroundNumber", 0, validator=greaterThanZero,
+                             doc="If specified overrides value in CharacterizationRunsFile", direction=Direction.Input)
+        self.declareProperty("VanadiumNumber", 0, validator=greaterThanZero,
+                             doc="If specified overrides value in CharacterizationRunsFile")
+        self.declareProperty(FloatArrayProperty("Binning", values=[0.,0.,0.]),
+                             doc="Positive is linear bins, negative is logorithmic")
+        self.declareProperty("SubtractBackgroundFromSample", False, doc="Subtract background from sample.  Background always subtracted from vanadium if specified.")
+        self.declareProperty("DivideSamplebyIntegratedVanadium", False, doc="Divide sample by integrated vanadium.")
+        self.declareProperty("LinearScatteringCoef", 0.0, doc="Linear Scattering Coefficient for Anvred correction of sample.")
+        self.declareProperty("LinearAbsorptionCoef", 0.0, doc="Linear Absorption Coefficient for Anvred correction of sample.")
+        self.declareProperty("Radius", 0.0, doc="Radius of sphere for Anvred correction of sample. Set to 0 for no Anvred corrections")
+        self.declareProperty("PowerLambda", 4.0, doc="Power of wavelength for Anvred correction of sample.")
+        self.declareProperty("VanadiumRadius", 0.0, doc="Radius of sphere for Anvred correction of vanadium. Set to 0 for no Anvred corrections")
+        self.declareProperty("MinimumdSpacing", 0.5, doc="Minimum d-spacing.  Default is 0.5")
+        self.declareProperty("MinimumWavelength", 0.6, doc="Minimum Wavelength.  Default is 0.6")
+        self.declareProperty("MaximumWavelength", 3.5, doc="Maximum Wavelength.  Default is 3.5")
+        self.declareProperty("ScaleFactor", 0.01, doc="Multiply FSQ and sig(FSQ) by ScaleFactor.  Default is 0.01")
+        self.declareProperty("EdgePixels", 24, doc="Number of edge pixels to ignore.  Default is 24")
+        self.declareProperty(FloatArrayProperty("LatticeParameters", values=[4.7582,4.7582,12.9972,90.0,90.0,120.0]),
+                             doc="a,b,c,alpha,beta,gamma (Default is Sapphire Lattice Parameters)")
+        self.declareProperty(FileProperty("IsawDetCalFile", "", FileAction.OptionalLoad, ['.DetCal']), doc="Isaw style file of location of detectors.")
         outfiletypes = ['', 'hkl']
-        self.declareProperty("SaveAs", "hkl", ListValidator(outfiletypes))
-        self.declareFileProperty("OutputFile", "", FileAction.OptionalLoad, outfiletypes,  Description="Name of output file to write/append.")
-        self.declareProperty("AppendHKLFile", False, Description="Append existing hkl file")
+        self.declareProperty("SaveAs", "hkl", StringListValidator(outfiletypes))
+        self.declareProperty(FileProperty("OutputFile", "", FileAction.OptionalLoad, outfiletypes),  doc="Name of output file to write/append.")
+        self.declareProperty("AppendHKLFile", False, doc="Append existing hkl file")
 
     def _loadNeXusData(self, filename, name, bank, extension, **kwargs):
         alg = LoadEventNexus(Filename=filename, OutputWorkspace=name, BankName=bank, SingleBankPixelsOnly=1, FilterByTofMin=self._binning[0], FilterByTofMax=self._binning[2], LoadMonitors=True, MonitorsAsEvents=True, **kwargs)
@@ -57,7 +60,7 @@ class SNSSingleCrystalReduction(PythonAlgorithm):
         #Normalise by sum of counts in upstream monitor
         NormaliseToMonitor(InputWorkspace=wksp,OutputWorkspace=wksp,MonitorWorkspace=mtd[str(name)+'_monitors'],IntegrationRangeMin=self._binning[0],IntegrationRangeMax=self._binning[2])
         wksp *= 1e8
-        mtd.deleteWorkspace(str(name)+'_monitors')
+        DeleteWorkspace(str(name)+'_monitors')
         mtd.releaseFreeMemory()
         # take care of filtering events
         if self._filterBadPulses:
@@ -95,7 +98,7 @@ class SNSSingleCrystalReduction(PythonAlgorithm):
         SortEvents(InputWorkspace=wksp, SortBy="X Value")
         DiffractionFocussing(InputWorkspace=wksp, OutputWorkspace=wksp,
                              GroupingWorkspace=str(wksp)+"group")
-        mtd.deleteWorkspace(str(wksp)+"group")
+        DeleteWorkspace(str(wksp)+"group")
         mtd.releaseFreeMemory()
         SortEvents(InputWorkspace=wksp, SortBy="X Value")
         ConvertUnits(InputWorkspace=wksp, OutputWorkspace=wksp, Target="TOF")
@@ -131,7 +134,7 @@ class SNSSingleCrystalReduction(PythonAlgorithm):
             IntegratePeaksMD(InputWorkspace=wkspMD,PeakRadius='0.12',ReplaceIntensity=False,
                     BackgroundOuterRadius='0.18',BackgroundInnerRadius='0.15',
                     PeaksWorkspace=peaksWS,OutputWorkspace=peaksWS)
-            mtd.deleteWorkspace('MD2')
+            DeleteWorkspace('MD2')
 
     def PyExec(self):
         # get generic information
@@ -188,7 +191,7 @@ class SNSSingleCrystalReduction(PythonAlgorithm):
                     FindDetectorsOutsideLimits(vanI, "VanMask", LowThreshold=1.0e-300, HighThreshold=1.0e+300)
                     maskWS = mtd["VanMask"]
                     MaskDetectors(vanI, MaskedWorkspace=maskWS)
-                    mtd.deleteWorkspace('VanMask')
+                    DeleteWorkspace('VanMask')
                     mtd.releaseFreeMemory()
                 # process the background
                 bkgRun = self.getProperty("BackgroundNumber")
@@ -202,7 +205,7 @@ class SNSSingleCrystalReduction(PythonAlgorithm):
                     bkgRun = None
                 if bkgRun is not None:
                     Minus(LHSWorkspace=vanRun, RHSWorkspace=bkgRun, OutputWorkspace=vanRun, ClearRHSWorkspace=True)
-                    mtd.deleteWorkspace(str(bkgRun))
+                    DeleteWorkspace(str(bkgRun))
                     mtd.releaseFreeMemory()
                     CompressEvents(InputWorkspace=vanRun, OutputWorkspace=vanRun, Tolerance=COMPRESS_TOL_TOF) # 10ns
                 
@@ -243,7 +246,7 @@ class SNSSingleCrystalReduction(PythonAlgorithm):
     
                 if bkgRun is not None:
                     Minus(LHSWorkspace=samRun, RHSWorkspace=bkgRun, OutputWorkspace=samRun, ClearRHSWorkspace=True)
-                    mtd.deleteWorkspace(str(bkgRun))
+                    DeleteWorkspace(str(bkgRun))
                     mtd.releaseFreeMemory()
                     CompressEvents(InputWorkspace=samRun, OutputWorkspace=samRun, Tolerance=COMPRESS_TOL_TOF) # 10ns
     
@@ -267,7 +270,7 @@ class SNSSingleCrystalReduction(PythonAlgorithm):
                 mtd.releaseFreeMemory()
                 self._save(samRun, normalized)
                 if self._outTypes is not '':
-                    mtd.deleteWorkspace(str(samRun))
+                    DeleteWorkspace(str(samRun))
                 mtd.releaseFreeMemory()
             peaksWS = mtd['Peaks']
             try:
@@ -299,6 +302,6 @@ class SNSSingleCrystalReduction(PythonAlgorithm):
                 MinDSpacing=self._minD,MinWavelength=self._minWL,MaxWavelength=self._maxWL,
                 Filename=self._outFile, AppendFile=self._append,InputWorkspace=peaksWS)
             self._append = True
-            mtd.deleteWorkspace(str(peaksWS))
+            DeleteWorkspace(str(peaksWS))
 
-mtd.registerPyAlgorithm(SNSSingleCrystalReduction())
+AlgorithmFactory.subscribe(SNSSingleCrystalReduction())
