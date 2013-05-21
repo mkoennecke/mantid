@@ -433,18 +433,20 @@ size_t CropWorkspace::getXMin(const int wsIndex)
   size_t xIndex = 0;
   if ( ! isEmpty(minX_val) )
   {//A value has been passed to the algorithm, check it and maybe store it
+    // The value is checked after calculation to allow for workspace having trailing zeros.
     const MantidVec& X = m_inputWorkspace->readX(wsIndex);
-    if ( m_commonBoundaries && minX_val > X.back() )
+    // Reduce cut-off value slightly to allow for rounding errors
+    // when trying to exactly hit a bin boundary.
+    minX_val -= std::abs(minX_val*xBoundaryTolerance);
+    xIndex = std::lower_bound(X.begin(),X.end(),minX_val) - X.begin();
+    if ( m_commonBoundaries && xIndex == size_t(X.end()-X.begin()) )
     {
       std::stringstream msg;
       msg << "XMin is greater than the largest X value (" << minX_val << " > " << X.back() << ")";
       g_log.error(msg.str());
       throw std::out_of_range(msg.str());
     }
-    // Reduce cut-off value slightly to allow for rounding errors
-    // when trying to exactly hit a bin boundary.
-    minX_val -= std::abs(minX_val*xBoundaryTolerance);
-    xIndex = std::lower_bound(X.begin(),X.end(),minX_val) - X.begin();
+
   }
   return xIndex;
 }
