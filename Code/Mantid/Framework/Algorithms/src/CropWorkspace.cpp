@@ -442,7 +442,7 @@ size_t CropWorkspace::getXMin(const int wsIndex)
     if ( m_commonBoundaries && xIndex == size_t(X.end()-X.begin()) )
     {
       std::stringstream msg;
-      // TODO Find largest X value to put in error message
+      // Find largest X value and put in error message
       size_t xMaxIndex = std::max_element(X.begin(),X.end()) - X.begin();
       double xMax = X[xMaxIndex];
       msg << "XMin is greater than the largest X value (" << minX_val << " > " << xMax << ")";
