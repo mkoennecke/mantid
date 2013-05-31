@@ -2,6 +2,7 @@
 #define MANTID_VATES_vtkSplatterPlotFactory_H_
 
 #include "MantidAPI/IMDEventWorkspace.h"
+#include "MantidAPI/IMDNode.h"
 #include "MantidMDEvents/MDEventFactory.h"
 #include "MantidMDEvents/MDEventWorkspace.h"
 #include "MantidVatesAPI/ThresholdRange.h"
@@ -108,6 +109,14 @@ private:
   /// Implicit function to define which boxes to render.
   mutable Mantid::Geometry::MDImplicitFunction * sliceImplicitFunction;
 
+  /// Variable to hold sorted list, so sort doesn't have to be repeated
+  mutable std::vector< Mantid::API::IMDNode * > sorted_boxes;
+
+  /// Flag indicating whether or not the sorted list must be built
+  mutable bool build_sorted_list;
+
+  /// Save name of current workspace so we can re-sort if it changes
+  mutable std::string ws_name;
 };
 
 

@@ -50,6 +50,7 @@ namespace Mantid
   m_thresholdRange(thresholdRange), m_scalarName(scalarName), 
   m_numPoints(numPoints), m_percentToUse(percentToUse)
   {
+    build_sorted_list = true;
   }
 
   /// Destructor
@@ -100,25 +101,31 @@ namespace Mantid
     if (VERBOSE) std::cout << tim <<" to retrieve the "<< boxes.size() <<" boxes down."<< std::endl;
 
                                                 // get list of boxes with signal > 0 and sort
-                                                // the list in order of decreasing signal
-    std::vector< MDBox<MDE,nd> * > sorted_boxes;
-    sorted_boxes.reserve( 100000 );
-    for ( size_t i = 0; i < boxes.size(); i++ )
+                                                // the list in order of decreasing signal if we 
+                                                // haven't already sorted it or the name is different
+    std::string new_name = ws->getName();
+    if ( new_name != ws_name || build_sorted_list )
     {
-      MDBox<MDE,nd> * box = dynamic_cast<MDBox<MDE,nd> *>(boxes[i]);
-      if (box)
+      ws_name = new_name;
+      build_sorted_list = false;
+      sorted_boxes.clear();
+      for ( size_t i = 0; i < boxes.size(); i++ )
       {
-        size_t newPoints = box->getNPoints();
-        if (newPoints > 0)
+        MDBox<MDE,nd> * box = dynamic_cast<MDBox<MDE,nd> *>(boxes[i]);
+        if (box)
         {
-          sorted_boxes.push_back( box );
-        } // box has any points
-      } // box is valid MDBox
-    } // For each box
+          size_t newPoints = box->getNPoints();
+          if (newPoints > 0)
+          {
+            sorted_boxes.push_back( box );
+          } // box has any points
+        } // box is valid MDBox
+      } // For each box
 
-    if ( VERBOSE ) std::cout << "START SORTING" << std::endl;
-    std::sort( sorted_boxes.begin(), sorted_boxes.end(), CompareNormalizedSignal );
-    if ( VERBOSE ) std::cout << "DONE SORTING" << std::endl;
+      if ( VERBOSE ) std::cout << "START SORTING" << std::endl;
+      std::sort( sorted_boxes.begin(), sorted_boxes.end(), CompareNormalizedSignal );
+      if ( VERBOSE ) std::cout << "DONE SORTING" << std::endl;
+    }
 
     size_t num_boxes_to_use = (size_t)(percent_to_use * (double)sorted_boxes.size() / 100.0);
     if ( num_boxes_to_use <= 0 )
@@ -192,7 +199,7 @@ namespace Mantid
     bool   done       = false;
     while ( box_index < num_boxes_to_use && !done )                // "For" each box
     {
-      MDBox<MDE,nd> * box = sorted_boxes[box_index];
+      MDBox<MDE,nd> * box = dynamic_cast<MDBox<MDE,nd> *>(sorted_boxes[box_index]);
       box_index++;
       float signal_normalized = float(box->getSignalNormalized());
       size_t newPoints = box->getNPoints();
