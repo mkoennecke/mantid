@@ -163,7 +163,7 @@ find_program ( DVIPNG_EXE dvipng )
                        )
 
    if ( MAKE_VATES )
-     add_dependencies ( qtassistant VatesAPI )
+     add_dependencies ( qtassistant VatesSimpleGui )
    endif ( MAKE_VATES )
 
    # Copy to correct location in bin
