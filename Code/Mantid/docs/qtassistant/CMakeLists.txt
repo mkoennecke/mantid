@@ -155,11 +155,16 @@ find_program ( DVIPNG_EXE dvipng )
                       DEPENDS ${HELP_ALGO_OUT} ${HELP_FIT_OUT} ${HELP_QHCP_SOURCE}
 		      COMMAND ${QT_QCOLLECTIONGENERATOR_EXECUTABLE} ${HELP_OUT_DIR}/mantid.qhcp
 		      )
-              
+   
+   # The qtassistant target needs to run after all shared libraries have been built           
    add_custom_target ( qtassistant ALL
-                       DEPENDS Framework ${HELP_OUT_DIR}/mantid.qhc
+                       DEPENDS Framework MantidQt ${HELP_OUT_DIR}/mantid.qhc
 		               ${QTASSISTANT_EXE}
                        )
+
+   if ( MAKE_VATES )
+     add_dependencies ( qtassistant VatesAPI )
+   endif ( MAKE_VATES )
 
    # Copy to correct location in bin
    set (HELP_BIN_OUT_DIR  ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/qtassistant )

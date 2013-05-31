@@ -455,7 +455,7 @@ void ConvertToMD::copyMetaData(API::IMDEventWorkspace_sptr mdEventWS, MDEvents::
   }
 
  // add rinindex to the target workspace description for further usage as the identifier for the events, which come from this run. 
-    targWSDescr.addProperty("RUN_INDEX",runIndex,true);
+    targWSDescr.addProperty("RUN_INDEX",runIndex,true);  
 }
 
 /** Constructor */
