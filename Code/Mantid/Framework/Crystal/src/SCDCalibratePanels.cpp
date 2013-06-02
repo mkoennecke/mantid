@@ -1852,7 +1852,7 @@ namespace Mantid
       *                        NewInstrument). "Clones" relevant information into the
       *                        NewInstrument's parameter map.
       *
-      *   @param RotateCenters Rotate the centers of the panels(the same amount) with the
+      *   @param RotCenters Rotate the centers of the panels(the same amount) with the
       *                        rotation of panels around their center
       */
     void SCDCalibratePanels::FixUpBankParameterMap(vector<string> const bankNames,
