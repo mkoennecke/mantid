@@ -166,13 +166,19 @@ namespace Mantid
 
 
     /**
-     * Creates the Workspace that will be supplied to the SCDPanelErrors Fit function
-     * @param pwks      The peaks workspace of indexed peaks.
-     * @param bankNames  The bank names where all banks from Group 0 are first, Group 1 are second, etc.
-     * @param tolerance  If h,k, and l values are not rounded, this is the indexing tolerance for a peak to be included.
-     *                   NOTE: if rounded, only indexed peaks( h,k,l values not all 0) are included.
-     * @param bounds    The positions in bankNames vector of  the start of Group * peaks
-     */
+      * Calculate the Workspace2D associated with a Peaksworkspace for Composite functions.
+      * the elements of parameter bounds can be used to calculate Xstart and Xend
+      *
+      * @param pwks        The PeaksWorkspace
+      *
+      * @param  bankNames  The list of bank names( from Peak.getBankName())
+      *
+      * @param tolerance   The maximum distance the h value, k value, and l value of a Peak is from
+      *                    an integer, for a peak to be considered Indexed.
+      *
+      * @param  bounds     bounds[i] is the starting index for the xvalues from the resultant workspace.
+      *                    This can be used to determine startX and endX.
+      */
     DataObjects::Workspace2D_sptr SCDCalibratePanels::calcWorkspace( DataObjects::PeaksWorkspace_sptr & pwks,
       vector< string>& bankNames,
       double tolerance, vector< int >&bounds)
@@ -243,10 +249,15 @@ namespace Mantid
 
     /**
      * Converts the Grouping indicated by the user to an internal more usable form
-     * @param AllBankNames  All the bang names
+     *
+     * @param AllBankNames  All the bank names
+     *
      * @param Grouping      The Grouping choice(one per bank, all together or specify)
+     *
      * @param bankPrefix    The prefix for the bank names
+     *
      * @param bankingCode   If Grouping Choice is specify, this is what the user specifies along with bankPrefix
+     *
      * @param &Groups       The internal form for grouping.
      */
     void  SCDCalibratePanels::CalculateGroups(set< string >& AllBankNames, string Grouping, string bankPrefix,
@@ -1271,6 +1282,7 @@ namespace Mantid
      *  @param instrument   The instrument to be modified
      *  @param AllBankName  The bank names in this instrument that will be modified
      *  @param T0           The time offset from the DetCal file
+     *  @param L0           The initial path length
      *  @param filename       The DetCal file name
      *  @param bankPrefixName   The prefix to the bank names.
      */
@@ -1683,7 +1695,17 @@ namespace Mantid
 
     }
 
-
+    /**
+       *  Copies positional entries in pmapSv to pmap starting at bank_const
+       *  and parents.
+       *
+       *  @param  bank_const  the starting component for copying entries.
+       *
+       *  @param pmap         the Parameter Map to be updated
+       *
+       *  @param pmapSv       the original Parameter Map
+       *
+       */
     void SCDCalibratePanels::updateBankParams( boost::shared_ptr<const Geometry::IComponent>  bank_const,
       boost::shared_ptr<Geometry::ParameterMap> pmap,
       boost::shared_ptr<const Geometry::ParameterMap>pmapSv)
@@ -1729,7 +1751,14 @@ namespace Mantid
 
     }
 
-
+    /**
+      *  Copies positional entries in pmapSv to pmap starting at bank_const
+      *  and parents.
+      *  @param  bank_const  the starting component for copying entries.
+      *  @param pmap        the Parameter Map to be updated
+      *  @param pmapSv       the original Parameter Map
+      *
+      */
     void SCDCalibratePanels::updateSourceParams(boost::shared_ptr<const Geometry::IObjComponent> bank_const,
       boost::shared_ptr<Geometry::ParameterMap> pmap, boost::shared_ptr<const Geometry::ParameterMap> pmapSv)
     {
@@ -1749,7 +1778,21 @@ namespace Mantid
         pmap->addQuat(bank_const.get(), "rot", rot->value<Quat>());
     }
 
-
+    /**
+       * *  Updates the ParameterMap for NewInstrument to reflect the position of the
+       * source.
+       *
+       * @param NewInstrument  The instrument whose parameter map will be changed
+      *                         to reflect the new source position
+      *
+       * @param L0             The distance from source to sample( should be positive)
+       *
+       * @param newSampPos     The  new sample position
+       *
+       * @param  pmapOld     The Parameter map from the original instrument( not
+      *                        NewInstrument). "Clones" relevant information into the
+      *                        NewInstrument's parameter map.
+       */
     void SCDCalibratePanels::FixUpSourceParameterMap( boost::shared_ptr<const Instrument> NewInstrument,
       double const L0,V3D const newSampPos,
       boost::shared_ptr<const ParameterMap> const pmapOld)
@@ -1783,7 +1826,35 @@ namespace Mantid
     }
 
 
-
+    /**
+      *  Updates the ParameterMap for NewInstrument to reflect the changes in the
+      *  associated panel information
+      *
+      *  @param bankNames      The names of the banks(panels) that will be updated
+      *
+      *  @param NewInstrument  The instrument whose parameter map will be changed
+      *                         to reflect the new values below
+      *
+      *  @param  pos           The quantity to be added to the current relative
+      *                        position, from old NewInstrument, of the banks in bankNames.
+      *  @param rot            The quantity to be added to the current relative
+      *                        rotations, from old NewInstrument, of the banks in bankNames.
+      *
+      *  @param  DetWScale     The factor to multiply the current detector width,
+      *                        from old NewInstrument, by to get the new detector width
+      *                        for the banks in bankNames.
+      *
+      *  @param   DetHtScale  The factor to multiply the current detector height,
+      *                        from old NewInstrument, by to get the new detector height
+      *                        for the banks in bankNames.
+      *
+      *   @param  pmapOld      The Parameter map from the original instrument( not
+      *                        NewInstrument). "Clones" relevant information into the
+      *                        NewInstrument's parameter map.
+      *
+      *   @param RotateCenters Rotate the centers of the panels(the same amount) with the
+      *                        rotation of panels around their center
+      */
     void SCDCalibratePanels::FixUpBankParameterMap(vector<string> const bankNames,
       boost::shared_ptr<const Instrument> NewInstrument, V3D const pos, Quat const rot, double const DetWScale,
       double const DetHtScale, boost::shared_ptr<const ParameterMap> const pmapOld, bool RotCenters)
