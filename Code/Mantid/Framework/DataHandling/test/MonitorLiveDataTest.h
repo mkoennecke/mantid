@@ -48,11 +48,11 @@ public:
 
   
   /** Create but don't start a MonitorLiveData thread */
-  IAlgorithm_sptr makeAlgo(std::string output, std::string accumWS="",
+  boost::shared_ptr<MonitorLiveData> makeAlgo(std::string output, std::string accumWS="",
       std::string AccumulationMethod="Replace",
       std::string EndRunBehavior="Restart", std::string UpdateEvery="1")
   {
-    IAlgorithm_sptr alg = AlgorithmManager::Instance().create("MonitorLiveData", -1, false);
+    auto alg = boost::dynamic_pointer_cast<MonitorLiveData>(AlgorithmManager::Instance().create("MonitorLiveData", -1, false));
     alg->setPropertyValue("Instrument", "TestDataListener");
     alg->setPropertyValue("UpdateEvery", UpdateEvery);
     alg->setPropertyValue("AccumulationMethod", AccumulationMethod);
@@ -84,9 +84,8 @@ public:
     Poco::Thread::sleep(100); // give it some time to start
 
     // This algorithm dies because another thread has the same output
-    IAlgorithm_sptr alg2 = makeAlgo("fake1");
-    TS_ASSERT_THROWS_ANYTHING( alg2->execute(); );
-    TS_ASSERT( !alg2->isExecuted() );
+    boost::shared_ptr<MonitorLiveData> alg2 = makeAlgo("fake1");
+    TSM_ASSERT("validateInputs should complaing (return a non-empty map)", ! alg2->validateInputs().empty() );
 
     // Abort the thread.
     alg1->cancel();
@@ -101,9 +100,8 @@ public:
     Poco::Thread::sleep(100); // give it some time to start
 
     // This algorithm dies because another thread has the same output
-    IAlgorithm_sptr alg2 = makeAlgo("fake2", "accum1");
-    TS_ASSERT_THROWS_ANYTHING( alg2->execute() );
-    TS_ASSERT( !alg2->isExecuted() );
+    boost::shared_ptr<MonitorLiveData> alg2 = makeAlgo("fake2", "accum1");
+    TSM_ASSERT("validateInputs should complaing (return a non-empty map)", ! alg2->validateInputs().empty() );
 
     // Abort the thread.
     alg1->cancel();
@@ -122,11 +120,7 @@ public:
 
     // This algorithm if OK because the other is not still running
     IAlgorithm_sptr alg2 = makeAlgo("fake1");
-    Poco::ActiveResult<bool> res2 = alg2->executeAsync();
-    Poco::Thread::sleep(100); // give it some time to start
-    TS_ASSERT( alg2->isRunning() );
-    alg2->cancel();
-    res2.wait(10000);
+    TSM_ASSERT("validateInputs should give the all clear (an empty map)", alg2->validateInputs().empty() );
   }
 
 
@@ -160,15 +154,11 @@ public:
   //--------------------------------------------------------------------------------------------
 /** Executes the given algorithm asynchronously, until you reach the given chunk number.
    * @return false if test failed*/
-  bool runAlgoUntilChunk(IAlgorithm_sptr alg1, size_t stopAtChunk)
+  bool runAlgoUntilChunk(boost::shared_ptr<MonitorLiveData> alg1, size_t stopAtChunk)
   {
-    MonitorLiveData * monitor = dynamic_cast<MonitorLiveData*>(alg1.get());
-    TS_ASSERT(monitor);
-    if (!monitor) return false;
-
     Poco::ActiveResult<bool> res1 = alg1->executeAsync();
     Poco::Thread::sleep(50);
-    while (monitor->m_chunkNumber < stopAtChunk)
+    while (alg1->m_chunkNumber < stopAtChunk)
       Poco::Thread::sleep(10);
     return true;
   }
@@ -181,7 +171,7 @@ public:
     ConfigService::Instance().setString("testdatalistener.m_changeStatusAfter", "4");
     ConfigService::Instance().setString("testdatalistener.m_newStatus", "4" /* ILiveListener::EndRun */);
 
-    IAlgorithm_sptr alg1 = makeAlgo("fake1", "", "Add", "Restart", "0.15");
+    boost::shared_ptr<MonitorLiveData> alg1 = makeAlgo("fake1", "", "Add", "Restart", "0.15");
     // Run this algorithm until that chunk #
     if (!runAlgoUntilChunk(alg1, 7)) return;
 
@@ -204,7 +194,7 @@ public:
     ConfigService::Instance().setString("testdatalistener.m_changeStatusAfter", "4");
     ConfigService::Instance().setString("testdatalistener.m_newStatus", "4" /* ILiveListener::EndRun */);
 
-    IAlgorithm_sptr alg1 = makeAlgo("fake1", "", "Add", "Rename", "0.15");
+    boost::shared_ptr<MonitorLiveData> alg1 = makeAlgo("fake1", "", "Add", "Rename", "0.15");
     // Run this algorithm until that chunk #
     if (!runAlgoUntilChunk(alg1, 7)) return;
 
