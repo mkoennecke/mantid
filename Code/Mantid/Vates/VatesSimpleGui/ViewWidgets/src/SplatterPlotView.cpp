@@ -264,7 +264,6 @@ void SplatterPlotView::onPickModeToggled(bool state)
       src = this->splatSource;
     }
     this->probeSource = builder->createFilter("filters", "ProbePoint", src);
-    emit this->triggerAccept();
   }
   else
   {
