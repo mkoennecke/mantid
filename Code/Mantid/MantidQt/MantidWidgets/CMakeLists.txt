@@ -29,6 +29,7 @@ set ( SRC_FILES
 	src/UserFunctionDialog.cpp
 	src/WorkspaceSelector.cpp
 	src/pythonCalc.cpp
+	src/QwtScaleEngineSquare.cpp
 )
 
 set ( SRC_UNITY_IGNORE_FILES 
@@ -74,6 +75,7 @@ set ( MOC_FILES
 set ( INC_FILES
     ${MOC_FILES}
 	inc/MantidQtMantidWidgets/WidgetDllOption.h
+	inc/MantidQtMantidWidgets/QwtScaleEngineSquare.h
 )
 
 # QtDesigner UI files to process

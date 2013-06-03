@@ -2,6 +2,8 @@
 #include "MantidQtAPI/MantidColorMap.h"
 #include "MantidQtAPI/GraphOptions.h"
 
+#include "MantidQtMantidWidgets/QwtScaleEngineSquare.h"
+
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QComboBox>
@@ -80,7 +82,7 @@ void ColorMapWidget::setupColorBarScaling(const MantidColorMap& colorMap)
   GraphOptions::ScaleType type = colorMap.getScaleType();
   if( type == GraphOptions::Linear )
   {
-    QwtLinearScaleEngine linScaler;
+    QwtSquareScaleEngine linScaler;
     m_scaleWidget->setScaleDiv(linScaler.transformation(), linScaler.divideScale(minValue, maxValue,  20, 5));
     m_scaleWidget->setColorMap(QwtDoubleInterval(minValue, maxValue),colorMap);
   }
@@ -203,7 +205,7 @@ void ColorMapWidget::updateScale()
   GraphOptions::ScaleType type = (GraphOptions::ScaleType)m_scaleOptions->itemData(m_scaleOptions->currentIndex()).toUInt();
   if( type == GraphOptions::Linear )
   {
-    QwtLinearScaleEngine linScaler;
+    QwtSquareScaleEngine linScaler;
     m_scaleWidget->setScaleDiv(linScaler.transformation(), linScaler.divideScale(minValue, maxValue,  20, 5));
   }
   else
