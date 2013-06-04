@@ -167,13 +167,11 @@ private:
      */
     class DeleteQueryBox : public QMessageBox{
     public: 
-      DeleteQueryBox(const QString & path, Mantid::API::SCRIPTSTATUS status, QWidget* parent = 0);
+      DeleteQueryBox(const QString & path, QWidget* parent = 0);
       virtual ~DeleteQueryBox(); 
-      bool deleteCentral(); 
-      QString comment(); 
+      QString comment();
     private: 
       QTextEdit * comment_te; 
-      QCheckBox * delete_ck; 
     };
 
 public:
@@ -212,10 +210,10 @@ public:
 
     QString fileDescription(const QModelIndex & index); 
     QString filePath(const QModelIndex & index);
-    QString author(const QModelIndex& index); 
- protected:
-    /// Implements the  QAbstractItemModel::removeRows to allow deleting rows from the view.
-    bool removeRows ( int row, int count, const QModelIndex & parent = QModelIndex() );
+    QString author(const QModelIndex& index);
+
+ signals:
+    void executingThread(bool);
 private:
     /// auxiliary method to populate the model
     void setupModelData(RepoItem *parent);
@@ -257,7 +255,7 @@ private:
     QFutureWatcher<QString> upload_watcher;
     // keep track of the file being used to the connection with uploader
     QString uploading_path;
-    QModelIndex delete_index;
+    QModelIndex upload_index;
     // check if the file pointed by the index is inside a connection with uploader
     bool isUploading(const QModelIndex & index)const ; 
     private slots:
