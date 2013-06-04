@@ -173,7 +173,7 @@ namespace Algorithms
 
   /**
    * @brief Creates a map of subcomponents where every spectrum belongs to 1 group only
-   * @param countsWS the workspace to check for componets/parents
+   * @param countsWS the workspace to check for components/parents
    * @return  vector of vectors, containing each spectrum that belongs to each group
    */
   std::vector<std::vector<size_t> > IntegrateByComponent::makeInstrumentMap(API::MatrixWorkspace_sptr countsWS)
@@ -200,7 +200,7 @@ namespace Algorithms
     std::multimap<Mantid::Geometry::ComponentID,size_t> mymap;
 
     Geometry::Instrument_const_sptr instrument = countsWS->getInstrument();
-    if (parents==0) //this should not happen in this file, but if one reuses the function and parents==0, the program has a sudded end without this check.
+    if (parents==0) //this should not happen in this file, but if one reuses the function and parents==0, the program has a sudden end without this check.
     {
         return makeInstrumentMap(countsWS);
     }
@@ -211,28 +211,26 @@ namespace Algorithms
       return makeInstrumentMap(countsWS);
     }
 
-    //check if not grouped. If grouped, it will throw
-    try
-    {
-      detid2index_map *d2i=countsWS->getDetectorIDToWorkspaceIndexMap(true);
-      d2i->clear();
-    }
-    catch(...)
-    {
-      throw std::runtime_error("IntegrateByComponent: not able to create detector to spectra map. It is likely that detectors are already grouped.");
-    }
-
     for(size_t i=0;i < countsWS->getNumberHistograms();i++)
     {
       detid_t d=(*((countsWS->getSpectrum(i))->getDetectorIDs().begin()));
-      std::vector<boost::shared_ptr<const Mantid::Geometry::IComponent> > anc=instrument->getDetector(d)->getAncestors();
-      if (anc.size()<static_cast<size_t>(parents))
-      {
-        g_log.warning("Too many levels up. Will ignore LevelsUp");
-        parents=0;
-        return makeInstrumentMap(countsWS);
-      }
-      mymap.insert(std::pair<Mantid::Geometry::ComponentID,size_t>(anc[parents-1]->getComponentID(),i));
+	  try
+	  {
+		  std::vector<boost::shared_ptr<const Mantid::Geometry::IComponent> > anc=instrument->getDetector(d)->getAncestors();
+	  
+		  if (anc.size()<static_cast<size_t>(parents))
+		  {
+			g_log.warning("Too many levels up. Will ignore LevelsUp");
+			parents=0;
+			return makeInstrumentMap(countsWS);
+		  }
+		  mymap.insert(std::pair<Mantid::Geometry::ComponentID,size_t>(anc[parents-1]->getComponentID(),i));
+	  }
+	  catch(Mantid::Kernel::Exception::NotFoundError &e)
+	  {
+		  //do nothing
+		  g_log.debug(e.what());
+	  }
     }
 
     std::vector<std::vector<size_t> > speclist;
