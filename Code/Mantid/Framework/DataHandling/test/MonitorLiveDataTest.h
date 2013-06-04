@@ -63,25 +63,15 @@ public:
     return alg;
   }
   
-  /** Create and run the algorithm asynchronously */
-  void test_runAsync()
-  {
-    IAlgorithm_sptr alg = makeAlgo("fake1");
-    Poco::ActiveResult<bool> res1 = alg->executeAsync();
-    Poco::Thread::sleep(100); // give it some time to start
-
-    // Abort the thread.
-    alg->cancel();
-    res1.wait(10000);
-    //TS_ASSERT( AnalysisDataService::Instance().doesExist("fake1") );
-  }
-
   /** Disallow if you detect another MonitorLiveData thread with the same */
   void test_DontAllowTwoAlgorithmsWithSameOutput()
   {
     IAlgorithm_sptr alg1 = makeAlgo("fake1");
     Poco::ActiveResult<bool> res1 = alg1->executeAsync();
-    Poco::Thread::sleep(100); // give it some time to start
+    while ( !alg1->isRunning() )
+    {
+      Poco::Thread::sleep(10); // give it some time to start
+    }
 
     // This algorithm dies because another thread has the same output
     boost::shared_ptr<MonitorLiveData> alg2 = makeAlgo("fake1");
@@ -97,7 +87,10 @@ public:
   {
     IAlgorithm_sptr alg1 = makeAlgo("fake1", "accum1");
     Poco::ActiveResult<bool> res1 = alg1->executeAsync();
-    Poco::Thread::sleep(100); // give it some time to start
+    while ( !alg1->isRunning() )
+    {
+      Poco::Thread::sleep(10); // give it some time to start
+    }
 
     // This algorithm dies because another thread has the same output
     boost::shared_ptr<MonitorLiveData> alg2 = makeAlgo("fake2", "accum1");
@@ -114,7 +107,10 @@ public:
     // Start and stop one algorithm
     IAlgorithm_sptr alg1 = makeAlgo("fake1");
     Poco::ActiveResult<bool> res1 = alg1->executeAsync();
-    Poco::Thread::sleep(100); // give it some time to start
+    while ( !alg1->isRunning() )
+    {
+      Poco::Thread::sleep(10); // give it some time to start
+    }
     alg1->cancel();
     res1.wait(10000);
 
