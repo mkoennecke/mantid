@@ -1097,6 +1097,7 @@ private:
   bool hasParaviewPath() const;
   bool shouldExecuteAndQuit(const QString& arg);
   void trySetParaviewPath(const QStringList& commandArguments, bool noDialog=false);
+  void handleConfigDir();
 
   private slots:
   //! \name Initialization
