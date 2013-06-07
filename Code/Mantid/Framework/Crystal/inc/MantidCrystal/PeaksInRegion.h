@@ -1,15 +1,15 @@
-#ifndef MANTID_ALGORITHMS_CLEARMASKFLAG_H_
-#define MANTID_ALGORITHMS_CLEARMASKFLAG_H_
+#ifndef MANTID_CRYSTAL_PEAKSINREGION_H_
+#define MANTID_CRYSTAL_PEAKSINREGION_H_
 
 #include "MantidKernel/System.h"
 #include "MantidAPI/Algorithm.h"
 
 namespace Mantid
 {
-namespace Algorithms
+namespace Crystal
 {
 
-  /** ClearMaskFlag : Delete the mask flag/bit on all spectra in a workspace
+  /** PeaksInRegion : TODO: DESCRIPTION
     
     Copyright &copy; 2013 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
 
@@ -31,11 +31,11 @@ namespace Algorithms
     File change history is stored at: <https://github.com/mantidproject/mantid>
     Code Documentation is available at: <http://doxygen.mantidproject.org>
   */
-  class DLLExport ClearMaskFlag  : public API::Algorithm
+  class DLLExport PeaksInRegion  : public API::Algorithm
   {
   public:
-    ClearMaskFlag();
-    virtual ~ClearMaskFlag();
+    PeaksInRegion();
+    virtual ~PeaksInRegion();
     
     virtual const std::string name() const;
     virtual int version() const;
@@ -50,7 +50,7 @@ namespace Algorithms
   };
 
 
-} // namespace Algorithms
+} // namespace Crystal
 } // namespace Mantid
 
-#endif  /* MANTID_ALGORITHMS_CLEARMASKFLAG_H_ */
+#endif  /* MANTID_CRYSTAL_PEAKSINREGION_H_ */
