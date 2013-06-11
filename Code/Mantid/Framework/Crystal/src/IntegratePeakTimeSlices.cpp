@@ -1811,7 +1811,6 @@ namespace Mantid
       ws->setData(2, Yvals);
       AttributeValues->setHeightHalfWidthInfo(xvals,Yvals,yvals);
 
-      ws->setName("index0");
       StatBase[IStartRow] = minRow;
       StatBase[IStartCol] =minCol;
       StatBase[INRows] = maxRow-minRow+1;
@@ -2556,7 +2555,7 @@ namespace Mantid
     void IntegratePeakTimeSlices::InitializeColumnNamesInTableWorkspace(
                                                     TableWorkspace_sptr &TabWS)
     {
-      TabWS->setName("Log Table");
+      //TabWS->setName("Log Table");
       TabWS->addColumn("double", "Time");
       TabWS->addColumn("double", "Channel");
       TabWS->addColumn("double", "Background");
