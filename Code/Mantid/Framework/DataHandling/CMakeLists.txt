@@ -50,6 +50,7 @@ set ( SRC_FILES
 	src/LoadInstrumentFromNexus.cpp
 	src/LoadInstrumentFromRaw.cpp
 	src/LoadIsawDetCal.cpp
+	src/LoadLLB.cpp
 	src/LoadLOQDistancesFromRaw.cpp
 	src/LoadLiveData.cpp
 	src/LoadLog.cpp
@@ -195,6 +196,7 @@ set ( INC_FILES
 	inc/MantidDataHandling/LoadInstrumentFromNexus.h
 	inc/MantidDataHandling/LoadInstrumentFromRaw.h
 	inc/MantidDataHandling/LoadIsawDetCal.h
+	inc/MantidDataHandling/LoadLLB.h
 	inc/MantidDataHandling/LoadLOQDistancesFromRaw.h
 	inc/MantidDataHandling/LoadLiveData.h
 	inc/MantidDataHandling/LoadLog.h
@@ -332,6 +334,7 @@ set ( TEST_FILES
 	LoadInstrumentFromRawTest.h
 	LoadInstrumentTest.h
 	LoadIsawDetCalTest.h
+	LoadLLBTest.h
 	LoadLiveDataTest.h
 	LoadLogTest.h
 	LoadLogsFromSNSNexusTest.h
