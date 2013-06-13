@@ -1,10 +1,10 @@
-from mantid import *
+#from MantidFramework import *
+#from mantidsimple import *
 from mantid.simpleapi import *
-from numpy import zeros
-from pylab import *
+from numpy import zeros, unique, arange, sqrt
 import os.path
 
-PRECISION = 0.010
+PRECISION = 0.020
 
 class sfCalculator():      
     
@@ -13,11 +13,12 @@ class sfCalculator():
 
     #range of x pixel to use in the X integration (we found out that there 
     #is a frame effect that introduces noise)
-    x_pixel_min = 90
-    x_pixel_max = 190
+    x_pixel_min = 0   #default is 90 
+    x_pixel_max = 255 #default is 190  (must be below 256)
 
     #from,width,to in microS
-    rebin_parameters = '0,200,200000'  
+    #rebin_parameters = '0,50,200000'
+    rebin_parameters = '0,50,100000'  
 
     #turn on or off the plots
     bPlot = False
@@ -119,6 +120,16 @@ class sfCalculator():
 #        self._x_axis_ratio = self._x_axis
         self.y_axis_ratio = self.y_axis_numerator / self.y_axis_denominator
         
+#        #DEBUGGING
+#        print self.y_axis_ratio
+#        
+#        f=open('/home/j35/Desktop/RatioNumDen.txt','w')
+#        for i in range(len(self.y_axis_ratio)):
+#            f.write(str(self.x_axis_ratio[i]) + "," + str(self.y_axis_ratio[i]) + "\n")
+#        f.close
+#        
+#        #end debugging
+        
         self.y_axis_error_ratio = ((self.y_axis_error_numerator / 
                                     self.y_axis_numerator) ** 2 + 
                                     (self.y_axis_error_denominator / 
@@ -146,93 +157,108 @@ class sfCalculator():
             self.back_pixel_max = self.d_back_pixel_max
         
         nexus_file_numerator = file
-        LoadEventNexus(Filename=nexus_file_numerator,
-                       OutputWorkspace='EventDataWks')
-        mt1 = mtd['EventDataWks']
+        print '----> loading nexus file: ' + nexus_file_numerator
+        EventDataWks = LoadEventNexus(Filename=nexus_file_numerator)
+#                       OutputWorkspace='EventDataWks')
+#        mt1 = mtd['EventDataWks']
         
-        proton_charge = self._getProtonCharge(mt1)
-        rebin(InputWorkspace='EventDataWks',
-              OutputWorkspace='HistoDataWks',
+        proton_charge = self._getProtonCharge(EventDataWks)
+        print '----> rebinning '
+        HistoDataWks = Rebin(InputWorkspace=EventDataWks,
               Params=self.rebin_parameters)
-        
-        mt2 = mtd['HistoDataWks']
-        x_axis = mt2.readX(0)[:]
+
+#        mt2 = mtd['HistoDataWks']
+#        x_axis = mt2.readX(0)[:]
+
+        x_axis = HistoDataWks.readX(0)[:]
         self.x_axis = x_axis
 
-        self._createIntegratedWorkspace(InputWorkspace=mt2,
-                                        OutputWorkspace='IntegratedDataWks',
+        OutputWorkspace = self._createIntegratedWorkspace(InputWorkspace=HistoDataWks,
                                         proton_charge=proton_charge,
-                                        from_pixel=self.x_pixel_min,
-                                        to_pixel=self.x_pixel_max)
-        ConvertToHistogram(InputWorkspace='IntegratedDataWks',
-                           OutputWorkspace='IntegratedDataWks')
+                                        from_pixel=self.peak_pixel_min,
+                                        to_pixel=self.peak_pixel_max)
 
-        Transpose(InputWorkspace='IntegratedDataWks',
-                  OutputWorkspace='TransposeIntegratedDataWks')
+
+        print '----> Convert to histogram'
+        IntegratedDataWks = ConvertToHistogram(InputWorkspace=OutputWorkspace)
+
+        print '----> Transpose'
+        TransposeIntegratedDataWks = Transpose(InputWorkspace=IntegratedDataWks)
         
-        ConvertToHistogram(InputWorkspace='TransposeIntegratedDataWks',
-                           OutputWorkspace='TransposeIntegratedDataWks_t')
+        print '----> convert to histogram'
+        TransposeIntegratedDataWks_t = ConvertToHistogram(InputWorkspace=TransposeIntegratedDataWks)
         
-        FlatBackground(InputWorkspace='TransposeIntegratedDataWks_t',
-                       OutputWorkspace='TransposeHistoFlatDataWks_1',
+        print '----> flat background1'
+        TransposeHistoFlatDataWks_1 = FlatBackground(InputWorkspace=TransposeIntegratedDataWks_t,
                        StartX=self.back_pixel_min,
                        EndX=self.peak_pixel_min,
                        Mode='Mean',
                        OutputMode="Return Background")
         
-        FlatBackground(InputWorkspace='TransposeIntegratedDataWks_t',
-                       OutputWorkspace='TransposeHistoFlatDataWks_2',
+        print '----> flat background2'
+        TransposeHistoFlatDataWks_2 = FlatBackground(InputWorkspace=TransposeIntegratedDataWks_t,
                        StartX=self.peak_pixel_max,
                        EndX=self.back_pixel_max,
                        Mode='Mean',
                        OutputMode="Return Background")
         
-        Transpose(InputWorkspace='TransposeHistoFlatDataWks_1',
-                  OutputWorkspace='DataWks_1')
+        print '----> transpose flat background 1 -> data1'
+        DataWks_1 = Transpose(InputWorkspace=TransposeHistoFlatDataWks_1);
         
-        Transpose(InputWorkspace='TransposeHistoFlatDataWks_2',
-                  OutputWorkspace='DataWks_2')
+        print '----> transpose flat background 2 -> data2'
+        DataWks_2 = Transpose(InputWorkspace=TransposeHistoFlatDataWks_2);
         
-        ConvertToHistogram(InputWorkspace='DataWks_1', 
-                           OutputWorkspace='DataWks_1')
+        print '----> convert to histogram data2'
+        DataWks_1 = ConvertToHistogram(InputWorkspace=DataWks_1);
         
-        ConvertToHistogram(InputWorkspace='DataWks_2', 
-                           OutputWorkspace='DataWks_2')
+        print '----> convert to histogram data1'
+        DataWks_2 = ConvertToHistogram(InputWorkspace=DataWks_2)
         
-        RebinToWorkspace(WorkspaceToRebin='DataWks_1',
-                         WorkspacetoMatch='IntegratedDataWks',
-                         OutputWorkspace='DataWks_1')
+        print '----> rebin workspace data1'
+        DataWks_1 = RebinToWorkspace(WorkspaceToRebin=DataWks_1,
+                         WorkspacetoMatch=IntegratedDataWks)
         
-        RebinToWorkspace(WorkspaceToRebin='DataWks_2',
-                         WorkspacetoMatch='IntegratedDataWks',
-                         OutputWorkspace='DataWks_2')
+        print '----> rebin workspace data2'
+        DataWks_2 = RebinToWorkspace(WorkspaceToRebin=DataWks_2,
+                         WorkspacetoMatch=IntegratedDataWks)
         
-        WeightedMean(InputWorkspace1='DataWks_1',
-                     InputWorkspace2='DataWks_2',
-                     OutputWorkspace='DataWks')
+        print '----> weighted mean'
+        DataWksWeightedMean = WeightedMean(InputWorkspace1=DataWks_1,
+                     InputWorkspace2=DataWks_2)
 
-        Minus(LHSWorkspace='IntegratedDataWks', 
-              RHSWorkspace='DataWks',
-              OutputWorkspace='DataWks')
+        print '----> minus'
+        DataWks = Minus(LHSWorkspace=IntegratedDataWks, 
+              RHSWorkspace=DataWksWeightedMean)
         
-        mt3 = mtd['DataWks']
-        self._calculateFinalAxis(Workspace=mt3,
+#        if not bNumerator:
+#            import sys
+#            sys.exit("now we are working with denominator")
+            
+                
+#        mt3 = mtd['DataWks']
+        self._calculateFinalAxis(Workspace=DataWks,
                            bNumerator=bNumerator)
+        print 'done with _calculateFinalAxis and back in calculatefinalaxis' #REMOVEME
 
         #cleanup workspaces
-        mtd.remove('EventDataWks')
-        mtd.remove('HistoDataWks')
-        mtd.remove('IntegratedDataWks')
-        mtd.remove('TransposeIntegratedDataWks')
-        mtd.remove('TransposeIntegratedDataWks_t')
-        mtd.remove('TransposeHistoFlatDataWks')
-        mtd.remove('DataWks')
+        DeleteWorkspace(EventDataWks)
+        DeleteWorkspace(HistoDataWks)
+        DeleteWorkspace(IntegratedDataWks)
+        DeleteWorkspace(TransposeIntegratedDataWks)
+        DeleteWorkspace(TransposeIntegratedDataWks_t)
+        DeleteWorkspace(TransposeHistoFlatDataWks_1)
+        DeleteWorkspace(TransposeHistoFlatDataWks_2)
+        DeleteWorkspace(DataWks)
+        
+        print 'done with cleaning workspaces in line 247'
         
     def _calculateFinalAxis(self, Workspace=None, bNumerator=None):
         """
         this calculates the final y_axis and y_axis_error of numerator 
         and denominator
         """
+        
+        print '----> calculate final axis'
         mt = Workspace
         x_axis = mt.readX(0)[:]
         self.x_axis = x_axis
@@ -244,8 +270,35 @@ class sfCalculator():
             counts_vs_tof += mt.readY(x)[:]
             counts_vs_tof_error += mt.readE(x)[:] ** 2
         counts_vs_tof_error = sqrt(counts_vs_tof_error)
+        
+#        #for DEBUGGING
+#        #output data into ascii file
+#        f=open('/home/j35/Desktop/myASCII.txt','w')
+#        if (not bNumerator):
+#            f.write(self.denominator + "\n")
+#        
+#            for i in range(len(counts_vs_tof)):
+#                f.write(str(x_axis[i]) + "," + str(counts_vs_tof[i]) + "\n")
+#            f.close
+#            import sys
+#            sys.exit("Stop in _calculateFinalAxis")
+##        end of for DEBUGGING #so far, so good !
+        
+        
+#        print 'x_axis'
+#        print x_axis
+#        print 'self.tof_min:'
+#        print self.tof_min
+#        print 'self.tof_max:'
+#        print self.tof_max
+        
         index_tof_min = self._getIndex(self.tof_min, x_axis)
         index_tof_max = self._getIndex(self.tof_max, x_axis)
+
+#        print 'index_tof_min'
+#        print index_tof_min
+#        print 'index_tof_max'
+#        print index_tof_max
 
         if (bNumerator is True):
             self.y_axis_numerator = counts_vs_tof[index_tof_min:index_tof_max]
@@ -255,6 +308,8 @@ class sfCalculator():
             self.y_axis_denominator = counts_vs_tof[index_tof_min:index_tof_max]
             self.y_axis_error_denominator = counts_vs_tof_error[index_tof_min:index_tof_max]
             self.x_axis_ratio = self.x_axis[index_tof_min:index_tof_max]
+        print 'done with _calculateFinalAxis'
+        
         
     def _createIntegratedWorkspace(self,
                                    InputWorkspace=None,
@@ -268,35 +323,80 @@ class sfCalculator():
         returns the new workspace handle
         """
         
+        print '-----> Create Integrated workspace '
         x_axis = InputWorkspace.readX(0)[:]
         x_size = to_pixel - from_pixel + 1 
         y_axis = zeros((self.alpha_pixel_nbr, len(x_axis) - 1))
         y_error_axis = zeros((self.alpha_pixel_nbr, len(x_axis) - 1))
         y_range = arange(x_size) + from_pixel
         
-        for x in range(self.beta_pixel_nbr):
+#        for x in range(self.beta_pixel_nbr):
+#            for y in y_range:
+#                index = int(self.alpha_pixel_nbr * x + y)
+##                y_axis[y, :] += InputWorkspace.readY(index)[:]
+#                y_axis[y, :] += InputWorkspace.readY(index)[:]
+#                y_error_axis[y, :] += ((InputWorkspace.readE(index)[:]) * 
+#                                        (InputWorkspace.readE(index)[:]))
+        
+        #case 1
+        print 'using case 1'
+        for x in range(304):
             for y in y_range:
-                index = int(self.alpha_pixel_nbr * x + y)
+                index = int(y+x*256)
+#                y_axis[y, :] += InputWorkspace.readY(index)[:]
                 y_axis[y, :] += InputWorkspace.readY(index)[:]
                 y_error_axis[y, :] += ((InputWorkspace.readE(index)[:]) * 
                                         (InputWorkspace.readE(index)[:]))
+
+##        case 2
+#        for x in range(304):
+#            for y in range(256):
+#                index = int(x+y*304)
+##                y_axis[y, :] += InputWorkspace.readY(index)[:]
+#                y_axis[y, :] += InputWorkspace.readY(index)[:]
+#                y_error_axis[y, :] += ((InputWorkspace.readE(index)[:]) * 
+#                                        (InputWorkspace.readE(index)[:]))
+
+
+#        for x in range(self.alpha_pixel_nbr):
+#            for y in range(256):
+#                index = int(self.beta_pixel_nbr * x + y)
+##                y_axis[y, :] += InputWorkspace.readY(index)[:]
+#                y_axis[y, :] += InputWorkspace.readY(index)[:]
+#                y_error_axis[y, :] += ((InputWorkspace.readE(index)[:]) * 
+#                                        (InputWorkspace.readE(index)[:]))
         
+#        #DEBUG
+#        f=open('/home/j35/myASCIIfromCode.txt','w')
+#        new_y_axis = zeros((len(x_axis)-1))
+#
+#        for y in range(256):
+#            new_y_axis += y_axis[y,:]
+#            
+#        for i in range(len(x_axis)-1):
+#            f.write(str(x_axis[i]) + "," + str(new_y_axis[i]) + "\n");
+#        f.close
+#
+#        print sum(new_y_axis)
+#        
+#        #END OF DEBUG
+        ## so far, worsk perfectly (tested with portal vs Mantid vs Matlab
+
         y_axis = y_axis.flatten()
         y_error_axis = sqrt(y_error_axis)
         #plot_y_error_axis = _y_error_axis #for output testing only    
-        #-> plt.imshow(plot_y_error_axis, aspect='auto', origin='lower')
+        #plt.imshow(plot_y_error_axis, aspect='auto', origin='lower')
         y_error_axis = y_error_axis.flatten()
 
-        #normalization by proton charge
+        #normalization by proton beam
         y_axis /= (proton_charge * 1e-12)
-
-        CreateWorkspace(OutputWorkspace=OutputWorkspace,
-                        DataX=x_axis,
+        
+        OutputWorkspace = CreateWorkspace(DataX=x_axis,
                         DataY=y_axis,
                         DataE=y_error_axis,
                         Nspec=self.alpha_pixel_nbr)
-#        mt3 = mtd[OutputWorkspace]
-#        return mt3 
+
+        return OutputWorkspace 
             
     def _getIndex(self, value, array):
         """
@@ -336,21 +436,54 @@ class sfCalculator():
         This is going to fit the counts_vs_tof with a linear expression and return the a and
         b coefficients (y=a+bx)
         """
-        CreateWorkspace(OutputWorkspace='DataToFit',
-                        DataX=self.x_axis_ratio,
+        DataToFit = CreateWorkspace(DataX=self.x_axis_ratio,
                         DataY=self.y_axis_ratio,
                         DataE=self.y_axis_error_ratio,
                         Nspec=1)
-
-        Fit(InputWorkspace='DataToFit',
-            Function="name=UserFunction, Formula=a+b*x, a=1, b=2",
-            Output='Res')
-        res = mtd['Res_Parameters']
         
-        self.a = res.getDouble("Value", 0)
-        self.b = res.getDouble("Value", 1)        
-        self.error_a = res.getDouble("Error", 0)
-        self.error_b = res.getDouble("Error", 1)            
+        print 'replaceSpecialValues'
+        DataToFit = ReplaceSpecialValues(InputWorkspace=DataToFit, 
+                             NaNValue=0, 
+                             NaNError=0, 
+                             InfinityValue=0, 
+                             InfinityError=0)
+
+#        ResetNegatives(InputWorkspace='DataToFit',
+#                       OutputWorkspace='DataToFit',
+#                       AddMinimum=0)        
+        
+        try:
+        
+            Fit(InputWorkspace=DataToFit,
+                Function="name=UserFunction, Formula=a+b*x, a=1, b=2",
+                Output='res')
+        
+        except:
+            
+            xaxis = self.x_axis_ratio
+            sz = len(xaxis)
+            xmin = xaxis[0]
+            xmax = xaxis[sz/2]
+            
+            DataToFit = CropWorkspace(InputWorkspace=DataToFit,
+                         XMin=xmin,
+                         XMax=xmax)
+            
+            Fit(InputWorkspace=DataToFit,
+                Function='name=UserFunction, Formula=a+b*x, a=1, b=2',
+                Output='res')
+        
+        res = mtd['res_Parameters']
+        
+        self.a = res.cell(0,1)
+        self.b = res.cell(1,1)
+        self.error_a = res.cell(0,2)
+        self.error_b = res.cell(1,2)
+        
+#        self.a = res.getDouble("Value", 0)
+#        self.b = res.getDouble("Value", 1)        
+#        self.error_a = res.getDouble("Error", 0)
+#        self.error_b = res.getDouble("Error", 1)            
 
 def plotObject(instance):
     
@@ -385,6 +518,7 @@ def recordSettings(a, b, error_a, error_b, name, instance):
     This function will record the various fitting parameters and the 
     name of the ratio
     """
+    print '--> recoding settings'
     a.append(instance.a)
     b.append(instance.b)
     error_a.append(instance.error_a)
@@ -400,7 +534,7 @@ def variable_value_splitter(variable_value):
     
     _split = variable_value.split('=')
     variable = _split[0]
-    value = float(_split[1])
+    value = _split[1]
     return {'variable':variable, 'value':value}
 
 def isWithinRange(value1, value2):
@@ -408,10 +542,6 @@ def isWithinRange(value1, value2):
         This function checks if the two values and return true if their
         difference is <= PRECISION
     """
-    print 'value1: ' + str(value1)
-    print 'value2: ' + str(value2)
-    
-    
     diff = abs(float(value1)) - abs(float(value2))
     if abs(diff) <= PRECISION:
         return True
@@ -439,6 +569,8 @@ def outputFittingParameters(a, b, error_a, error_b,
     9th column: error_b
     """
 
+    print '--> output fitting parameters'
+
     bFileExist = False
     #First we need to check if the file already exist
     if os.path.isfile(output_file_name):
@@ -453,36 +585,70 @@ def outputFittingParameters(a, b, error_a, error_b,
 #        split_lines = text.split('\n')
         split_lines = text
         
-        
         entry_list_to_add = []
         
-        sz = len(a)
-        for i in range(sz):
-
-            _match = False
+        try:
         
-            for _line in split_lines:
-                if _line[0] == '#':
-                    continue
+            sz = len(a)
+            for i in range(sz):
+
+                _match = False
+        
+                for _line in split_lines:
+                    if _line[0] == '#':
+                        continue
             
-                _line_split = _line.split(' ')
-                _incident_medium = _line_split[0]
-                if (_incident_medium == incident_medium):
-                    _lambdaRequested = variable_value_splitter(_line_split[1])
-                    if (isWithinRange(_lambdaRequested['value'], lambda_requested)):
-                        _s1h = variable_value_splitter(_line_split[2])
-                        if (isWithinRange(_s1h['value'], S1H[i])):
-                            _s2h = variable_value_splitter(_line_split[3])
-                            if (isWithinRange(_s2h['value'],S2H[i])):
-                                _s1w = variable_value_splitter(_line_split[4])
-                                if (isWithinRange(_s1w['value'],S1W[i])):
-                                    _s2w = variable_value_splitter(_line_split[5])
-                                    if (isWithinRange(_s2w['value'],S2W[i])):
-                                        _match = True
-                                        break
+                    _line_split = _line.split(' ')
+                    _incident_medium = variable_value_splitter(_line_split[0])
+                
+                    if (_incident_medium['value'].strip() == incident_medium.strip()):
+                        _lambdaRequested = variable_value_splitter(_line_split[1])
+                        if (isWithinRange(_lambdaRequested['value'], lambda_requested)):
+                            _s1h = variable_value_splitter(_line_split[2])
+                            if (isWithinRange(_s1h['value'], S1H[i])):
+                                _s2h = variable_value_splitter(_line_split[3])
+                                if (isWithinRange(_s2h['value'],S2H[i])):
+                                    _s1w = variable_value_splitter(_line_split[4])
+                                    if (isWithinRange(_s1w['value'],S1W[i])):
+                                        _s2w = variable_value_splitter(_line_split[5])
+                                        if (isWithinRange(_s2w['value'],S2W[i])):
+                                            _match = True
+                                            break
             
-            if _match == False:
-                entry_list_to_add.append(i)
+                if _match == False:
+                    entry_list_to_add.append(i)
+
+        except:            
+            #replace file because this one has the wrong format
+            _content = ['#y=a+bx\n', '#\n',
+                        '#lambdaRequested[Angstroms] S1H[mm] S2H[mm] S1W[mm] S2W[mm] a b error_a error_b\n', '#\n']
+            sz = len(a)
+            for i in range(sz):
+            
+                _line = 'IncidentMedium=' + incident_medium.strip() + ' '
+                _line += 'LambdaRequested=' + str(lambda_requested) + ' '
+            
+                _S1H = "{0:.2f}".format(abs(S1H[i]))
+                _S2H = "{0:.2f}".format(abs(S2H[i]))
+                _S1W = "{0:.2f}".format(abs(S1W[i]))
+                _S2W = "{0:.2f}".format(abs(S2W[i]))
+                _a = "{0:}".format(a[i])
+                _b = "{0:}".format(b[i])
+                _error_a = "{0:}".format(float(error_a[i]))
+                _error_b = "{0:}".format(float(error_b[i]))
+            
+                _line += 'S1H=' + _S1H + ' ' + 'S2H=' + _S2H + ' '
+                _line += 'S1W=' + _S1W + ' ' + 'S2W=' + _S2W + ' '
+                _line += 'a=' + _a + ' '
+                _line += 'b=' + _b + ' '
+                _line += 'error_a=' + _error_a + ' '
+                _line += 'error_b=' + _error_b + '\n'
+                _content.append(_line)
+    
+            f = open(output_file_name, 'w')
+            f.writelines(_content)
+            f.close()
+            return
 
         _content = []
         for j in entry_list_to_add:
@@ -490,14 +656,14 @@ def outputFittingParameters(a, b, error_a, error_b,
             _line = 'IncidentMedium=' + incident_medium + ' '
             _line += 'LambdaRequested=' + str(lambda_requested) + ' '
             
-            _S1H = "{0:.8f}".format(abs(S1H[j]))
-            _S2H = "{0:.8f}".format(abs(S2H[j]))
-            _S1W = "{0:.8f}".format(abs(S1W[j]))
-            _S2W = "{0:.8f}".format(abs(S2W[j]))
-            _a = "{0:.8f}".format(a[j])
-            _b = "{0:.8f}".format(b[j])
-            _error_a = "{0:.8f}".format(float(error_a[j]))
-            _error_b = "{0:.8f}".format(float(error_b[j]))
+            _S1H = "{0:.2f}".format(abs(S1H[j]))
+            _S2H = "{0:.2f}".format(abs(S2H[j]))
+            _S1W = "{0:.2f}".format(abs(S1W[j]))
+            _S2W = "{0:.2f}".format(abs(S2W[j]))
+            _a = "{0:}".format(a[j])
+            _b = "{0:}".format(b[j])
+            _error_a = "{0:}".format(float(error_a[j]))
+            _error_b = "{0:}".format(float(error_b[j]))
             
             _line += 'S1H=' + _S1H + ' ' + 'S2H=' + _S2H + ' '
             _line += 'S1W=' + _S1W + ' ' + 'S2W=' + _S2W + ' '
@@ -521,14 +687,14 @@ def outputFittingParameters(a, b, error_a, error_b,
             _line = 'IncidentMedium=' + incident_medium.strip() + ' '
             _line += 'LambdaRequested=' + str(lambda_requested) + ' '
             
-            _S1H = "{0:.8f}".format(abs(S1H[i]))
-            _S2H = "{0:.8f}".format(abs(S2H[i]))
-            _S1W = "{0:.8f}".format(abs(S1W[i]))
-            _S2W = "{0:.8f}".format(abs(S2W[i]))
-            _a = "{0:.8f}".format(a[i])
-            _b = "{0:.8f}".format(b[i])
-            _error_a = "{0:.8f}".format(float(error_a[i]))
-            _error_b = "{0:.8f}".format(float(error_b[i]))
+            _S1H = "{0:.2f}".format(abs(S1H[i]))
+            _S2H = "{0:.2f}".format(abs(S2H[i]))
+            _S1W = "{0:.2f}".format(abs(S1W[i]))
+            _S2W = "{0:.2f}".format(abs(S2W[i]))
+            _a = "{0:}".format(a[i])
+            _b = "{0:}".format(b[i])
+            _error_a = "{0:}".format(float(error_a[i]))
+            _error_b = "{0:}".format(float(error_b[i]))
             
             _line += 'S1H=' + _S1H + ' ' + 'S2H=' + _S2H + ' '
             _line += 'S1W=' + _S1W + ' ' + 'S2W=' + _S2W + ' '
@@ -585,23 +751,47 @@ def getSh(mt, top_tag, bottom_tag):
     units = mt_run.getProperty(top_tag).units
     return sh, units
     
+def getSheight(mt, index):
+    """
+        return the DAS hardware slits height of slits # index
+    """
+    mt_run = mt.getRun()
+    tag = 'S' + index + 'VHeight'
+    value = mt_run.getProperty(tag).value
+    return value[0]
+    
 def getS1h(mt=None):
     """    
         returns the height and units of the slit #1 
     """
     if mt != None:
-        _h, units = getSh(mt, 's1t', 's1b') 
-        return _h, units
-    return None, ''
+#        _h, units = getSh(mt, 's1t', 's1b')
+        _h = getSheight(mt, '1') 
+        return _h
+    return None
     
 def getS2h(mt=None):
     """    
         returns the height and units of the slit #2 
     """
     if mt != None:
-        _h, units = getSh(mt, 's2t', 's2b') 
-        return _h, units
-    return None, None
+#        _h, units = getSh(mt, 's2t', 's2b')
+        _h = getSheight(mt, '2') 
+        return _h
+    return None
+
+
+
+
+def getSwidth(mt, index):
+    """
+        returns the width and units of the given index slits
+        defined by the DAS hardware
+    """
+    mt_run = mt.getRun()
+    tag = 'S' + index + 'HWidth'
+    value = mt_run.getProperty(tag).value
+    return value[0]
 
 def getSw(mt, left_tag, right_tag):
     """
@@ -619,18 +809,22 @@ def getS1w(mt=None):
         returns the width and units of the slit #1 
     """
     if mt != None:
-        _w, units = getSw(mt, 's1l', 's1r') 
-        return _w, units
-    return None, ''
+#        _w, units = getSw(mt, 's1l', 's1r') 
+        _w = getSwidth(mt, '1')
+        return _w
+    return None
     
 def getS2w(mt=None):
     """    
         returns the width and units of the slit #2 
     """
     if mt != None:
-        _w, units = getSh(mt, 's2l', 's2r') 
-        return _w, units
-    return None, None
+#        _w, units = getSh(mt, 's2l', 's2r') 
+        _w = getSwidth(mt, '2')
+        return _w
+    return None
+
+
 
 def getSlitsValueAndLambda(full_list_runs, 
                            S1H, S2H, 
@@ -647,21 +841,20 @@ def getSlitsValueAndLambda(full_list_runs,
     for i in range(_nbr_files):
         _full_file_name = full_list_runs[i]
         print '-> ' + _full_file_name
-        LoadEventNexus(Filename=_full_file_name,
-                       OutputWorkspace='tmpWks',
+        tmpWks = LoadEventNexus(Filename=_full_file_name,
                        MetaDataOnly='1')
-        mt1 = mtd['tmpWks']
-        _s1h_value, _s1h_units = getS1h(mt1)
-        _s2h_value, _s2h_units = getS2h(mt1)
+#        mt1 = mtd['tmpWks']
+        _s1h_value = getS1h(tmpWks)
+        _s2h_value = getS2h(tmpWks)
         S1H[i] = _s1h_value
         S2H[i] = _s2h_value
         
-        _s1w_value, _s1w_units = getS1w(mt1)
-        _s2w_value, _s2w_units = getS2w(mt1)
+        _s1w_value = getS1w(tmpWks)
+        _s2w_value = getS2w(tmpWks)
         S1W[i] = _s1w_value
         S2W[i] = _s2w_value
         
-        _lambda_value = getLambdaValue(mt1)
+        _lambda_value = getLambdaValue(tmpWks)
         lambdaRequest[i] = _lambda_value
 
 def isRunsSorted(list_runs, S1H, S2H):
@@ -685,7 +878,6 @@ def isRunsSorted(list_runs, S1H, S2H):
             return False
     
     return True
-
 
 def calculateAndFit(numerator='',
                     denominator='',
@@ -711,6 +903,7 @@ def calculateAndFit(numerator='',
                         maxBack=list_peak_back_denominator[3])                
 
     cal1.run()
+    print 'Done with cal1.run()'
     
     if (list_objects != [] and list_objects[-1] is not None):
         new_cal1 = cal1 * list_objects[-1]
@@ -739,8 +932,8 @@ def help():
 def calculate(string_runs=None, 
 #              list_attenuator=None, 
               list_peak_back=None, 
-              output_file_name=None,
               incident_medium=None,
+              output_file_name=None,
               tof_range=None):  
     """
     In this current version, the program will automatically calculates
@@ -790,7 +983,7 @@ def calculate(string_runs=None,
             try:
                 _File = FileFinder.findRuns("REF_L%d" %int(item))[0]
                 list_runs[offset] = _File
-            except:
+            except RuntimeError:
                 msg = "RefLReduction: could not find run %s\n" %item
                 msg += "Add your data folder to your User Data Directories in the File menu"
                 raise RuntimeError(msg)
@@ -828,6 +1021,7 @@ def calculate(string_runs=None,
     #Make sure all the lambdaRequested are identical within a given range
     lambdaRequestPrecision = 0.01 #1%
     _lr = lambdaRequest[0]
+        
     for i in lambdaRequest:
         _localValue = float(lambdaRequest[i][0])
         _localValueRate = lambdaRequestPrecision * _localValue
@@ -889,11 +1083,12 @@ def calculate(string_runs=None,
                 print '-> numerator  : ' + str(list_runs[index_numerator])
                 print '-> denominator: ' + str(list_runs[index_denominator])
                 cal = calculateAndFit(numerator=list_runs[index_numerator],
-                                       denominator=list_runs[index_denominator],
-                                       list_peak_back_numerator=list_peak_back[index_numerator],
-                                       list_peak_back_denominator=list_peak_back[index_denominator],
-                                       list_objects=list_objects,
-                                       tof_range=tof_range)                                       
+                                      denominator=list_runs[index_denominator],
+                                      list_peak_back_numerator=list_peak_back[index_numerator],
+                                      list_peak_back_denominator=list_peak_back[index_denominator],
+                                      list_objects=list_objects,
+                                      tof_range=tof_range)                                       
+                print '-> Done with Calculate and Fit'
                 
                 recordSettings(a, b, error_a, error_b, name, cal)
                                 
@@ -916,8 +1111,8 @@ def calculate(string_runs=None,
 #        output_ext = '.txt'
 #        output_file = output_path + '/' + output_pre + output_ext        
         
-        if output_file_name is None:
-            output_file_name = "/home/j35/Desktop/RefLsf.cfg"
+        if (output_file_name is None) or (output_file_name == ''):
+            output_file_name = "RefLsf.cfg"
         
         outputFittingParameters(a, b, error_a, error_b, 
                                 _lambdaRequest,
