@@ -128,6 +128,13 @@ class DLLExport AnalysisDataServiceImpl : public Kernel::DataService<API::Worksp
      return boost::dynamic_pointer_cast<WSTYPE>(workspace);
    }
 
+   /** @name Methods to work with workspace groups */
+   //@{
+
+   void deepRemoveGroup(const std::string& name);
+   void removeFromGroup(const std::string& groupName, const std::string& wsName);
+
+   //@}
 
 private:
    /// Checks the name is valid, throwing if not
