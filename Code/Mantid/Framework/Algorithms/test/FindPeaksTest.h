@@ -8,19 +8,23 @@
 #include "MantidDataHandling/LoadNexusProcessed.h"
 #include "MantidDataHandling/LoadInstrument.h"
 
+#include <fstream>
+
 using Mantid::Algorithms::FindPeaks;
+
+using namespace Mantid::API;
 
 class FindPeaksTest : public CxxTest::TestSuite
 {
 public:
-  void testTheBasics()
+  void PtestTheBasics()
   {
     FindPeaks finder;
     TS_ASSERT_EQUALS( finder.name(), "FindPeaks" );
     TS_ASSERT_EQUALS( finder.version(), 1 );
   }
 
-  void testInit()
+  void PtestInit()
   {
     FindPeaks finder;
     TS_ASSERT_THROWS_NOTHING( finder.initialize() );
@@ -37,6 +41,16 @@ public:
 
     FindPeaks finder;
     if ( !finder.isInitialized() ) finder.initialize();
+
+#if 1
+    MatrixWorkspace_sptr dataws = boost::dynamic_pointer_cast<MatrixWorkspace>(
+          AnalysisDataService::Instance().retrieve("FindPeaksTest_peaksWS"));
+    std::ofstream ofile;
+    ofile.open("spectrum4.dat");
+    for (size_t i = 0; i < dataws->readY(4).size(); ++i)
+      ofile << dataws->readX(4)[i] << " \t" << dataws->readY(4)[i] << ".\n";
+    ofile.close();
+#endif
 
     TS_ASSERT_THROWS_NOTHING( finder.setPropertyValue("InputWorkspace","FindPeaksTest_peaksWS") );
     TS_ASSERT_THROWS_NOTHING( finder.setPropertyValue("WorkspaceIndex","4") );
@@ -71,7 +85,7 @@ public:
     loader.execute();
   }
 
-  void testExecGivenPeaksList()
+  void PtestExecGivenPeaksList()
   {
     this->LoadPG3_733();
 
