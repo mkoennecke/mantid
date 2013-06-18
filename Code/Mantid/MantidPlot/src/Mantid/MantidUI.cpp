@@ -1541,10 +1541,11 @@ void MantidUI::renameWorkspace(QStringList wsName)
 
   if(wsName.size() == 1)
   {
-     presets["InputWorkspace"] = wsName[0];
+    presets["InputWorkspace"] = wsName[0];
   }
   else
   {
+    presets["InputWorkspaces"] = wsName.join(",");
   }
 
   MantidQt::API::AlgorithmDialog *dlg = interfaceManager.createDialog(alg.get(), m_appWindow,false,presets);
