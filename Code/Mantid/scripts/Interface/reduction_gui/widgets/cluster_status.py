@@ -6,7 +6,8 @@ from reduction_gui.widgets import util
 import ui.ui_cluster_status
 
 import mantid.simpleapi as api
-from mantid.kernel import ConfigService
+from mantid.kernel import ConfigService, DateAndTime
+from mantid.api import AlgorithmManager
 
 from reduction_gui.reduction.scripter import BaseScriptElement
 class RemoteJobs(BaseScriptElement):
@@ -47,6 +48,9 @@ class RemoteJobsWidget(BaseWidget):
         self.connect(self._content.job_table, QtCore.SIGNAL("customContextMenuRequested(QPoint)"), self.tableWidgetContext)
         
         self.connect(self._content.refresh_button, QtCore.SIGNAL("clicked()"), self._update_content)
+
+        # Set the time of the oldest displayed job to 2 days ago
+        self._content.date_time_edit.setDateTime(QtCore.QDateTime().currentDateTime().addDays(-2))   
         
         compute_resources = ConfigService.Instance().getFacility().computeResources()
         self._content.resource_combo.clear()
@@ -138,16 +142,36 @@ class RemoteJobsWidget(BaseWidget):
             util.set_valid(self._content.username_edit, True)
             util.set_valid(self._content.password_edit, True)
         
-        job_info = api.QueryAllRemoteJobs(ComputeResource=str(self._settings.compute_resource),
-                                          UserName=str(self._settings.cluster_user),
-                                          Password=str(self._settings.cluster_pass))    
-        job_list = zip(*(job_info[0], job_info[1], job_info[3]))
+        alg = AlgorithmManager.create("QueryAllRemoteJobs")
+        alg.initialize()
+        alg.setProperty("ComputeResource", str(self._settings.compute_resource))
+        alg.setProperty("UserName", str(self._settings.cluster_user))
+        alg.setProperty("Password", str(self._settings.cluster_pass))
+        alg.execute()
+        job_id = alg.getProperty("JobId").value
+        job_status = alg.getProperty("JobStatusString").value
+        job_name = alg.getProperty("JobName").value
+        job_start = alg.getProperty("JobStartTime").value
+        job_end = alg.getProperty("JobCompletionTime").value
+                
+        job_list = zip(*(job_id, job_status, job_name, job_start, job_end))
         
         self._clear_table()
         self._content.job_table.setSortingEnabled(False)
         self._content.job_table.setRowCount(len(job_list))
 
         for i in range(len(job_list)):
+            
+            # Make sure that only recent jobs are displayed
+            oldest = DateAndTime(str(self._content.date_time_edit.dateTime().toString(QtCore.Qt.ISODate)))
+            this_job = DateAndTime(str(job_list[i][4]))
+            unavailable = DateAndTime(0)
+            unavailable.setToMinimum()
+            if this_job>unavailable and this_job<oldest:
+                self._content.job_table.setRowHidden(i, True)
+                continue
+            self._content.job_table.setRowHidden(i, False)
+
             # Job ID
             item = QtGui.QTableWidgetItem(str(job_list[i][0]))
             item.setFlags(QtCore.Qt.ItemIsSelectable |QtCore.Qt.ItemIsEnabled )
@@ -163,11 +187,24 @@ class RemoteJobsWidget(BaseWidget):
             item.setFlags(QtCore.Qt.ItemIsSelectable |QtCore.Qt.ItemIsEnabled )
             self._content.job_table.setItem(i, 2, item)
             
-            # Start/Stop time
-            #TODO currently unavailable
+            # Start time
+            time_displayed = str(job_list[i][3]).replace('T', ' ')
+            if DateAndTime(str(job_list[i][3])) == unavailable:
+                time_displayed = ''
+            item = QtGui.QTableWidgetItem(time_displayed)
+            item.setFlags(QtCore.Qt.ItemIsSelectable |QtCore.Qt.ItemIsEnabled )
+            self._content.job_table.setItem(i, 3, item)
+            
+            # Completion time
+            time_displayed = str(job_list[i][4]).replace('T', ' ')
+            if DateAndTime(str(job_list[i][4])) == unavailable:
+                time_displayed = ''
+            item = QtGui.QTableWidgetItem(time_displayed)
+            item.setFlags(QtCore.Qt.ItemIsSelectable |QtCore.Qt.ItemIsEnabled )
+            self._content.job_table.setItem(i, 4, item)
           
         self._content.job_table.setSortingEnabled(True)
-        self._content.job_table.sortItems(0)
+        self._content.job_table.sortItems(0, 1)
     
     def get_state(self):
         return RemoteJobs()
