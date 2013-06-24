@@ -15,7 +15,7 @@ Peak parameters must have the following parameters, which are case sensitive in 
  7. A2
  8. chi2
 
- ==== Output ====
+==== Output ====
  Output will include
  1. pure peak
  2. pure background (with specified range of FWHM (int))
