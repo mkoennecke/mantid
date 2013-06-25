@@ -12076,7 +12076,9 @@ Graph3D* ApplicationWindow::openSurfacePlot(ApplicationWindow* app, const QStrin
     plot->setOrthogonal(fList[1].toInt());
   }
 
-  plot->setStyle(lst[3].split("\t", QString::SkipEmptyParts));
+  QStringList style = lst[3].split("\t", QString::SkipEmptyParts);
+  style.removeFirst();
+  plot->setStyle( style );
   plot->setIgnoreFonts(true);
   plot->update();
   return plot;
