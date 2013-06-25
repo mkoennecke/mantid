@@ -144,6 +144,20 @@ Mantid::Kernel::Logger & ScriptRepositoryView::g_log = Mantid::Kernel::Logger::g
             this, SLOT(cell_activated(const QModelIndex&)));
     connect(ui->repo_treeView, SIGNAL(currentCell(const QModelIndex&)),
             this, SLOT(currentChanged(const QModelIndex&)));
+
+    ConfigServiceImpl & config = ConfigService::Instance();
+    QString loc = QString::fromStdString(config.getString("ScriptLocalRepository"));
+    QString loc_info = "<html><head/><body><p><a href=\"file://%1\"><span style=\" text-decoration: underline; color:#0000ff;\">%2</span></a></p></body></html>";
+    QString path_label; 
+    if (loc.size()<50)
+      path_label = loc; 
+    else{
+      path_label = QString("%1...%2").arg(loc.left(20)).arg(loc.right(27));      
+    }
+    
+    ui->folderPathLabel->setText(loc_info.arg(loc).arg(path_label));
+    ui->folderPathLabel->setToolTip(QString("Click here to open Script Repository Folder: %1.").arg(loc));
+    connect(ui->folderPathLabel, SIGNAL(linkActivated(QString)),this,SLOT(openFolderLink(QString)));
  }
 
   /** This method refreshes the ScriptRepository and allows it 
@@ -496,6 +510,10 @@ bool  ScriptRepositoryView::RemoveEntryDelegate::editorEvent(QEvent *event,
   }else{
     return true; //Does not allow others events to be processed (example: double-click)
   }   
+}
+
+void ScriptRepositoryView::openFolderLink(QString link){
+  QDesktopServices::openUrl(QUrl(link));
 }
 
 } // namespace API
