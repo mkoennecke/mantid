@@ -1,5 +1,5 @@
-#ifndef MANTID_SLICEVIEWER_PEAKOVERLAYSPHERE_H_
-#define MANTID_SLICEVIEWER_PEAKOVERLAYSPHERE_H_
+#ifndef MANTID_SLICEVIEWER_PEAKOVERLAYMULTICROSS_H_
+#define MANTID_SLICEVIEWER_PEAKOVERLAYMULTICROSS_H_
 
 #include "DllOption.h"
 #include "MantidKernel/System.h"
@@ -11,7 +11,7 @@
 #include <qpainter.h>
 #include <qcolor.h>
 #include "MantidQtSliceViewer/PeakOverlayView.h"
-#include "MantidQtSliceViewer/PhysicalSphericalPeak.h"
+#include "MantidQtSliceViewer/PhysicalCrossPeak.h"
 
 
 namespace MantidQt
@@ -19,9 +19,9 @@ namespace MantidQt
 namespace SliceViewer
 {
 
-  /** Widget representing a peak sphere on the plot. Used for representing spherically integrated peaks.
+  /** Widget representing visible peaks in the plot. 
     
-    @date 2012-08-22
+    @date 2013-06-10
 
     Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
 
@@ -43,17 +43,17 @@ namespace SliceViewer
     File change history is stored at: <https://github.com/mantidproject/mantid>
     Code Documentation is available at: <http://doxygen.mantidproject.org>
   */
-  class EXPORT_OPT_MANTIDQT_SLICEVIEWER PeakOverlaySphere : public QWidget, public PeakOverlayView
+  class EXPORT_OPT_MANTIDQT_SLICEVIEWER PeakOverlayMultiCross : public QWidget, public PeakOverlayView
   {
     Q_OBJECT
 
   public:
     /// Constructor
-    PeakOverlaySphere(QwtPlot * plot, QWidget * parent, const Mantid::Kernel::V3D& origin, const double& peakRadius, const double& backgroundInnerRadius, const double& backgroundOuterRadius, const QColor& peakColour, const QColor& backColour);
+    PeakOverlayMultiCross(QwtPlot * plot, QWidget * parent, const VecPhysicalCrossPeak& vecPhysicalPeaks, const QColor& peakColour);
     /// Destructor
-    virtual ~PeakOverlaySphere();
+    virtual ~PeakOverlayMultiCross();
     /// Set the slice point at position.
-    virtual void setSlicePoint(const double& point); 
+    virtual void setSlicePoint(const double& point, const std::vector<bool>& viewablePeaks);
     /// Hide the view.
     virtual void hideView();
     /// Show the view.
@@ -66,20 +66,21 @@ namespace SliceViewer
     virtual void changeForegroundColour(const QColor);
     /// Change background colour
     virtual void changeBackgroundColour(const QColor);
-    /// Show the background radius
-    virtual void showBackgroundRadius(const bool show);
     /// Get a bounding box for this peak.
-    virtual PeakBoundingBox getBoundingBox() const;
+    virtual PeakBoundingBox getBoundingBox(const int peakIndex) const;
     /// Changes the size of the overlay to be the requested fraction of the current view width.
     virtual void changeOccupancyInView(const double fraction);
     /// Changes the size of the overlay to be the requested fraction of the view depth.
     virtual void changeOccupancyIntoView(const double fraction);
-    /// Get the peak size (width/2 as a fraction of total width)  on projection
+    /// Get the occupancy in the view.
     virtual double getOccupancyInView() const;
-    /// Get the peaks size into the projection (effective radius as a fraction of z range)
+    /// Get the occupancy into the view.
     virtual double getOccupancyIntoView() const;
-    /// Getter indicating that the view is position only
-    virtual bool positionOnly() const;
+    /// Flag indicating that the peak is position only.
+    bool positionOnly() const;
+    /// Get the effective radius.
+    virtual double getRadius() const;
+
   private:
 
     //QRect drawHandle(QPainter & painter, QPointF coords, QColor brush);
@@ -92,16 +93,16 @@ namespace SliceViewer
 
     /// QwtPlot containing this
     QwtPlot * m_plot;
-    /// Physical peak object
-    PhysicalSphericalPeak m_physicalPeak;
+    /// Physical model of the spacial cross peaks
+    VecPhysicalCrossPeak m_physicalPeaks;
     /// Peak colour
     QColor m_peakColour;
-    /// Back colour
-    QColor m_backColour;
+    /// Peaks in the workspace that are viewable in the present view.
+    std::vector<bool> m_viewablePeaks;
   };
 
 
 } // namespace SliceViewer
 } // namespace Mantid
 
-#endif  /* MANTID_SLICEVIEWER_PEAKOVERLAY_H_ */
+#endif  /* MANTID_SLICEVIEWER_PEAKOVERLAYCROSS_H_ */

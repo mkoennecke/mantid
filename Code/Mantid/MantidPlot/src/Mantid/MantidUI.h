@@ -155,9 +155,6 @@ public:
   // Adjusts QtiPlot's main menu if a MantidMatrix becomes active (receives focus)
   bool menuAboutToShow(MdiSubWindow *w);
 
-  // Removes references to MantidMatrix w in QtiPlot (called when matrix closes)
-  void removeWindowFromLists(MdiSubWindow* w);
-
   // Prepares the contex menu for MantidMatrix
   void showContextMenu(QMenu& cm, MdiSubWindow* w);
 
@@ -248,7 +245,7 @@ public slots:
 
 
   //  *****                            *****  //
-  void renameWorkspace(QString = "");
+  void renameWorkspace(QStringList);
 
 public:
 
@@ -425,8 +422,9 @@ public slots:
   // Plot a spectrum in response from a InstrumentWindow signal
   MultiLayer* plotInstrumentSpectrum(const QString&,int);
   MultiLayer* plotInstrumentSpectrumList(const QString&,std::set<int>);
-
+  
   void importString(const QString &logName, const QString &data);
+  void importString(const QString &logName, const QString &data, const QString &sep);
   void importStrSeriesLog(const QString &logName, const QString &data);
   void importNumSeriesLog(const QString &wsName, const QString &logname, int filter);
 
