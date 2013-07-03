@@ -57,7 +57,7 @@ public:
 					MatrixWorkspace>(output);
 
 			TS_ASSERT_EQUALS(output2D->getNumberHistograms(), 65536);
-			TS_ASSERT_EQUALS(output2D->blocksize(), 256);
+			TS_ASSERT_EQUALS(output2D->blocksize(), 100);
 			AnalysisDataService::Instance().clear();
 		}
 
