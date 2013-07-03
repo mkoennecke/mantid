@@ -25,6 +25,7 @@ set ( SRC_FILES
 	src/LiveDataAlgorithm.cpp
 	src/Load.cpp
 	src/LoadAscii.cpp
+	src/LoadHelper.cpp
 	src/LoadCalFile.cpp
 	src/LoadCanSAS1D.cpp
 	src/LoadCanSAS1D2.cpp
@@ -44,6 +45,7 @@ set ( SRC_FILES
 	src/LoadFullprofResolution.cpp
 	src/LoadGSS.cpp
 	src/LoadILL.cpp
+	src/LoadILLSANS.cpp
 	src/LoadISISNexus.cpp
 	src/LoadISISNexus2.cpp
 	src/LoadInstrument.cpp
@@ -173,6 +175,7 @@ set ( INC_FILES
 	inc/MantidDataHandling/LiveDataAlgorithm.h
 	inc/MantidDataHandling/Load.h
 	inc/MantidDataHandling/LoadAscii.h
+	inc/MantidDataHandling/LoadHelper.h
 	inc/MantidDataHandling/LoadCalFile.h
 	inc/MantidDataHandling/LoadCanSAS1D.h
 	inc/MantidDataHandling/LoadCanSAS1D2.h
@@ -188,6 +191,7 @@ set ( INC_FILES
 	inc/MantidDataHandling/LoadFullprofResolution.h
 	inc/MantidDataHandling/LoadGSS.h
 	inc/MantidDataHandling/LoadILL.h
+	inc/MantidDataHandling/LoadILLSANS.h
 	inc/MantidDataHandling/LoadISISNexus.h
 	inc/MantidDataHandling/LoadISISNexus2.h
 	inc/MantidDataHandling/LoadInstrument.h
@@ -287,7 +291,6 @@ set ( INC_FILES
 )
 
 set ( TEST_FILES
-  LoadDAETest.h
 	#LoadSNSNexusTest.h # TODO has no active tests in it
 	#Needs fixing to not rely on network. SNSLiveEventDataListenerTest.h
 	ADARAPacketTest.h
@@ -315,6 +318,7 @@ set ( TEST_FILES
 	LoadAsciiTest.h
 	LoadCalFileTest.h
 	LoadCanSAS1dTest.h
+	LoadDAETest.h
 	LoadDaveGrpTest.h
 	LoadDetectorInfoTest.h
 	LoadDetectorsGroupingFileTest.h
@@ -325,6 +329,7 @@ set ( TEST_FILES
 	LoadEventPreNexusTest.h
 	LoadFullprofResolutionTest.h
 	LoadGSSTest.h
+	LoadILLSANSTest.h
 	LoadILLTest.h
 	LoadISISNexusTest.h
 	LoadInstrumentFromRawTest.h
@@ -335,7 +340,7 @@ set ( TEST_FILES
 	LoadLogsFromSNSNexusTest.h
 	LoadMappingTableTest.h
 	LoadMaskTest.h
-	LoadMcStasNexusTest.h	
+	LoadMcStasNexusTest.h
 	LoadMuonLogTest.h
 	LoadMuonNexus1Test.h
 	LoadMuonNexus2Test.h
@@ -343,7 +348,7 @@ set ( TEST_FILES
 	LoadNexusLogsTest.h
 	LoadNexusMonitorsTest.h
 	LoadNexusProcessedTest.h
-	LoadNexusTest.h	
+	LoadNexusTest.h
 	LoadPDFgetNFileTest.h
 	LoadParameterFileTest.h
 	LoadPreNexusMonitorsTest.h
@@ -400,7 +405,7 @@ set ( TEST_FILES
 	SaveRKHTest.h
 	SaveSPETest.h
 	SaveToSNSHistogramNexusTest.h
-        SetSampleMaterialTest.h
+	SetSampleMaterialTest.h
 	SetScalingPSDTest.h
 	StartLiveDataTest.h
 	UpdateInstrumentFromFileTest.h

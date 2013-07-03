@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- For help on the notation used to specify an Instrument Definition File see http://www.mantidproject.org/IDF -->
-<instrument name="D33" valid-from="1900-01-31 23:59:59" valid-to="2100-01-31 23:59:59" last-modified="2013-06-12 14:55:02">
+<instrument name="D33" valid-from="1900-01-31 23:59:59" valid-to="2100-01-31 23:59:59" last-modified="2013-07-03 08:53:09">
   <!-- Author: ricardo.leal@ill.fr -->
   <defaults>
     <length unit="meter" />
@@ -27,43 +27,47 @@
   </component>
   <!-- Detector Panels -->
   <type name="detectors">
-    <component type="front_detectors">
-      <location z='1.5' />
-    </component>
-    <component type="back_detector" idstart="1" idfillbyfirst="y" idstepbyrow="128">
+    <component type="back_detector" idstart="1" idfillbyfirst="y" idstep="256" idstepbyrow="1">
       <location z='3' />
     </component>
-  </type>
-  <type name="front_detectors">
-    <component type="front_detector" idstart="100000000" idfillbyfirst="y" idstepbyrow="128">
-      <location x='0.4' y='0' z='0' rot="90.0" axis-x="0.0" axis-y="0.0" axis-z="1.0" />
+    <component type="front_detector_right" idstart="32769" idfillbyfirst="y" idstep="256" idstepbyrow="1">
+      <location x='0.4' y='0' z='1' rot="90.0" axis-x="0.0" axis-y="0.0" axis-z="1.0" />
     </component>
-    <component type="front_detector" idstart="200000000" idfillbyfirst="y" idstepbyrow="128">
-      <location x='-0.4' y='0' z='0' rot="-90.0" axis-x="0.0" axis-y="0.0" axis-z="1.0" />
+    <component type="front_detector_left" idstart="40961" idfillbyfirst="y" idstep="256" idstepbyrow="1">
+      <location x='-0.4' y='0' z='1' rot="90.0" axis-x="0.0" axis-y="0.0" axis-z="1.0" />
     </component>
-    <component type="front_detector" idstart="300000000" idfillbyfirst="y" idstepbyrow="128">
-      <location x='0' y='0.4' z='0' />
+    <component type="front_detector_bottom" idstart="49153" idfillbyfirst="y" idstep="256" idstepbyrow="1">
+      <location x='0' y='-0.4' z='1' />
     </component>
-    <component type="front_detector" idstart="400000000" idfillbyfirst="y" idstepbyrow="128">
-      <location x='0' y='-0.4' z='0' />
+    <component type="front_detector_top" idstart="57345" idfillbyfirst="y" idstep="256" idstepbyrow="1">
+      <location x='0' y='0.4' z='1' />
     </component>
   </type>
   <!-- Definition of every bank -->
-  <!-- Front detector: 160 x 640 mm (32 x 128 pixels) -->
-  <type name="front_detector" is="rectangular_detector" type="pixel" xpixels="128" xstart="-0.320000" xstep="0.005000" ypixels="32" ystart="-0.080000" ystep="0.005000">
+  <!-- Back detector: 640 x 640 mm -->
+  <type name="back_detector" is="rectangular_detector" type="pixel" xpixels="256" xstart="0.318750" xstep="-0.002500" ypixels="128" ystart="-0.317500" ystep="0.005000">
     <properties />
   </type>
-  <!-- Back detector: 640 x 640 mm -->
-  <type name="back_detector" is="rectangular_detector" type="pixel" xpixels="128" xstart="-0.320000" xstep="0.005000" ypixels="128" ystart="-0.320000" ystep="0.005000">
+  <!-- Front detectors -->
+  <type name="front_detector_right" is="rectangular_detector" type="pixel" xpixels="256" xstart="-0.318750" xstep="0.002500" ypixels="32" ystart="-0.077500" ystep="0.005000">
+    <properties />
+  </type>
+  <type name="front_detector_left" is="rectangular_detector" type="pixel" xpixels="256" xstart="-0.318750" xstep="0.002500" ypixels="32" ystart="-0.077500" ystep="0.005000">
+    <properties />
+  </type>
+  <type name="front_detector_bottom" is="rectangular_detector" type="pixel" xpixels="256" xstart="0.318750" xstep="-0.002500" ypixels="32" ystart="-0.077500" ystep="0.005000">
+    <properties />
+  </type>
+  <type name="front_detector_top" is="rectangular_detector" type="pixel" xpixels="256" xstart="0.318750" xstep="-0.002500" ypixels="32" ystart="-0.077500" ystep="0.005000">
     <properties />
   </type>
   <!-- Pixel for Detectors: 5x5 mm -->
   <type is="detector" name="pixel">
     <cuboid id="pixel-shape">
-      <left-front-bottom-point y="-0.0025" x="-0.0025" z="0.0" />
-      <left-front-top-point y="0.0025" x="-0.0025" z="0.0" />
-      <left-back-bottom-point y="-0.0025" x="-0.0025" z="-0.0001" />
-      <right-front-bottom-point y="-0.0025" x="0.0025" z="0.0" />
+      <left-front-bottom-point y="-0.0025" x="-0.00125" z="0.0" />
+      <left-front-top-point y="0.0025" x="-0.00125" z="0.0" />
+      <left-back-bottom-point y="-0.0025" x="-0.00125" z="-0.0001" />
+      <right-front-bottom-point y="-0.0025" x="0.00125" z="0.0" />
     </cuboid>
     <algebra val="pixel-shape" />
   </type>
