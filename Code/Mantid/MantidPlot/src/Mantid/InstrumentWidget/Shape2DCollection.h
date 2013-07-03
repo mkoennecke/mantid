@@ -38,13 +38,14 @@ public:
   void setWindow(const RectF& surface,const QRect& viewport) const;
   virtual void draw(QPainter& painter) const;
   virtual void addShape(Shape2D*,bool slct = false);
-  virtual void removeShape(Shape2D*);
+  virtual void removeShape(Shape2D*, bool sendSignal = true);
   virtual void removeShapes(const QList<Shape2D*>&);
   virtual void clear();
   
   void keyPressEvent(QKeyEvent*);
 
-  bool selectAtXY(int x,int y);
+  bool selectAtXY(int x,int y, bool edit = true);
+  void deselectAtXY(int x,int y);
   bool selectIn(const QRect& rect);
   void removeCurrentShape();
   bool isEmpty()const{return m_shapes.isEmpty();}
@@ -80,6 +81,7 @@ signals:
   void shapeCreated();
   void shapeSelected();
   void shapesDeselected();
+  void shapesRemoved();
   void shapeChanged();
   void shapeChangeFinished();
   void cleared();
@@ -89,6 +91,7 @@ public slots:
   void deselectAll();
   void moveRightBottomTo(int,int);
   void selectShapeOrControlPointAt(int x,int y);
+  void addToSelectionShapeAt(int x,int y);
   void moveShapeOrControlPointBy(int dx,int dy);
   void touchShapeOrControlPointAt(int x,int y);
   void removeSelectedShapes();
@@ -106,6 +109,7 @@ protected:
   bool isOverCurrentAt(int x,int y);
   bool isOverSelectionAt(int x,int y);
   void addToSelection(Shape2D* shape);
+  void removeFromSelection(Shape2D* shape);
   void edit(Shape2D* shape);
   void finishEdit();
   QList<Shape2D*> getSelectedShapes() const {return m_selectedShapes;}

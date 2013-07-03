@@ -48,6 +48,7 @@ ProjectionSurface::ProjectionSurface(const InstrumentActor* rootActor,const Mant
   connect(&m_maskShapes,SIGNAL(shapeCreated()),this,SIGNAL(shapeCreated()));
   connect(&m_maskShapes,SIGNAL(shapeSelected()),this,SIGNAL(shapeSelected()));
   connect(&m_maskShapes,SIGNAL(shapesDeselected()),this,SIGNAL(shapesDeselected()));
+  connect(&m_maskShapes,SIGNAL(shapesRemoved()),this,SIGNAL(shapesRemoved()));
   connect(&m_maskShapes,SIGNAL(shapeChanged()),this,SIGNAL(shapeChanged()));
   connect(&m_maskShapes,SIGNAL(cleared()),this,SIGNAL(shapesCleared()));
 
@@ -58,8 +59,6 @@ ProjectionSurface::ProjectionSurface(const InstrumentActor* rootActor,const Mant
   setInputController(AddPeakMode, pickController);
   connect(pickController,SIGNAL(pickPointAt(int,int)),this,SLOT(pickDetectorAt(int,int)));
   connect(pickController,SIGNAL(touchPointAt(int,int)),this,SLOT(touchDetectorAt(int,int)));
-  connect(pickController,SIGNAL(setSelection(QRect)),this,SLOT(setSelectionRect(QRect)));
-  connect(pickController,SIGNAL(finishSelection()),this,SLOT(selectMultipleDetectors()));
 
   // create and connect the mask drawing input controller
   InputControllerDrawShape* drawController = new InputControllerDrawShape(this);
@@ -68,6 +67,7 @@ ProjectionSurface::ProjectionSurface(const InstrumentActor* rootActor,const Mant
   connect(this,SIGNAL(signalToStartCreatingShape2D(QString,QColor,QColor)),drawController,SLOT(startCreatingShape2D(QString,QColor,QColor)));
   connect(drawController,SIGNAL(moveRightBottomTo(int,int)),&m_maskShapes,SLOT(moveRightBottomTo(int,int)));
   connect(drawController,SIGNAL(selectAt(int,int)),&m_maskShapes,SLOT(selectShapeOrControlPointAt(int,int)));
+  connect(drawController,SIGNAL(selectCtrlAt(int,int)),&m_maskShapes,SLOT(addToSelectionShapeAt(int,int)));
   connect(drawController,SIGNAL(moveBy(int,int)),&m_maskShapes,SLOT(moveShapeOrControlPointBy(int,int)));
   connect(drawController,SIGNAL(touchPointAt(int,int)),&m_maskShapes,SLOT(touchShapeOrControlPointAt(int,int)));
   connect(drawController,SIGNAL(disabled()),&m_maskShapes,SLOT(deselectAll()));
@@ -713,17 +713,6 @@ void ProjectionSurface::setSelectionRect(const QRect &rect)
 void ProjectionSurface::emptySelectionRect()
 {
     m_selectRect = QRect();
-}
-
-/**
-  * Send multipleDetectorsSelected signal.
-  */
-void ProjectionSurface::selectMultipleDetectors()
-{
-    QList<int> detList;
-    getSelectedDetectors(detList);
-    emit multipleDetectorsSelected(detList);
-    emptySelectionRect();
 }
 
 /**
