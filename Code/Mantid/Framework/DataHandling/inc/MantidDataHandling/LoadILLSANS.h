@@ -87,10 +87,13 @@ private:
 	void moveDetectorHorizontal(double, const std::string&);
 	void moveDetectorVertical(double, const std::string&);
 	Kernel::V3D getComponentPosition(const std::string& componentName);
+	void loadMetaData(const NeXus::NXEntry &,const std::string &);
+
 	LoadHelper m_loader;
 	std::string m_instrumentName; ///< Name of the instrument
 	std::vector<std::string> supportedInstruments;
 	API::MatrixWorkspace_sptr m_localWorkspace;
+	std::vector<double> m_defaultBinning;
 
 };
 
