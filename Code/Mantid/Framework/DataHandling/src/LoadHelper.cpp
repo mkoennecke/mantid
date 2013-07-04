@@ -17,7 +17,6 @@ LoadHelper::LoadHelper() :
 LoadHelper::~LoadHelper() {
 }
 
-
 /**
  * Finds the instrument name in the nexus file
  *
@@ -39,8 +38,10 @@ std::string LoadHelper::getInstrumentName(NeXus::NXEntry& entry) {
 		if (it->nxclass == "NXinstrument") {
 			std::string nexusInstrumentEntryName = it->nxname;
 			std::string insNamePath = nexusInstrumentEntryName + "/name";
-			if ( !entry.isValid(insNamePath) )
-				throw std::runtime_error("Error reading the instrument name: " + insNamePath + " is not a valid path!");
+			if (!entry.isValid(insNamePath))
+				throw std::runtime_error(
+						"Error reading the instrument name: " + insNamePath
+								+ " is not a valid path!");
 			instrumentName = entry.getString(insNamePath);
 			g_log.debug() << "Instrument Name: " << instrumentName
 					<< " in NxPath: " << insNamePath << std::endl;
@@ -56,7 +57,8 @@ std::string LoadHelper::getInstrumentName(NeXus::NXEntry& entry) {
  * Finds the path for the instrument name in the nexus file
  * Usually of the form: entry0/<NXinstrument class>/name
  */
-std::string LoadHelper::findInstrumentNexusPath(const NeXus::NXEntry &firstEntry) {
+std::string LoadHelper::findInstrumentNexusPath(
+		const NeXus::NXEntry &firstEntry) {
 	std::string insNamePath = "";
 	std::vector<NeXus::NXClassInfo> v = firstEntry.groups();
 	for (auto it = v.begin(); it < v.end(); it++) {
@@ -100,11 +102,16 @@ std::vector<double> LoadHelper::getTimeBinningFromNexusPath(
 	return timeBinning;
 }
 /**
- * Sets the member variable to instrument name
- *
- * @param entry :: The Nexus entry
- *
+ * Calculate Neutron Energy from wavelength: \f$ E = h^2 / 2m\lambda ^2 \f$
+ *  @param wavelength :: wavelength in \f$ \AA \f$
+ *  @return tof in seconds
  */
+double LoadHelper::calculateEnergy(double wavelength) {
+	double e = (PhysicalConstants::h * PhysicalConstants::h)
+			/ (2 * PhysicalConstants::NeutronMass * wavelength * wavelength
+					* 1e-20) / PhysicalConstants::meV;
+	return e;
+}
 
 } // namespace DataHandling
 } // namespace Mantid

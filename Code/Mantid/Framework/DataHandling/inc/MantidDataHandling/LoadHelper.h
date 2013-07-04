@@ -40,9 +40,8 @@ public:
 	double getDoubleFromNexusPath(const NeXus::NXEntry&, const std::string&);
 	std::vector<double> getTimeBinningFromNexusPath(
 			const NeXus::NXEntry &, const std::string &);
-	static double calculateStandardError(double in) {
-			return sqrt(in);
-		}
+	static double calculateStandardError(double in) {return sqrt(in);}
+	double calculateEnergy(double);
 private:
 	/// Reference to the logger class
 	Kernel::Logger& g_log;

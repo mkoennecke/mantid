@@ -26,7 +26,9 @@ DECLARE_LOADALGORITHM(LoadILLSANS)
 //----------------------------------------------------------------------------------------------
 /** Constructor
  */
-LoadILLSANS::LoadILLSANS() {
+LoadILLSANS::LoadILLSANS() :
+m_defaultBinning(2)
+{
 	supportedInstruments.push_back("D33");
 }
 
@@ -138,11 +140,11 @@ void LoadILLSANS::exec() {
 
 	initWorkSpace(firstEntry, instrumentPath);
 
+
 	// load the instrument from the IDF if it exists
 	runLoadInstrument();
 
 	// Move detectors
-
 	moveDetectors(detPos);
 
 	// Set the output workspace property
@@ -239,20 +241,36 @@ void LoadILLSANS::initWorkSpace(NeXus::NXEntry &firstEntry,
 	g_log.debug("Creating empty workspace...");
 	createEmptyWorkspace(numberOfHistograms, dataRear.dim2());
 
-	g_log.debug("Getting the time bins...");
-	std::string binPath(instrumentPath + "/tof/tof_wavelength_detector");
+	loadMetaData(firstEntry, instrumentPath);
 
-	std::vector<double> binningRear = m_loader.getTimeBinningFromNexusPath(
-			firstEntry, binPath + "1");
-	std::vector<double> binningRight = m_loader.getTimeBinningFromNexusPath(
-			firstEntry, binPath + "2");
-	std::vector<double> binningLeft = m_loader.getTimeBinningFromNexusPath(
-			firstEntry, binPath + "3");
-	std::vector<double> binningDown = m_loader.getTimeBinningFromNexusPath(
-			firstEntry, binPath + "4");
-	std::vector<double> binningUp = m_loader.getTimeBinningFromNexusPath(
-			firstEntry, binPath + "5");
 
+	std::vector<double> binningRear, binningRight, binningLeft, binningDown,binningUp;
+
+	if (firstEntry.getFloat("mode") == 0.0) { // Not TOF
+		g_log.debug("Getting default wavelength bins...");
+		binningRear = m_defaultBinning;
+		binningRight = m_defaultBinning;
+		binningLeft = m_defaultBinning;
+		binningDown = m_defaultBinning;
+		binningUp = m_defaultBinning;
+
+	}
+	else {
+		g_log.debug("Getting wavelength bins from the nexus file...");
+		std::string binPathPrefix(
+				instrumentPath + "/tof/tof_wavelength_detector");
+
+		binningRear = m_loader.getTimeBinningFromNexusPath(firstEntry,
+				binPathPrefix + "1");
+		binningRight = m_loader.getTimeBinningFromNexusPath(firstEntry,
+				binPathPrefix + "2");
+		binningLeft = m_loader.getTimeBinningFromNexusPath(firstEntry,
+				binPathPrefix + "3");
+		binningDown = m_loader.getTimeBinningFromNexusPath(firstEntry,
+				binPathPrefix + "4");
+		binningUp = m_loader.getTimeBinningFromNexusPath(firstEntry,
+				binPathPrefix + "5");
+	}
 	g_log.debug("Loading the data into the workspace...");
 	size_t nextIndex = loadDataIntoWorkspaceFromHorizontalTubes(dataRear,binningRear,0);
 	nextIndex = loadDataIntoWorkspaceFromVerticalTubes(dataRight,binningRight,nextIndex);
@@ -469,7 +487,37 @@ V3D LoadILLSANS::getComponentPosition(const std::string& componentName) {
 	return component->getPos();
 }
 
+/*
+ * Loads metadata present in the nexus file
+ */
+void LoadILLSANS::loadMetaData(const NeXus::NXEntry &entry, const std::string &instrumentNamePath) {
 
+	g_log.debug("Loading metadata...");
+
+	API::Run & runDetails = m_localWorkspace->mutableRun();
+
+	int runNum = entry.getInt("run_number");
+	std::string run_num = boost::lexical_cast<std::string>(runNum);
+	runDetails.addProperty("run_number", run_num);
+
+
+	double wavelength = entry.getFloat(instrumentNamePath + "/selector/wavelength");
+	g_log.debug()<< "Wavelength found in the nexus file: " << wavelength << std::endl;
+
+	if (wavelength <= 0) {
+		g_log.error("The wavelength present in the NeXus file <= 0!!");
+	}
+	else {
+		double wavelengthRes = entry.getFloat(instrumentNamePath + "/selector/wavelength_res");
+		runDetails.addProperty<double>("wavelength", wavelength);
+		double ei = m_loader.calculateEnergy(wavelength);
+		runDetails.addProperty<double>("Ei", ei, true);
+		// wavelength
+		m_defaultBinning[0] = wavelength - wavelengthRes * wavelength * 0.01 / 2;
+		m_defaultBinning[1] = wavelength + wavelengthRes * wavelength * 0.01 / 2;
+	}
+
+}
 
 
 } // namespace DataHandling
