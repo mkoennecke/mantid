@@ -2,8 +2,7 @@
 #define MANTID_DATAHANDLING_LOADILLSANS_H_
 
 #include "MantidKernel/System.h"
-#include "MantidAPI/Algorithm.h"
-#include "MantidAPI/IDataFileChecker.h"
+#include "MantidAPI/IHDFFileLoader.h"
 #include "MantidNexus/NexusClasses.h"
 #include "MantidDataHandling/LoadHelper.h"
 
@@ -55,7 +54,7 @@ std::ostream& operator<<(std::ostream &strm, const DetectorPosition &p) {
 			<< p.shiftDown << std::endl;
 }
 
-class DLLExport LoadILLSANS: public API::IDataFileChecker {
+class DLLExport LoadILLSANS: public API::IHDFFileLoader {
 public:
 	LoadILLSANS();
 	virtual ~LoadILLSANS();
@@ -63,11 +62,9 @@ public:
 	virtual const std::string name() const;
 	virtual int version() const;
 	virtual const std::string category() const;
-	///checks the file can be loaded by reading 1st 100 bytes and looking at the file extension.
-	bool quickFileCheck(const std::string& filePath, size_t nread,
-			const file_header& header);
-	/// check the structure of the file and if this file can be loaded return a value between 1 and 100
-	int fileCheck(const std::string& filePath);
+        /// Returns a confidence value that this algorithm can load a file
+        int confidence(Kernel::HDFDescriptor & descriptor) const;
+
 private:
 	virtual void initDocs();
 	void init();
