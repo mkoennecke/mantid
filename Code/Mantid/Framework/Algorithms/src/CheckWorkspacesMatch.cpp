@@ -150,6 +150,7 @@ void CheckWorkspacesMatch::init()
   declareProperty(new WorkspaceProperty<Workspace>("Workspace2","",Direction::Input), "The name of the second input workspace.");
 
   declareProperty("Tolerance",0.0, "The maximum amount by which values may differ between the workspaces.");
+  declareProperty("ToleranceRelerr",false, "Treat tolerance as relative error rather then the absolute error");   
   
   declareProperty("CheckType",true, "Whether to check that the data types (Workspace2D vs EventWorkspace) match.");
   declareProperty("CheckAxes",true, "Whether to check that the axes match.");
@@ -157,6 +158,8 @@ void CheckWorkspacesMatch::init()
   declareProperty("CheckInstrument",true, "Whether to check that the instruments match. ");
   declareProperty("CheckMasking",true, "Whether to check that the bin masking matches. ");
   declareProperty("CheckSample",false, "Whether to check that the sample (e.g. logs).");    // Have this one false by default - the logs are brittle
+  declareProperty("CheckAllData",false, "Usually checking data ends wnen first mismatch occurs. This will force algorithm to check all data and print mismatch to debug log");    // Have this one false by default - it can be a lot of printing. 
+
   
   declareProperty("Result","",Direction::Output);
 }
@@ -164,6 +167,7 @@ void CheckWorkspacesMatch::init()
 void CheckWorkspacesMatch::exec()
 {
   result.clear();
+  m_ErrorIsRelative = getProperty("ToleranceRelerr");
   this->doComparison();
   
   if ( result != "")
@@ -446,6 +450,9 @@ bool CheckWorkspacesMatch::checkData(API::MatrixWorkspace_const_sptr ws1, API::M
   const size_t numHists = ws1->getNumberHistograms();
   const size_t numBins = ws1->blocksize();
   const bool histogram = ws1->isHistogramData();
+  bool checkAllData=getProperty("CheckAllData");
+
+
   
   // First check that the workspace are the same size
   if ( numHists != ws2->getNumberHistograms() || numBins != ws2->blocksize() )
@@ -481,16 +488,42 @@ bool CheckWorkspacesMatch::checkData(API::MatrixWorkspace_const_sptr ws1, API::M
       const MantidVec& Y2 = ws2->readY(i);
       const MantidVec& E2 = ws2->readE(i);
 
+      bool RelErr = m_ErrorIsRelative;
       for ( int j = 0; j < static_cast<int>(numBins); ++j )
       {
-        if ( std::abs(X1[j]-X2[j]) > tolerance || std::abs(Y1[j]-Y2[j]) > tolerance || std::abs(E1[j]-E2[j]) > tolerance )
+        bool err;
+        if (RelErr)
+        {
+            double s1=0.5*(X1[j]+X2[j]);
+            if (s1>tolerance)
+                err = (std::abs(X1[j]-X2[j])/s1 > tolerance);
+            else
+                err = (std::abs(X1[j]-X2[j]) > tolerance);
+
+            double s2=0.5*(Y1[j]+Y2[j]);
+            if (s2>tolerance)
+               err = ((std::abs(Y1[j]-Y2[j])/s2 > tolerance)||err);
+            else
+               err = ((std::abs(Y1[j]-Y2[j]) > tolerance)||err);
+
+
+            double s3=0.5*(E1[j]+E2[j]);
+            if (s3>tolerance)
+               err = ((std::abs(E1[j]-E2[j])/s3 > tolerance)||err);
+            else
+               err = ((std::abs(E1[j]-E2[j]) > tolerance)||err);
+        }
+        else
+            err = (std::abs(X1[j]-X2[j]) > tolerance || std::abs(Y1[j]-Y2[j]) > tolerance || std::abs(E1[j]-E2[j]) > tolerance);
+
+        if (err)
         {
           g_log.debug() << "Data mismatch at cell (hist#,bin#): (" << i << "," << j << ")\n";
           g_log.debug() << " Dataset #1 (X,Y,E) = (" << X1[j] << "," << Y1[j] << "," << E1[j] << ")\n";
           g_log.debug() << " Dataset #2 (X,Y,E) = (" << X2[j] << "," << Y2[j] << "," << E2[j] << ")\n";
           g_log.debug() << " Difference (X,Y,E) = (" << std::abs(X1[j]-X2[j]) << "," << std::abs(Y1[j]-Y2[j]) << "," << std::abs(E1[j]-E2[j]) << ")\n";
           result = "Data mismatch";
-          resultBool = false;
+          resultBool = checkAllData;
         }
       }
 
@@ -498,7 +531,7 @@ bool CheckWorkspacesMatch::checkData(API::MatrixWorkspace_const_sptr ws1, API::M
       if ( histogram && std::abs(X1.back()-X2.back()) > tolerance )
       {
         result = "Data mismatch";
-        resultBool = false;
+        resultBool = checkAllData;
       }
     }
     PARALLEL_END_INTERUPT_REGION
