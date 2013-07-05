@@ -619,7 +619,7 @@ LoadILL::LoadILL() :
 			/ (2 * PhysicalConstants::NeutronMass * wavelength * wavelength
 					* 1e-20) / PhysicalConstants::meV;
       return e;
-}
+    }
 
 
 double LoadILL::getL1() {
