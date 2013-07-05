@@ -7,8 +7,9 @@
 
 #include "MantidDataHandling/LoadILLSANS.h"
 #include "MantidAPI/FileProperty.h"
+#include "MantidAPI/RegisterFileLoader.h"
 #include "MantidKernel/UnitFactory.h"
-#include "MantidAPI/LoadAlgorithmFactory.h"
+
 
 namespace Mantid {
 namespace DataHandling {
@@ -17,11 +18,7 @@ using namespace Kernel;
 using namespace API;
 using namespace NeXus;
 
-// Register the algorithm into the AlgorithmFactory
-DECLARE_ALGORITHM(LoadILLSANS)
-
-//register the algorithm into loadalgorithm factory
-DECLARE_LOADALGORITHM(LoadILLSANS)
+DECLARE_HDF_FILELOADER_ALGORITHM(LoadILLSANS)
 
 //----------------------------------------------------------------------------------------------
 /** Constructor
@@ -64,50 +61,21 @@ void LoadILLSANS::initDocs() {
 	this->setOptionalMessage("Loads a ILL nexus files for SANS instruments.");
 }
 
-/**
- * This method does a quick file check by checking the no.of bytes read nread params and header buffer
- *  @param filePath- path of the file including name.
- *  @param nread :: no.of bytes read
- *  @param header :: The first 100 bytes of the file as a union
- *  @return true if the given file is of type which can be loaded by this algorithm
- */
-bool LoadILLSANS::quickFileCheck(const std::string& filePath, size_t nread,
-		const file_header& header) {
-	std::string extn = extension(filePath);
-	bool bnexs(false);
-	(!extn.compare("nxs") || !extn.compare("nx5")) ? bnexs = true : bnexs =
-																false;
-	/*
-	 * HDF files have magic cookie in the first 4 bytes
-	 */
-	if (((nread >= sizeof(unsigned))
-			&& (ntohl(header.four_bytes) == g_hdf_cookie)) || bnexs) {
-		//hdf
-		return true;
-	} else if ((nread >= sizeof(g_hdf5_signature))
-			&& (!memcmp(header.full_hdr, g_hdf5_signature,
-					sizeof(g_hdf5_signature)))) {
-		//hdf5
-		return true;
-	}
-	return false;
-}
 
 /**
- * Checks the file by opening it and reading few lines
- * @param filePath :: name of the file inluding its path
- * @return an integer value how much this algorithm can load the file
+ * Return the confidence with with this algorithm can load the file
+ * @param descriptor A descriptor for the file
+ * @returns An integer specifying the confidence level. 0 indicates it will not be used
  */
-int LoadILLSANS::fileCheck(const std::string& filePath) {
-	// Create the root Nexus class
-	NXRoot root(filePath);
-	NXEntry entry = root.openFirstEntry();
-	if (std::find(supportedInstruments.begin(), supportedInstruments.end(),
-			m_loader.getInstrumentName(entry)) != supportedInstruments.end()) {
-		// FOUND
-		return 80;
-	}
-	return 0;
+int LoadILLSANS::confidence(Kernel::HDFDescriptor & descriptor) const
+{
+  const std::string root =  "/" + descriptor.firstEntryNameType().first + "/";
+  for(auto it = supportedInstruments.begin(); it != supportedInstruments.end() ; ++it)
+  {
+    if(descriptor.pathExists(root + *it)) return 80;
+  }
+  
+  return 0;
 }
 
 
