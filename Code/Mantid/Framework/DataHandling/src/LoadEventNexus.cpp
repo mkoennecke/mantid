@@ -44,7 +44,6 @@ Veto pulses can be filtered out in a separate step using [[FilterByLogValue]]:
 #include "MantidAPI/RegisterFileLoader.h"
 #include "MantidAPI/SpectrumDetectorMapping.h"
 
-
 using std::endl;
 using std::map;
 using std::string;
