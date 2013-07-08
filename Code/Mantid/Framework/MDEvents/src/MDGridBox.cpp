@@ -1429,7 +1429,7 @@ namespace MDEvents
           {
             coord_t eventCenter[nd];
             for (size_t l=0; l<nd; l++)eventCenter[l] = coordTable[k*nColumns+skipCol+l];
-            coord_t out[nd];
+            coord_t out[2];
             radiusTransform.apply(eventCenter, out);
             // add event to appropriate y channel
             size_t xchannel;
@@ -1457,7 +1457,7 @@ namespace MDEvents
         box->getCenter(boxCenter);
 
         // Distance from center to the peak integration center
-        coord_t out[nd];
+        coord_t out[2];
         radiusTransform.apply(boxCenter, out);
 
         if (out[0] < std::sqrt(diagonalSquared*0.72 + radius*radius) && std::fabs(out[1]) < std::sqrt(diagonalSquared*0.72 + 0.25*length*length))
