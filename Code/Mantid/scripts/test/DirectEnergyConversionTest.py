@@ -1,8 +1,10 @@
 import unittest
+import inspect
 import os, sys
-lib_path = os.path.abspath('../Inelastic')
-sys.path.append(lib_path)
-import DirectEnergyConversion
+#test_path = (os.path.realpath(__file__))
+#lib_path = os.path.abspath(test_path+'/../../Inelastic')
+#sys.path.append(lib_path)
+from DirectEnergyConversion import DirectEnergyConversion
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------
@@ -215,6 +217,19 @@ class DirectEnergyConversionTest(unittest.TestCase):
         name = tReducer.make_ckpt_name('do_white',monovan,data,'t1')
         self.assertEqual('do_white1000t1',name)
 
+    def test_get_parameter(self):
+        tReducer = self.reducer
+        param = tReducer.get_default_parameter('map_file')
+        self.assertTrue(isinstance(param,str))
+
+        param = tReducer.get_default_parameter('ei-mon1-spec')
+        self.assertTrue(isinstance(param,int))
+
+        param = tReducer.get_default_parameter('background')
+        self.assertTrue(isinstance(param,bool))
+
+
+
 
     #def test_diag_call(self):
     #    tReducer = self.reducer
@@ -223,4 +238,5 @@ class DirectEnergyConversionTest(unittest.TestCase):
 
     #    tReducet.di
 
-    
+if __name__=="__main__":   
+    unittest.main()
