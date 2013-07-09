@@ -1161,6 +1161,30 @@ void PlotDialog::initPercentilePage()
 	connect(boxFillSymbols, SIGNAL(clicked()), this, SLOT(fillBoxSymbols()));
 }
 
+/*
+ * Hides the "Custom color map" button when the user has not selected that specific button.
+ */
+void PlotDialog::showColorMapEditor(bool)
+{
+  if (grayScaleBox->isChecked() || defaultScaleBox->isChecked())
+  {
+    mSelectColormap->hide();
+  }
+  else
+  {
+    mSelectColormap->show();
+    connect(mSelectColormap,SIGNAL(clicked()),this,SLOT(changeColormap()));
+  }
+}
+
+
+void PlotDialog::showSelectColorMapButton(bool )
+{
+  mSelectColormap->show();
+  connect(mSelectColormap,SIGNAL(clicked()),this,SLOT(changeColormap()));
+
+}
+
 void PlotDialog::initSpectrogramPage()
 {
   	spectrogramPage = new QWidget();
@@ -1170,14 +1194,13 @@ void PlotDialog::initSpectrogramPage()
 
 	QVBoxLayout *vl = new QVBoxLayout();
   	grayScaleBox = new QRadioButton(tr("&Gray Scale"));
-	//connect(grayScaleBox, SIGNAL(toggled(bool)), this, SLOT(showColorMapEditor(bool)));
+	connect(grayScaleBox, SIGNAL(toggled(bool)), this, SLOT(showColorMapEditor(bool)));
     vl->addWidget(grayScaleBox);
   	defaultScaleBox = new QRadioButton(tr("&Default Color Map"));
-	//connect(defaultScaleBox, SIGNAL(toggled(bool)), this, SLOT(showColorMapEditor(bool)));
+	connect(defaultScaleBox, SIGNAL(toggled(bool)), this, SLOT(showColorMapEditor(bool)));
     vl->addWidget(defaultScaleBox);
   	customScaleBox = new QRadioButton(tr("&Custom Color Map"));
-	//connect(customScaleBox, SIGNAL(toggled(bool)), this, SLOT(showColorMapEditor(bool)));
-	connect(customScaleBox, SIGNAL(toggled(bool)), this, SLOT(showSelectColorMapButton(bool)));
+	connect(customScaleBox, SIGNAL(toggled(bool)), this, SLOT(showColorMapEditor(bool)));
     vl->addWidget(customScaleBox);
 
     QHBoxLayout *hl = new QHBoxLayout(imageGroupBox);
@@ -1849,8 +1872,8 @@ void PlotDialog::insertTabs(int plot_type)
 
 void PlotDialog::clearTabWidget()
 {
-    privateTabWidget->removeTab(privateTabWidget->indexOf(labelsPage));
-    privateTabWidget->removeTab(privateTabWidget->indexOf(axesPage));
+  privateTabWidget->removeTab(privateTabWidget->indexOf(labelsPage));
+  privateTabWidget->removeTab(privateTabWidget->indexOf(axesPage));
 	privateTabWidget->removeTab(privateTabWidget->indexOf(linePage));
 	privateTabWidget->removeTab(privateTabWidget->indexOf(symbolPage));
 	privateTabWidget->removeTab(privateTabWidget->indexOf(errorsPage));
@@ -1860,9 +1883,9 @@ void PlotDialog::clearTabWidget()
 	privateTabWidget->removeTab(privateTabWidget->indexOf(boxPage));
 	privateTabWidget->removeTab(privateTabWidget->indexOf(percentilePage));
 	privateTabWidget->removeTab(privateTabWidget->indexOf(spectrogramPage));
-    privateTabWidget->removeTab(privateTabWidget->indexOf(piePage));
-    privateTabWidget->removeTab(privateTabWidget->indexOf(pieGeometryPage));
-    privateTabWidget->removeTab(privateTabWidget->indexOf(pieLabelsPage));
+	privateTabWidget->removeTab(privateTabWidget->indexOf(piePage));
+	privateTabWidget->removeTab(privateTabWidget->indexOf(pieGeometryPage));
+	privateTabWidget->removeTab(privateTabWidget->indexOf(pieLabelsPage));
 	privateTabWidget->removeTab(privateTabWidget->indexOf(layerPage));
 	privateTabWidget->removeTab(privateTabWidget->indexOf(layerGeometryPage));
 	privateTabWidget->removeTab(privateTabWidget->indexOf(fontsPage));
@@ -2390,64 +2413,73 @@ bool PlotDialog::acceptParams()
     if (!graph)
         return false;
 
-	if (privateTabWidget->currentPage() == axesPage){
-		plotItem->setAxis(boxXAxis->currentIndex() + 2, boxYAxis->currentIndex());
+	if (privateTabWidget->currentPage() == axesPage)
+	{
+	  plotItem->setAxis(boxXAxis->currentIndex() + 2, boxYAxis->currentIndex());
 		graph->setAutoScale();
 		return true;
-	} else if (privateTabWidget->currentPage() == spectrogramPage){
-			Spectrogram *sp = dynamic_cast<Spectrogram*>(plotItem);
-		 if (!sp || sp->rtti() != QwtPlotItem::Rtti_PlotSpectrogram)
-		{
-  	    	return false;
-		}
-        if (grayScaleBox->isChecked()){
-		   sp->setGrayScale();
-	  	   } else if (defaultScaleBox->isChecked()){
-	   	   sp->setDefaultColorMap();
-	   }
-	   //if customScaleBox radiobutton is selected it loads teh colormap file and 
-	   //updates the spectrogram,colormap widget with the loaded file
-	   else if (customScaleBox->isChecked()){
-		   sp->mutableColorMap().loadMap(mCurrentColorMap);
-		  // sp->setDefaultColorMap();
-		   sp->setCustomColorMap(sp->mutableColorMap());
-		   //sets the selected colormapfile name to spectrogram
-		   sp->setColorMapFileName(mCurrentColorMap);
-		   //saves the settings
-		   sp->saveSettings();
-	   }
-	
-  	   sp->showColorScale((QwtPlot::Axis)colorScaleBox->currentItem(), axisScaleBox->isChecked());
-  	   sp->setColorBarWidth(colorScaleWidthBox->value());
+	}
+	else if (privateTabWidget->currentPage() == spectrogramPage)
+	{
+	  Spectrogram *sp = dynamic_cast<Spectrogram*>(plotItem);
 
-  	   //Update axes page
-  	   boxXAxis->setCurrentItem(sp->xAxis()-2);
-  	   boxYAxis->setCurrentItem(sp->yAxis());
-  	}else if (privateTabWidget->currentPage() == contourLinesPage){
+	  if (!sp || sp->rtti() != QwtPlotItem::Rtti_PlotSpectrogram) { return false; }
+
+	  if (grayScaleBox->isChecked())
+	  {
+	    sp->setGrayScale();
+	  }
+	  else if (defaultScaleBox->isChecked())
+	  {
+	    sp->setDefaultColorMap();
+	  }
+	   //if customScaleBox radiobutton is selected it loads the colormap file and
+	   //updates the spectrogram,colormap widget with the loaded file
+	  else if (customScaleBox->isChecked())
+	  {
+	    sp->mutableColorMap().loadMap(mCurrentColorMap);
+	    // sp->setDefaultColorMap();
+	    sp->setCustomColorMap(sp->mutableColorMap());
+	    //sets the selected colormapfile name to spectrogram
+	    sp->setColorMapFileName(mCurrentColorMap);
+	    //saves the settings
+	    sp->saveSettings();
+	  }
+
+	  sp->showColorScale((QwtPlot::Axis)colorScaleBox->currentItem(), axisScaleBox->isChecked());
+	  sp->setColorBarWidth(colorScaleWidthBox->value());
+
+	  //Update axes page
+	  boxXAxis->setCurrentItem(sp->xAxis()-2);
+	  boxYAxis->setCurrentItem(sp->yAxis());
+	}
+	else if (privateTabWidget->currentPage() == contourLinesPage)
+	{
+	  Spectrogram *sp = dynamic_cast<Spectrogram*>(plotItem);
+
+	  if (!sp || sp->rtti() != QwtPlotItem::Rtti_PlotSpectrogram) { return false; }
 		
-		Spectrogram *sp = dynamic_cast<Spectrogram*>(plotItem);
-	  	    if (!sp || sp->rtti() != QwtPlotItem::Rtti_PlotSpectrogram)
-		{
-	 	    	return false;
+	  if (defaultContourBox->isChecked())
+	  {
+	    QPen pen = QPen(levelsColorBox->color(), contourWidthBox->value(),Graph::getPenStyle(boxContourStyle->currentIndex()));
+	      pen.setCosmetic(true);
+	    sp->setDefaultContourPen(pen);
+	    sp->setColorMapPen(false);
 		}
-		if (defaultContourBox->isChecked()){ 
-			QPen pen = QPen(levelsColorBox->color(), contourWidthBox->value(),Graph::getPenStyle(boxContourStyle->currentIndex()));
-		   	pen.setCosmetic(true);
-  	    	sp->setDefaultContourPen(pen);
-			sp->setColorMapPen(false);
-		} else if (customPenBtn->isChecked())
+	  else if (customPenBtn->isChecked())
 				contourLinesEditor->updateContourPens();
 		else
 			sp->setColorMapPen();
 
-		contourLinesEditor->updateContourLevels();
+	  contourLinesEditor->updateContourLevels();
 		sp->setDisplayMode(QwtPlotSpectrogram::ContourMode, levelsGroupBox->isChecked());
 		labelsGroupBox->setChecked(levelsGroupBox->isChecked());
 		labelsGroupBox->setEnabled(levelsGroupBox->isChecked());
 		sp->showContourLineLabels(levelsGroupBox->isChecked());
-  	} 
-	else if (privateTabWidget->currentPage() == linePage){
-		int index = item->plotItemIndex();
+  }
+	else if (privateTabWidget->currentPage() == linePage)
+	{
+	  int index = item->plotItemIndex();
 		graph->setCurveStyle(index, boxConnect->currentIndex());
 		QBrush br = QBrush(boxAreaColor->color(), boxPattern->getSelectedPattern());
 		if (!fillGroupBox->isChecked())
@@ -2457,34 +2489,44 @@ bool PlotDialog::acceptParams()
 		QPen pen = QPen(boxLineColor->color(), boxLineWidth->value(), Graph::getPenStyle(boxLineStyle->currentIndex()));
 		QwtPlotCurve *curve = dynamic_cast<QwtPlotCurve *>(plotItem);
 		curve->setPen(pen);
-	} else if (privateTabWidget->currentPage() == symbolPage){
-		int size = 2*boxSymbolSize->value()+1;
+	}
+	else if (privateTabWidget->currentPage() == symbolPage)
+	{
+	  int size = 2*boxSymbolSize->value()+1;
 		QBrush br = QBrush(boxFillColor->color(), Qt::SolidPattern);
+
 		if (!boxFillSymbol->isChecked())
 			br = QBrush();
+
 		QPen pen = QPen(boxSymbolColor->color(), boxPenWidth->value(), Qt::SolidLine);
 		QwtSymbol s = QwtSymbol(boxSymbolStyle->selectedSymbol(), br, pen, QSize(size, size));
 		QwtPlotCurve *curve = dynamic_cast<QwtPlotCurve*>(plotItem);
 		curve->setSymbol(s);
-	} else if (privateTabWidget->currentPage() == histogramPage){
-				QwtHistogram *h = dynamic_cast<QwtHistogram*>(plotItem);
-		if (!h)
+	}
+	else if (privateTabWidget->currentPage() == histogramPage)
+	{
+	  QwtHistogram *h = dynamic_cast<QwtHistogram*>(plotItem);
+	  if (!h)
 			return false;
 
-		if (validInput()){
-            if (h->autoBinning() == automaticBox->isChecked() &&
+	  if (validInput())
+	  {
+	    if (h->autoBinning() == automaticBox->isChecked() &&
                 h->binSize() == binSizeBox->text().toDouble() &&
                 h->begin() == histogramBeginBox->text().toDouble() &&
                 h->end() == histogramEndBox->text().toDouble()) return true;
 
-            h->setBinning(automaticBox->isChecked(), binSizeBox->text().toDouble(),
-                         histogramBeginBox->text().toDouble(), histogramEndBox->text().toDouble());
-            h->loadData();
-			graph->updateScale();
-			graph->notifyChanges();
-			return true;
-		}
-	} else if (privateTabWidget->currentPage() == spacingPage)
+	    h->setBinning(automaticBox->isChecked(), binSizeBox->text().toDouble(),
+	        histogramBeginBox->text().toDouble(), histogramEndBox->text().toDouble());
+	    h->loadData();
+
+	    graph->updateScale();
+	    graph->notifyChanges();
+
+	    return true;
+	  }
+	}
+	else if (privateTabWidget->currentPage() == spacingPage)
 		graph->setBarsGap(item->plotItemIndex(), gapBox->value(), offsetBox->value());
 	else if (privateTabWidget->currentPage() == vectPage){
 		int index = item->plotItemIndex();
@@ -2869,25 +2911,6 @@ void PlotDialog::customVectorsPage(bool angleMag)
 	}
 }
 
-void PlotDialog::showColorMapEditor(bool)
-{
-  	if (grayScaleBox->isChecked() || defaultScaleBox->isChecked())
-	{
-  		//colorMapEditor->hide();
-		//mSelectColormap->hide();
-	}
-  	else
-  	{
-  	 	//colorMapEditor->show();
-  	   // colorMapEditor->setFocus();
-  	}
-}
-void PlotDialog::showSelectColorMapButton(bool )
-{
-	mSelectColormap->show();
-	connect(mSelectColormap,SIGNAL(clicked()),this,SLOT(changeColormap()));
-
-}
 /**
      This slot gets called on clicking slect colormap button 
 */

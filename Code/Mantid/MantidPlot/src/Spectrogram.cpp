@@ -304,8 +304,8 @@ void Spectrogram::setGrayScale()
 
 void Spectrogram::setDefaultColorMap()
 {
-  //color_map = defaultColorMap();
-  //setColorMap(color_map);
+  //Use the default (__standard) colormap from MantidColorMap.
+  mColorMap.setupDefaultMap();
   setColorMap(mColorMap);
   color_map_policy = Default;
 
@@ -340,6 +340,7 @@ void Spectrogram::setCustomColorMap(const QwtColorMap &map)
     colorAxis->setColorMap(this->data().range(), this->getColorMap());
   }
 }
+
 void Spectrogram::setCustomColorMap(const QwtLinearColorMap& map)
 {
   setColorMap(map);
