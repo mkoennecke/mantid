@@ -104,6 +104,7 @@ class ReductionGUI(QtGui.QMainWindow, ui.ui_reduction_main.Ui_SANSReduction):
         self.connect(self.reduce_button, QtCore.SIGNAL("clicked()"), self.reduce_clicked)  
         self.connect(self.save_button, QtCore.SIGNAL("clicked()"), self._save)  
         self.connect(self.interface_chk, QtCore.SIGNAL("clicked(bool)"), self._interface_choice)  
+        self.connect(self.cluster_button, QtCore.SIGNAL("clicked()"), self.cluster_clicked)  
         
         self.interface_chk.setChecked(self.general_settings.advanced)
             
@@ -178,7 +179,6 @@ class ReductionGUI(QtGui.QMainWindow, ui.ui_reduction_main.Ui_SANSReduction):
                 if config.hasProperty("cluster.submission") \
                 and config.getString("cluster.submission").lower()=='on':
                     self.cluster_button.show()
-                    self.connect(self.cluster_button, QtCore.SIGNAL("clicked()"), self.cluster_clicked)  
             else:
                 self.cluster_button.hide()
             
