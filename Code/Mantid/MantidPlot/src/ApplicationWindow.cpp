@@ -1223,6 +1223,7 @@ void ApplicationWindow::initMainMenu()
   help->addAction(actionmantidplotHelp);
   help->insertSeparator();
   help->addAction(actionHelpBugReports);
+  help->addAction(actionAskHelp);
   help->insertSeparator();
   help->addAction(actionFirstTimeSetup);
   help->insertSeparator();
@@ -13188,6 +13189,9 @@ void ApplicationWindow::createActions()
   actionHelpBugReports = new QAction(tr("Report a &Bug"), this);
   connect(actionHelpBugReports, SIGNAL(triggered()), this, SLOT(showBugTracker()));
 
+  actionAskHelp = new QAction(tr("Ask for Help"), this);
+  connect(actionAskHelp, SIGNAL(triggered()), this, SLOT(showBugTracker()));
+
   //actionDownloadManual = new QAction(tr("Download &Manual"), this); // Mantid change
   //connect(actionDownloadManual, SIGNAL(activated()), this, SLOT(downloadManual())); // Mantid change
 
@@ -13793,6 +13797,7 @@ void ApplicationWindow::translateActionsStrings()
   //actionCheckUpdates->setMenuText(tr("Search for &Updates")); //Mantid change - commented out
   //actionHelpForums->setText(tr("Visit QtiPlot &Forums"));
   actionHelpBugReports->setText(tr("Report a &Bug"));
+  actionAskHelp->setText(tr("Ask for Help"));
   //actionDownloadManual->setMenuText(tr("Download &Manual"));//Mantid change - commented out
   //actionTranslations->setMenuText(tr("&Translations"));//Mantid change - commented out
   //actionDonate->setMenuText(tr("Make a &Donation"));
