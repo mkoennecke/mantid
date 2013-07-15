@@ -16,7 +16,7 @@ namespace Mantid
   namespace CurveFitting
   {
     /**
-    Implements CubicSpline Interpolation.
+    Implements cubic spline Interpolation.
 
     Attributes: int n - number of interpolation points
     Parameters: n
@@ -57,8 +57,7 @@ namespace Mantid
       std::string name()const{return "CubicSpline";}
       virtual const std::string category() const { return "Background";}
       void function1D(double* out, const double* xValues, const size_t nData)const;
-      void derivative(const API::FunctionDomain& domain, API::FunctionValues& values,
-          const size_t order) const;
+      void derivative1D(double* out, const double* xValues, size_t nData, const size_t order) const;
       void setParameter(size_t i, const double& value, bool explicitlySet=true);
       using ParamFunction::setParameter;
 
@@ -81,9 +80,6 @@ namespace Mantid
       /// Flag for checking if the spline needs recalculating
       mutable bool m_recalculateSpline;
 
-      /// Flag for checking if the derivatives need recalculating
-      mutable bool m_recalculateDeriv;
-
       /// Minimum number of data points in spline
       static const int M_MIN_POINTS;
 
@@ -98,14 +94,13 @@ namespace Mantid
 
       /// Calculate the derivative
       void calculateDerivative(const boost::scoped_array<double>& x, const boost::scoped_array<double>& y,
-          const API::FunctionDomain1D* domain, API::FunctionValues& values,
-            const size_t order) const;
+          double* out, const double* xValues, const size_t nData, const size_t order) const;
 
       /// Initialise GSL objects if required
       void initGSLObjects(boost::scoped_array<double>& x, boost::scoped_array<double>& y, int n) const;
 
       /// Check if an error occurred and throw appropriate message
-      void checkGSLError(const double status, const int errorType) const;
+      void checkGSLError(const int status, const int errorType) const;
     };
 
 
