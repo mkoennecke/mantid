@@ -46,31 +46,6 @@
       </widget>
      </item>
      <item>
-      <widget class="QToolButton" name="live_button">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>28</height>
-        </size>
-       </property>
-       <property name="text">
-        <string>Use live stream</string>
-       </property>
-       <property name="checkable">
-        <bool>true</bool>
-       </property>
-       <property name="toolButtonStyle">
-        <enum>Qt::ToolButtonTextOnly</enum>
-       </property>
-      </widget>
-     </item>
-     <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
@@ -655,38 +630,5 @@
   </layout>
  </widget>
  <resources/>
- <connections>
-  <connection>
-   <sender>live_button</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>sample_edit</receiver>
-   <slot>setDisabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>901</x>
-     <y>24</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>464</x>
-     <y>24</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>live_button</sender>
-   <signal>toggled(bool)</signal>
-   <receiver>sample_browse</receiver>
-   <slot>setDisabled(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>901</x>
-     <y>24</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>791</x>
-     <y>24</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>

@@ -12,7 +12,6 @@ from reduction_gui.reduction.scripter import BaseScriptElement
 class SampleSetupScript(BaseScriptElement):
     
     sample_file = ""
-    live_button = False
     output_wsname = ""
     detcal_file = ""
     relocate_dets = False
@@ -42,12 +41,7 @@ class SampleSetupScript(BaseScriptElement):
         SampleSetupScript.monitor2_specid = int(ip.get_parameter("ei-mon2-spec"))
         
     def to_script(self):
-        script = ""
-        if not self.live_button:
-            script += "SampleInputFile=\"%s\",\n" % self.sample_file
-        else:
-            script += "SampleInputWorkspace=input,\n"
-            #script += "OutputWorkspace=output,\n"
+        script =  "SampleInputFile=\"%s\",\n" % self.sample_file
         tmp_wsname = ""
         if self.output_wsname == SampleSetupScript.output_wsname:
             # Make a default name from the incoming file

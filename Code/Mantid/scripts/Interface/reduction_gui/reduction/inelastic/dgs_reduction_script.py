@@ -29,11 +29,13 @@ class DgsReductionScripter(BaseReductionScripter):
         script = "from mantid.simpleapi import *\n"
         script += "config['default.facility']=\"%s\"\n" % self.facility_name
         script += "\n"
-        script += self.workflow_algorithm_call()
-        
-        # Nasty hack to find out if the live button was selected. I will do better later
-        if 'SampleInputWorkspace' in script:
-            script = self.live_script()
+        script +=  "%s(\n" % DgsReductionScripter.TOPLEVEL_WORKFLOWALG
+        for item in self._observers:
+            if item.state() is not None:
+                for subitem in str(item.state()).split('\n'):
+                    if len(subitem):
+                        script += DgsReductionScripter.WIDTH + subitem + "\n"
+        script += DgsReductionScripter.WIDTH_END + ")\n"
         
         if file_name is not None:
             f = open(file_name, 'w')
@@ -41,44 +43,3 @@ class DgsReductionScripter(BaseReductionScripter):
             f.close()
         
         return script
-    
-    def live_script(self):
-        """
-            Generate the script for live data reduction
-        """
-        #preprocessing = self.workflow_algorithm_call()
-        
-        script = """StartLiveData(UpdateEvery='5',Instrument='"""
-        script += self.instrument_name    #'FileEventDataListener'
-        script += """',ProcessingScript='"""
-        #script += preprocessing
-        
-        # Need to construct Dgs call slightly differently: no line breaks & extract output workspace
-        script +=  DgsReductionScripter.TOPLEVEL_WORKFLOWALG + '('
-        for item in self._observers:
-            if item.state() is not None:
-                for subitem in str(item.state()).split('\n'):
-                    if len(subitem):
-                        if 'OutputWorkspace' in subitem:
-                            output_workspace = subitem
-                            script += "OutputWorkspace=output,"
-                        else:
-                            script += subitem
-        script += ")"
-        
-        script += """',PreserveEvents=True,EndRunBehavior='Stop',"""
-        script += output_workspace
-        script += ")\n"
-        
-        return script
-    
-    def workflow_algorithm_call(self):
-        signature =  "%s(\n" % DgsReductionScripter.TOPLEVEL_WORKFLOWALG
-        for item in self._observers:
-            if item.state() is not None:
-                for subitem in str(item.state()).split('\n'):
-                    if len(subitem):
-                        signature += DgsReductionScripter.WIDTH + subitem + "\n"
-        signature += DgsReductionScripter.WIDTH_END + ")\n"
-        
-        return signature
