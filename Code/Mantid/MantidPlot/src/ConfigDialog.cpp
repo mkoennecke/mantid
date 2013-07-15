@@ -775,13 +775,14 @@ void ConfigDialog::initSendToProgramTab()
 
   //create tree diagram for all known programs that can be saved to
   treePrograms = new QTreeWidget(frame);
+  treePrograms->setSelectionMode( QAbstractItemView::ExtendedSelection );
   treePrograms->setColumnCount(1);
   treePrograms->setSortingEnabled(false);
   treePrograms->setHeaderLabel(tr("List of Current Programs"));
 
   grid->addWidget(treePrograms, 0,0);
 
-  connect(treePrograms,SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(treeClicked()));
+  connect(treePrograms,SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(treeClicked(QTreeWidgetItem*)));
   populateProgramTree();
 
   //Add buttons to the bottom of the widget
@@ -803,16 +804,16 @@ void ConfigDialog::initSendToProgramTab()
   widgetLayout->addLayout(buttons);
 }
 
-void ConfigDialog::treeClicked()
+void ConfigDialog::enableButtons()
 {
-  QStringList checkedItems = treeChecking();
+  QStringList selectedItems = treeSelecting();
   //Set the buttons on whether the conditions are met. Reducing the amount of user errors
-  if (checkedItems.size() == 0)
+  if (selectedItems.size() == 0)
   {  
     deleteButton->setEnabled(false);
     editButton->setEnabled(false);
   }
-  else if (checkedItems.size() == 1)
+  else if (selectedItems.size() == 1)
   {
     deleteButton->setEnabled(true);
     editButton->setEnabled(true);
@@ -822,6 +823,23 @@ void ConfigDialog::treeClicked()
     deleteButton->setEnabled(true);
     editButton->setEnabled(false);
   }
+}
+
+void ConfigDialog::treeClicked(QTreeWidgetItem* item)
+{
+  enableButtons();
+  std::string visibility = "Yes";
+  if (item->checkState(0) != Qt::Checked)
+  {
+    visibility = "No";
+  }
+
+  auto it = m_sendToSettings.find(item->text(0).toStdString());
+  if (it != m_sendToSettings.end())
+  {
+    it->second["visible"] = visibility;
+  }
+  updateChildren(it->second, item);
 }
 
 
@@ -840,13 +858,13 @@ void ConfigDialog::addDialog()
   //clear the tree and repopulate it without the programs that have just been deleted
   treePrograms->clear();
   updateProgramTree();
-  treeClicked();
+  enableButtons();
 }
 
 //Edit a program
 void ConfigDialog::editDialog()
 {
-  QStringList checkedItems = treeChecking();
+  QStringList checkedItems = treeSelecting();
 
   std::map<std::string,std::string> programKeysAndDetails = m_sendToSettings.find(checkedItems[0].toStdString())->second;
 
@@ -864,14 +882,14 @@ void ConfigDialog::editDialog()
   //clear the tree and repopulate it without the programs that have just been deleted
   treePrograms->clear();
   updateProgramTree();
-  treeClicked();
+  enableButtons();
 }
 
 
 //Deleting send to options. Deletes them off the mantid.user.properties
 void ConfigDialog::deleteDialog()
 {
-  QStringList checkedItems = treeChecking();
+  QStringList checkedItems = treeSelecting();
   if(checkedItems.size() > 0)
   {
     //Question box asking to continue to avoid accidental deletion of program options
@@ -924,27 +942,26 @@ void ConfigDialog::updateProgramTree()
   std::map<std::string, std::map<std::string,std::string> >::const_iterator itr = m_sendToSettings.begin();
   for( ; itr != m_sendToSettings.end(); ++itr)
   {    
-    //Populate list
-    QTreeWidgetItem *program = createCheckedTreeItem(QString::fromStdString(itr->first), true);
-    treePrograms->addTopLevelItem(program);
-
-    //Check to see whether invisible. If so then change of colour is needed.
+    //creating the map of kvps needs to happen first as createing the item requires them. 
     std::map<std::string, std::string> programKeysAndDetails = itr->second;
-    bool invisible = (programKeysAndDetails.find("visible")->second == "No");
 
-    //get the current program's (itr) keys and values (pItr)
-    std::map<std::string,std::string>::const_iterator pItr = programKeysAndDetails.begin();
-    for( ; pItr != programKeysAndDetails.end(); ++pItr)
-    {
-      QTreeWidgetItem *item = new QTreeWidgetItem(program);
-      item->setText(0, tr("   " + QString::fromStdString(pItr->first) + " --- " + QString::fromStdString(pItr->second)));
-      if (invisible)
-      {
-        item->setTextColor(0,QColor(150,150,150));
-        program->setTextColor(0,QColor(150,150,150));
-      }
-      program->addChild(item);
-    }
+    //Populate list
+    QTreeWidgetItem *program = createCheckedTreeItem(QString::fromStdString(itr->first), (programKeysAndDetails.find("visible")->second == "Yes"));
+    treePrograms->addTopLevelItem(program);
+    updateChildren(programKeysAndDetails, program);
+  }
+}
+
+void ConfigDialog::updateChildren(std::map<std::string, std::string> &programKeysAndDetails, QTreeWidgetItem* program)
+{
+  program->takeChildren();
+  //get the current program's (itr) keys and values (pItr)
+  std::map<std::string,std::string>::const_iterator pItr = programKeysAndDetails.begin();
+  for( ; pItr != programKeysAndDetails.end(); ++pItr)
+  {
+    QTreeWidgetItem *item = new QTreeWidgetItem(program);
+    item->setText(0, tr("   " + QString::fromStdString(pItr->first) + " --- " + QString::fromStdString(pItr->second)));
+    program->addChild(item);
   }
 }
 
@@ -1011,7 +1028,7 @@ void ConfigDialog::refreshTreeCategories()
     QStringList subCats = catName.split('\\');
     if (subCats.size() == 1)
     {
-      QTreeWidgetItem *catItem = createCheckedTreeItem(catName,isHidden);
+      QTreeWidgetItem *catItem = createCheckedTreeItem(catName,!isHidden);
       categories.insert(catName,catItem);
       treeCategories->addTopLevelItem(catItem);
     }
@@ -1028,7 +1045,7 @@ void ConfigDialog::refreshTreeCategories()
         }
         else
         {
-          QTreeWidgetItem *newCatItem = createCheckedTreeItem(subCats[j],isHidden);
+          QTreeWidgetItem *newCatItem = createCheckedTreeItem(subCats[j],!isHidden);
           categories.insert(cn,newCatItem);
           if (!catItem)
           {
@@ -1052,11 +1069,11 @@ QTreeWidgetItem* ConfigDialog::createCheckedTreeItem(QString name,bool checkBoxS
   item->setFlags(item->flags()|Qt::ItemIsUserCheckable);
   if (checkBoxState)
   {
-    item->setCheckState(0,Qt::Unchecked);
+    item->setCheckState(0,Qt::Checked);
   }
   else
   {
-    item->setCheckState(0,Qt::Checked);
+    item->setCheckState(0,Qt::Unchecked);
   }
   return item;
 }
@@ -2276,7 +2293,7 @@ void ConfigDialog::updateMantidOptionsTab()
   settings.setValue("Mantid/Python/APIVersion", apiVersion);
 }
 
-QStringList ConfigDialog::treeChecking(QTreeWidgetItem *parent)
+QStringList ConfigDialog::treeSelecting(QTreeWidgetItem *parent)
 {
   QStringList results;
   //how many children at this level
@@ -2287,7 +2304,7 @@ QStringList ConfigDialog::treeChecking(QTreeWidgetItem *parent)
     //get the child
     QTreeWidgetItem *item = parent ? parent->child(i) : treePrograms->topLevelItem(i);
 
-    if (item->checkState(0) == Qt::Checked)
+    if (item->isSelected())
     {
       results.append(item->text(0));
     }
