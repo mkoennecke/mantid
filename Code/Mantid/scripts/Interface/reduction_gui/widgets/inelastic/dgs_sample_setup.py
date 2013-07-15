@@ -112,7 +112,6 @@ class SampleSetupWidget(BaseWidget):
         """
         self._check_and_set_lineedit_content(self._content.sample_edit,
                                              state.sample_file)
-        self._content.live_button.setChecked(state.live_button)
         self._content.output_ws_edit.setText(state.output_wsname)
         self._content.detcal_edit.setText(state.detcal_file)
         if "SNS" != self._facility_name:
@@ -137,7 +136,6 @@ class SampleSetupWidget(BaseWidget):
         """
         s = SampleSetupScript(self._instrument_name)
         s.sample_file = self._content.sample_edit.text()
-        s.live_button = self._content.live_button.isChecked()
         s.output_wsname = self._content.output_ws_edit.text()
         s.detcal_file = self._content.detcal_edit.text()
         s.incident_energy_guess = self._content.ei_guess_edit.text()
