@@ -31,7 +31,7 @@ class LoadSINQFile(PythonAlgorithm):
     def PyInit(self):
         global dictsearch
         self.setWikiSummary("Load a SINQ file with the right dictionary.")
-        instruments=["AMOR","BOA","DMC","FOCUS","HRPT","MARSI","MARSE","POLDI",
+        instruments=["AMOR","AMORS1","AMORS2","BOA","DMC","FOCUS","HRPT","MARSI","MARSE","POLDI",
                      "RITA-2","SANS","SANS2","TRICS"]
         self.declareProperty("Instrument","AMOR",
                              StringListValidator(instruments),
@@ -49,6 +49,10 @@ class LoadSINQFile(PythonAlgorithm):
 
         if inst =="AMOR":
             self.doAmor()
+        if inst =="AMORS1":
+            self.doAmorS1()
+        if inst =="AMORS2":
+            self.doAmorS2()
         elif inst == "BOA":
             self.doBoa()
         elif inst == "DMC":
@@ -76,6 +80,16 @@ class LoadSINQFile(PythonAlgorithm):
         
     def doAmor(self):
         dicname = dictsearch +"/mantidamor.dic"
+        fname =self.getProperty('Filename').value 
+        wname =self.getProperty('OutputWorkspace').value
+        ws = mantid.simpleapi.LoadFlexiNexus(fname,dicname,wname)
+    def doAmorS1(self):
+        dicname = dictsearch +"/mantidamors1.dic"
+        fname =self.getProperty('Filename').value 
+        wname =self.getProperty('OutputWorkspace').value
+        ws = mantid.simpleapi.LoadFlexiNexus(fname,dicname,wname)
+    def doAmorS2(self):
+        dicname = dictsearch +"/mantidamors2.dic"
         fname =self.getProperty('Filename').value 
         wname =self.getProperty('OutputWorkspace').value
         ws = mantid.simpleapi.LoadFlexiNexus(fname,dicname,wname)

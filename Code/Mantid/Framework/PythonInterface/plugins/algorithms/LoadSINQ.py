@@ -31,7 +31,7 @@ class LoadSINQ(PythonAlgorithm):
         return "DataHandling;PythonAlgorithms"
 
     def PyInit(self):
-        instruments=["AMOR","BOA","DMC","FOCUS","HRPT","MARSI","MARSE","POLDI",
+        instruments=["AMOR","AMORS1", "AMORS2", "BOA","DMC","FOCUS","HRPT","MARSI","MARSE","POLDI",
                      "RITA-2","SANS","SANS2","TRICS"]
         self.declareProperty("Instrument","AMOR",
                              StringListValidator(instruments),
@@ -51,6 +51,8 @@ class LoadSINQ(PythonAlgorithm):
 
         instmap = {}
         instmap['AMOR'] = 'amor'
+        instmap['AMORS1'] = 'amor'
+        instmap['AMORS2'] = 'amor'
         instmap['BOA'] = 'boa'
         instmap['DMC'] = 'dmc'
         instmap['FOCUS'] = 'focus'
