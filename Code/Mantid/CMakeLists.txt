@@ -10,6 +10,12 @@ set ( SYSTEM_PACKAGE_TARGET "")
 # Add the path to our custom 'find' modules
 set ( CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/Build/CMake")
 
+#-------------------- special things @ SINQ
+set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /afs/psi.ch/project/sinq/sl6/lib)
+set(CMAKE_INCLUDE_PATH ${CMAKE_LIBRARY_PATH} /afs/psi.ch/project/sinq/sl6/include)
+set(Boost_NO_BOOST_CMAKE TRUE)
+#-------------------- end of specials
+
 # Define the project name.
 project ( Mantid )
 set ( CPACK_PACKAGE_SUFFIX "" CACHE STRING "suffix used to determine the deployment type")
