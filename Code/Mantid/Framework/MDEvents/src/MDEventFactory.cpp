@@ -241,9 +241,11 @@ namespace Mantid
         //------------------------------- FACTORY METHODS END --------------------------------------------------------------------------------------------------------------
 
         /// static vector, conaining the pointers to the functions creating MD boxes
-        std::vector<MDEventFactory::fpCreateBox>  MDEventFactory::boxCreatorFP(MDEventFactory::NumBoxTypes*(MDEventFactory::MAX_MD_DIMENSIONS_NUM+1),NULL);
+        //std::vector<MDEventFactory::fpCreateBox>  MDEventFactory::boxCreatorFP(MDEventFactory::NumBoxTypes*(MDEventFactory::MAX_MD_DIMENSIONS_NUM+1),NULL);
+        std::vector<MDEventFactory::fpCreateBox>  MDEventFactory::boxCreatorFP(20);
         // static vector, conaining the pointers to the functions creating MD Workspaces
-        std::vector<MDEventFactory::fpCreateMDWS> MDEventFactory::wsCreatorFP(MDEventFactory::MAX_MD_DIMENSIONS_NUM+1,NULL);
+        //std::vector<MDEventFactory::fpCreateMDWS> MDEventFactory::wsCreatorFP(MDEventFactory::MAX_MD_DIMENSIONS_NUM+1,NULL);
+      std::vector<MDEventFactory::fpCreateMDWS> MDEventFactory::wsCreatorFP(20);
 
         //########### Teplate methaprogrammed CODE SOURCE start:  -------------------------------------
 

@@ -13,16 +13,14 @@ LoadSINQFile is a wrapper algorithm around LoadFlexiNexus. It locates a suitable
 # Mark Koennecke, November 2012
 #--------------------------------------------------------------
 from mantid.api import AlgorithmFactory
-from mantid.api import PythonAlgorithm, registerAlgorithm, WorkspaceFactory, FileProperty, FileAction, WorkspaceProperty, FrameworkManager
+from mantid.api import PythonAlgorithm, WorkspaceFactory, FileProperty, FileAction, WorkspaceProperty, FrameworkManager
 from mantid.kernel import Direction, StringListValidator, ConfigServiceImpl
 import mantid.simpleapi
-import MantidFramework 
-from mantid import config
 
 
 #--------- place to look for dictionary files
 #dictsearch='/home/christophe/poldi/dev/mantid-2.3.2-Source/PSIScripts'
-dictsearch=config['instrumentDefinition.directory']+"/nexusdictionaries/"
+dictsearch=''
 
 class LoadSINQFile(PythonAlgorithm):
     def category(self):

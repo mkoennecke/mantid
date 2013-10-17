@@ -38,15 +38,27 @@ namespace Geometry
   {
     public:
       // Default constructor. a = b = c = 1, alpha = beta = gamma = 90 degrees
-      OrientedLattice(Kernel::DblMatrix Umatrix=Kernel::DblMatrix(3,3,true)); 
+      OrientedLattice();
+      OrientedLattice(const Kernel::DblMatrix & Umatrix);
+      OrientedLattice(const Kernel::DblMatrix Umatrix);
       //Copy constructor
       OrientedLattice(const OrientedLattice& other); 
       // a,b,c constructor
-      OrientedLattice(const double _a,const double _b,const double _c,Kernel::DblMatrix Umatrix=Kernel::DblMatrix(3,3,true)); 
+      OrientedLattice(const double _a,const double _b,const double _c,
+                      const Kernel::DblMatrix & Umatrix = Kernel::DblMatrix(3,3,true));
+      OrientedLattice(const double _a,const double _b,const double _c,
+                      const Kernel::DblMatrix Umatrix);
       //a,b,c,alpha,beta,gamma constructor
-      OrientedLattice(const double _a,const double _b,const double _c,const double _alpha,const double _beta,const double _gamma,Kernel::DblMatrix Umatrix=Kernel::DblMatrix(3,3,true),const int angleunit=angDegrees);
+      //a,b,c,alpha,beta,gamma constructor
+      OrientedLattice(const double _a,const double _b,const double _c,const double _alpha,const double _beta,
+                      const double _gamma,  Kernel::DblMatrix Umatrix,
+                      const int angleunit=angDegrees);
+      OrientedLattice(const double _a,const double _b,const double _c,const double _alpha,const double _beta,
+                      const double _gamma, 
+                      const int angleunit=angDegrees);
       //UnitCell constructor
-      OrientedLattice(UnitCell uc ,Kernel::DblMatrix Umatrix=Kernel::DblMatrix(3,3,true));
+      OrientedLattice(const UnitCell & uc , const Kernel::DblMatrix & Umatrix = Kernel::DblMatrix(3,3,true));
+      OrientedLattice(const UnitCell uc , const Kernel::DblMatrix Umatrix);
       // Destructor
       virtual ~OrientedLattice();  
 
