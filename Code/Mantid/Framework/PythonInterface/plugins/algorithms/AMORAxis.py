@@ -8,7 +8,7 @@ necessary.
 *WIKI*"""
 
 from mantid.api import AlgorithmFactory
-from mantid.api import PythonAlgorithm, registerAlgorithm, WorkspaceFactory, WorkspaceProperty
+from mantid.api import PythonAlgorithm, WorkspaceFactory, WorkspaceProperty
 from mantid.kernel import Direction, StringListValidator
 import mantid.simpleapi 
 from mantid.simpleapi import mtd

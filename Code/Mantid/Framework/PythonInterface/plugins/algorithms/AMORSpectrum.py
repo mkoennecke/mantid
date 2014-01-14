@@ -6,7 +6,7 @@ such that the result is a 1D spectrum counts versus TOF.
 *WIKI*"""
 
 from mantid.api import AlgorithmFactory
-from mantid.api import PythonAlgorithm, registerAlgorithm, WorkspaceFactory, FileProperty, FileAction, WorkspaceProperty
+from mantid.api import PythonAlgorithm, WorkspaceFactory, FileProperty, FileAction, WorkspaceProperty
 from mantid.kernel import Direction, StringListValidator, ConfigServiceImpl, IntArrayBoundedValidator, IntArrayProperty
 import mantid.simpleapi 
 from mantid.simpleapi import mtd
