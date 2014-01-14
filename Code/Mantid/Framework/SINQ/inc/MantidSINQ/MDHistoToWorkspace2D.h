@@ -2,19 +2,38 @@
  * This algorithm flattens a MDHistoWorkspace to a Workspace2D. Mantid has far more tools
  * to deal with W2D then for MD ones.
  *
- * copyright: do not bother me, see Mantid copyright
+ * Original contributor: Mark Koennecke: mark.koennecke@psi.ch
+ * 
+ * Copyright &copy; 2013 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+
+ * This file is part of Mantid.
+
+ * Mantid is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
  *
- * Mark Koennecke, November 2012
+ * Mantid is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+ * File change history is stored at: <https://github.com/mantidproject/mantid>
+ * Code Documentation is available at: <http://doxygen.mantidproject.org>
  */
 #ifndef MDHISTOTOWORKSPACE2D_H_
 #define MDHISTOTOWORKSPACE2D_H_
 
+#include "MantidSINQ/DllConfig.h"
 #include "MantidAPI/Algorithm.h"
 #include "MantidMDEvents/MDHistoWorkspace.h"
 #include "MantidGeometry/MDGeometry/MDTypes.h"
 #include "MantidDataObjects/Workspace2D.h"
 
-class MDHistoToWorkspace2D : public Mantid::API::Algorithm
+class MANTID_SINQ_DLL MDHistoToWorkspace2D : public Mantid::API::Algorithm
 {
 public:
   /// (Empty) Constructor
@@ -36,10 +55,10 @@ private:
 
   virtual void initDocs();
 
-  int rank;
-  int currentSpectra;
-  int calculateNSpectra( Mantid::API::IMDHistoWorkspace_sptr inws);
-  void recurseData(Mantid::API::IMDHistoWorkspace_sptr inWS, Mantid::DataObjects::Workspace2D_sptr outWS, int currentDim, Mantid::coord_t *pos);
+  size_t rank;
+  size_t currentSpectra;
+  size_t calculateNSpectra( Mantid::API::IMDHistoWorkspace_sptr inws);
+  void recurseData(Mantid::API::IMDHistoWorkspace_sptr inWS, Mantid::DataObjects::Workspace2D_sptr outWS, size_t currentDim, Mantid::coord_t *pos);
 
   void checkW2D(Mantid::DataObjects::Workspace2D_sptr outWS);
 

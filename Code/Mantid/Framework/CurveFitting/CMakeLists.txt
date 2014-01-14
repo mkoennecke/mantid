@@ -3,6 +3,7 @@ set ( SRC_FILES
 	#	src/SCDPanelErrors.cpp
 	# src/ChebyshevPolynomialBackground.cpp
 	src/Abragam.cpp
+	src/AugmentedLagrangianOptimizer.cpp
 	src/BFGS_Minimizer.cpp
 	src/BSpline.cpp
 	src/BackToBackExponential.cpp
@@ -10,18 +11,20 @@ set ( SRC_FILES
 	src/BivariateNormal.cpp
 	src/Bk2BkExpConvPV.cpp
 	src/BoundaryConstraint.cpp
+	src/CalculateGammaBackground.cpp
 	src/Chebyshev.cpp
 	src/ComptonProfile.cpp
 	src/ComptonScatteringCountRate.cpp
 	src/Convolution.cpp
 	src/CostFuncFitting.cpp
 	src/CostFuncLeastSquares.cpp
+	src/CostFuncRwp.cpp
 	src/CubicSpline.cpp
 	src/DampingMinimizer.cpp
 	src/DeltaFunction.cpp
 	src/DerivMinimizer.cpp
+	src/DiffRotDiscreteCircle.cpp
 	src/DiffSphere.cpp
-	src/ElasticDiffSphere.cpp
 	src/EndErfc.cpp
 	src/ExpDecay.cpp
 	src/ExpDecayMuon.cpp
@@ -32,22 +35,19 @@ set ( SRC_FILES
 	src/FitMW.cpp
 	src/FitPowderDiffPeaks.cpp
 	src/FlatBackground.cpp
+	src/FullprofPolynomial.cpp
 	src/GSLFunctions.cpp
 	src/GSLMatrix.cpp
 	src/GausDecay.cpp
 	src/GausOsc.cpp
 	src/Gaussian.cpp
-	src/Gaussian1D.cpp
-	src/Gaussian1D2.cpp
 	src/GaussianComptonProfile.cpp
 	src/GramCharlierComptonProfile.cpp
 	src/IkedaCarpenterPV.cpp
-	src/InelasticDiffSphere.cpp
 	src/LeBailFit.cpp
 	src/LeBailFunction.cpp
 	src/LevenbergMarquardtMDMinimizer.cpp
 	src/LevenbergMarquardtMinimizer.cpp
-	src/Linear.cpp
 	src/LinearBackground.cpp
 	src/LogNormal.cpp
 	src/Lorentzian.cpp
@@ -66,6 +66,7 @@ set ( SRC_FILES
 	src/Quadratic.cpp
 	src/RefinePowderInstrumentParameters.cpp
 	src/RefinePowderInstrumentParameters3.cpp
+	src/ReflectivityMulf.cpp
 	src/Resolution.cpp
 	src/SeqDomain.cpp
 	src/SimplexMinimizer.cpp
@@ -97,6 +98,7 @@ set ( INC_FILES
 	#	inc/MantidCurveFitting/SCDPanelErrors.h
 	# inc/MantidCurveFitting/ChebyshevPolynomialBackground.h
 	inc/MantidCurveFitting/Abragam.h
+	inc/MantidCurveFitting/AugmentedLagrangianOptimizer.h
 	inc/MantidCurveFitting/BFGS_Minimizer.h
 	inc/MantidCurveFitting/BSpline.h
 	inc/MantidCurveFitting/BackToBackExponential.h
@@ -104,6 +106,7 @@ set ( INC_FILES
 	inc/MantidCurveFitting/BivariateNormal.h
 	inc/MantidCurveFitting/Bk2BkExpConvPV.h
 	inc/MantidCurveFitting/BoundaryConstraint.h
+	inc/MantidCurveFitting/CalculateGammaBackground.h
 	inc/MantidCurveFitting/Chebyshev.h
 	inc/MantidCurveFitting/CompositeValues.h
 	inc/MantidCurveFitting/ComptonProfile.h
@@ -111,13 +114,14 @@ set ( INC_FILES
 	inc/MantidCurveFitting/Convolution.h
 	inc/MantidCurveFitting/CostFuncFitting.h
 	inc/MantidCurveFitting/CostFuncLeastSquares.h
+	inc/MantidCurveFitting/CostFuncRwp.h
 	inc/MantidCurveFitting/CubicSpline.h
 	inc/MantidCurveFitting/DampingMinimizer.h
 	inc/MantidCurveFitting/DeltaFunction.h
 	inc/MantidCurveFitting/DerivMinimizer.h
 	inc/MantidCurveFitting/DiffSphere.h
+	inc/MantidCurveFitting/DiffRotDiscreteCircle.h
 	inc/MantidCurveFitting/DllConfig.h
-	inc/MantidCurveFitting/ElasticDiffSphere.h
 	inc/MantidCurveFitting/EmptyValues.h
 	inc/MantidCurveFitting/EndErfc.h
 	inc/MantidCurveFitting/ExpDecay.h
@@ -129,6 +133,7 @@ set ( INC_FILES
 	inc/MantidCurveFitting/FitMW.h
 	inc/MantidCurveFitting/FitPowderDiffPeaks.h
 	inc/MantidCurveFitting/FlatBackground.h
+	inc/MantidCurveFitting/FullprofPolynomial.h
 	inc/MantidCurveFitting/GSLFunctions.h
 	inc/MantidCurveFitting/GSLJacobian.h
 	inc/MantidCurveFitting/GSLMatrix.h
@@ -136,18 +141,14 @@ set ( INC_FILES
 	inc/MantidCurveFitting/GausDecay.h
 	inc/MantidCurveFitting/GausOsc.h
 	inc/MantidCurveFitting/Gaussian.h
-	inc/MantidCurveFitting/Gaussian1D.h
-	inc/MantidCurveFitting/Gaussian1D2.h
 	inc/MantidCurveFitting/GaussianComptonProfile.h
 	inc/MantidCurveFitting/GramCharlierComptonProfile.h
 	inc/MantidCurveFitting/IkedaCarpenterPV.h
-	inc/MantidCurveFitting/InelasticDiffSphere.h
 	inc/MantidCurveFitting/Jacobian.h
 	inc/MantidCurveFitting/LeBailFit.h
 	inc/MantidCurveFitting/LeBailFunction.h
 	inc/MantidCurveFitting/LevenbergMarquardtMDMinimizer.h
 	inc/MantidCurveFitting/LevenbergMarquardtMinimizer.h
-	inc/MantidCurveFitting/Linear.h
 	inc/MantidCurveFitting/LinearBackground.h
 	inc/MantidCurveFitting/LogNormal.h
 	inc/MantidCurveFitting/Lorentzian.h
@@ -166,6 +167,7 @@ set ( INC_FILES
 	inc/MantidCurveFitting/Quadratic.h
 	inc/MantidCurveFitting/RefinePowderInstrumentParameters.h
 	inc/MantidCurveFitting/RefinePowderInstrumentParameters3.h
+	inc/MantidCurveFitting/ReflectivityMulf.h
 	inc/MantidCurveFitting/Resolution.h
 	inc/MantidCurveFitting/SeqDomain.h
 	inc/MantidCurveFitting/SimplexMinimizer.h
@@ -193,15 +195,16 @@ set ( INC_FILES
 set ( TEST_FILES
 	# ChebyshevPolynomialBackgroundTest.h
 	# RefinePowderInstrumentParametersTest.h
-	#DiffSphereTest.h
 	#SCDPanelErrorsTest.h
 	AbragamTest.h
+	AugmentedLagrangianOptimizerTest.h
 	BFGSTest.h
 	BSplineTest.h
 	BackToBackExponentialTest.h
 	BivariateNormalTest.h
 	Bk2BkExpConvPVTest.h
 	BoundaryConstraintTest.h
+	CalculateGammaBackgroundTest.h
 	ChebyshevTest.h
 	CompositeFunctionTest.h
 	ComptonProfileTest.h
@@ -210,6 +213,8 @@ set ( TEST_FILES
 	CubicSplineTest.h
 	DampingMinimizerTest.h
 	DeltaFunctionTest.h
+	DiffRotDiscreteCircleTest.h
+	DiffSphereTest.h
 	EndErfcTest.h
 	ExpDecayMuonTest.h
 	ExpDecayOscTest.h
@@ -218,11 +223,11 @@ set ( TEST_FILES
 	FitMWTest.h
 	FitPowderDiffPeaksTest.h
 	FlatBackgroundTest.h
+	FullprofPolynomialTest.h
 	FunctionFactoryConstraintTest.h
 	GSLMatrixTest.h
 	GausDecayTest.h
 	GausOscTest.h
-	Gaussian1DTest.h
 	GaussianComptonProfileTest.h
 	GaussianTest.h
 	GramCharlierComptonProfileTest.h
@@ -233,7 +238,6 @@ set ( TEST_FILES
 	LevenbergMarquardtMDTest.h
 	LevenbergMarquardtTest.h
 	LinearBackgroundTest.h
-	LinearTest.h
 	LogNormalTest.h
 	Lorentzian1DTest.h
 	LorentzianTest.h
@@ -250,6 +254,7 @@ set ( TEST_FILES
 	ProductQuadraticExpTest.h
 	QuadraticTest.h
 	RefinePowderInstrumentParameters3Test.h
+	ReflectivityMulfTest.h
 	ResolutionTest.h
 	SimplexTest.h
 	SpecialFunctionSupportTest.h

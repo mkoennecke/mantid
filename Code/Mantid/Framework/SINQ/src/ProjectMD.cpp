@@ -80,7 +80,7 @@ void ProjectMD::exec()
 
 
 	std::vector<IMDDimension_sptr> dimensions;
-	for(unsigned int i = 0; i < inWS->getNumDims(); i++){
+	for(size_t i = 0; i < inWS->getNumDims(); i++){
 		if(i != dimNo){
 			dimensions.push_back(boost::const_pointer_cast<IMDDimension>(inWS->getDimension(i)));
 		} else {
@@ -89,9 +89,9 @@ void ProjectMD::exec()
 				start = 0;
 			}
 			if(end == -1) {
-				end = dimi->getNBins();
+				end = static_cast<int>(dimi->getNBins());
 			} else  if(end > int(dimi->getNBins()) ) {
-				end = dimi->getNBins() -1;
+				end = static_cast<int>(dimi->getNBins()) -1;
 			}
 		}
 	}
@@ -102,7 +102,7 @@ void ProjectMD::exec()
 
     memset(targetDim,0,MAXDIM*sizeof(int));
     memset(sourceDim,0,MAXDIM*sizeof(int));
-    sumData(inWS, outWS, sourceDim, targetDim, 0, dimNo, start, end, 0);
+    sumData(inWS, outWS, sourceDim, targetDim, 0, static_cast<int>(dimNo), start, end, 0);
 
 
     copyMetaData(inWS, outWS);
@@ -131,7 +131,7 @@ void ProjectMD::copyMetaData( Mantid::API::IMDHistoWorkspace_sptr inws,  Mantid:
  */
 unsigned int ProjectMD::calcIndex(IMDHistoWorkspace_sptr ws, int dim[])
 {
-	unsigned int idx = 0;
+	size_t idx = 0;
 	switch(ws->getNumDims()){
 	case 1:
 	                idx = dim[0];
@@ -148,7 +148,7 @@ unsigned int ProjectMD::calcIndex(IMDHistoWorkspace_sptr ws, int dim[])
 	default:
 		throw std::runtime_error("Unsupported dimension depth");
 	}
-	return idx;
+	return static_cast<unsigned int>(idx);
 }
 
 double ProjectMD::getValue(IMDHistoWorkspace_sptr ws, int dim[])
@@ -172,20 +172,18 @@ void ProjectMD::putValue(IMDHistoWorkspace_sptr ws, int dim[], double value)
 void ProjectMD::sumData(IMDHistoWorkspace_sptr inWS, IMDHistoWorkspace_sptr outWS,
 		  int *sourceDim, int *targetDim, int targetDimCount, int dimNo, int start, int end, int currentDim)
 {
-	  int i, length;
-	  double val, sumVal = 0;
 	  boost::shared_ptr<const IMDDimension> dimi;
 
 	  /*
 	     when we have recursed through  all dimensions
 	     we actually do the sums...
 	   */
-	  if (currentDim == inWS->getNumDims()) {
-	    length = end - start;
-	    sumVal = getValue(outWS, targetDim);
-	    for (i = 0; i < length; i++) {
+	  if (currentDim == static_cast<int>(inWS->getNumDims())) {
+	    int length = end - start;
+	    double sumVal = getValue(outWS, targetDim);
+	    for (int i = 0; i < length; i++) {
 	      sourceDim[dimNo] = start + i;
-	      val = getValue(inWS, sourceDim);
+	      double val = getValue(inWS, sourceDim);
 	      sumVal += val;
 	    }
 	    putValue(outWS, targetDim, sumVal);
@@ -203,8 +201,7 @@ void ProjectMD::sumData(IMDHistoWorkspace_sptr inWS, IMDHistoWorkspace_sptr outW
 	         loop over all values of the non summed dimension
 	       */
 	      dimi = inWS->getDimension(currentDim);
-	      //std::cout << " dim " << currentDim << " val " <<  dimi->getNBins() << std::endl;
-	      for (i = 0; i < dimi->getNBins(); i++) {
+	      for (int i = 0; i < static_cast<int>(dimi->getNBins()); i++) {
 	        /*
 	           the problem here is that we have to jump over the summed
 	           dimension here. This why we have to maintain a separate

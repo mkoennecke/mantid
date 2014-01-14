@@ -17,7 +17,6 @@
 #include <Poco/DOM/Document.h>
 #include <Poco/DOM/NodeList.h>
 #include <Poco/DOM/Text.h>
-#include <unistd.h>
 
 using namespace Mantid::API;
 using namespace Mantid::Geometry;
@@ -43,7 +42,7 @@ SINQHMListener::~SINQHMListener()
 bool SINQHMListener::connect(const Poco::Net::SocketAddress& address)
 {
     std::string host = address.toString();
-    unsigned int i = host.find(':');
+    std::string::size_type i = host.find(':');
     if ( i != std::string::npos )
     {
       host.erase( i );
@@ -113,7 +112,7 @@ boost::shared_ptr<Workspace> SINQHMListener::extractData()
 
     std::vector<MDHistoDimension_sptr> dimensions;
     for(int i = 0; i < rank; i++){
-    	dimensions.push_back(MDHistoDimension_sptr(new MDHistoDimension(dimNames[i], dimNames[i], "", .0, double(dim[i]), dim[i])));
+    	dimensions.push_back(MDHistoDimension_sptr(new MDHistoDimension(dimNames[i], dimNames[i], "", .0, coord_t(dim[i]), dim[i])));
     }
     MDHistoWorkspace_sptr ws (new MDHistoWorkspace(dimensions));
     ws->setTo(.0,.0,.0);
@@ -142,7 +141,6 @@ void SINQHMListener::loadDimensions()
 	  std::istream& istr = httpRequest("/sinqhm.xml");
 	  std::stringstream oss;
 	  Poco::StreamCopier::copyStream(istr,oss);
-	  //std::cout << oss.str() << std::endl;
 
 	  DOMParser xmlParser;
 	  Document *doc;
@@ -169,25 +167,14 @@ void SINQHMListener::loadDimensions()
 		  dim[i] = atoi(sdim.c_str());
 	  }
 
-//	  std::cout << "Dims after parsing sinqhm.xml: rank = " << rank << " dims =";
-//	  for(int i = 0; i < rank; i++){
-//		  std::cout << dim[i] << ", ";
-//	  }
-//	  std::cout << std::endl;
 
 	  doSpecialDim();
 
-//	  std::cout << "Dims after doSpecialDim: rank = " << rank << " dims =";
-//	  for(int i = 0; i < rank; i++){
-//		  std::cout << dim[i] << ", ";
-//	  }
-//	  std::cout << std::endl;
-
-}
+    }
 
 std::istream& SINQHMListener::httpRequest(std::string path)
 {
-	std::cout << path << std::endl;
+
 
 	HTTPRequest req(HTTPRequest::HTTP_GET,path, HTTPMessage::HTTP_1_1);
     req.setKeepAlive(true);
@@ -216,13 +203,10 @@ void SINQHMListener::doSpecialDim()
 }
 int SINQHMListener::calculateCAddress(coord_t *pos)
 {
-	int result, mult;
-	int i, j;
-
-	result = (int)pos[rank - 1];
-	for(i = 0; i < rank -1; i++){
-		mult = 1;
-		for(j = rank -1; j > i; j--){
+	int result = (int)pos[rank - 1];
+	for(int i = 0; i < rank -1; i++){
+		int mult = 1;
+		for(int j = rank -1; j > i; j--){
 			mult *= dim[j];
 		}
 		if((int)pos[i] < dim[i] && (int)pos[i] > 0){
@@ -237,12 +221,12 @@ void SINQHMListener::recurseDim(int *data, IMDHistoWorkspace_sptr ws, int curren
 		int Cindex = calculateCAddress(idx);
 		int val = data[Cindex];
 		MDHistoWorkspace_sptr mdws = boost::dynamic_pointer_cast<MDHistoWorkspace>(ws);
-		unsigned int F77index = mdws->getLinearIndexAtCoord(idx);
+		size_t F77index = mdws->getLinearIndexAtCoord(idx);
 		mdws->setSignalAt(F77index,signal_t(val));
 		mdws->setErrorSquaredAt(F77index,signal_t(val));
 	} else {
 		for(int i = 0; i < dim[currentDim]; i++){
-			idx[currentDim] = i;
+			idx[currentDim] = static_cast<coord_t>(i);
 			recurseDim(data,ws,currentDim+1, idx);
 		}
 	}
@@ -250,18 +234,15 @@ void SINQHMListener::recurseDim(int *data, IMDHistoWorkspace_sptr ws, int curren
 
 void SINQHMListener::readHMData(IMDHistoWorkspace_sptr ws)
 {
-	int val, *data = NULL, length = 1;
+	int *data = NULL, length = 1;
 	coord_t *idx;
-	long dataSum = 0;
 
 	for(int i = 0; i < rank; i++){
 		length *= dim[i];
 	}
-	char pathBuffer[132];
-	snprintf(pathBuffer,sizeof(pathBuffer),"/admin/readhmdata.egi?bank=0&start=0&end=%d", length);
-	std::istream& istr = httpRequest(std::string(pathBuffer));
-
-	//std::cout << "Content-length " << response.getContentLength() << ", Content-type: " << response.getContentType() << std::endl;
+  std::ostringstream pathBuffer;
+  pathBuffer << "/admin/readhmdata.egi?bank=0&start=0&end=" << length;
+	std::istream& istr = httpRequest(pathBuffer.str());
 
 	data = (int *)malloc(length*sizeof(int));
 	if(data == NULL){
@@ -273,10 +254,8 @@ void SINQHMListener::readHMData(IMDHistoWorkspace_sptr ws)
 	}
 	for(int i = 0; i < length ; i++){
 		data[i] = ntohl(data[i]);
-		dataSum += data[i];
 	}
-    //std::cout << "DataSum = " << dataSum  << std::endl;
-
+  
 	/**
 	 * recurseDim also takes care of converting from C to F77 storage order. Because
 	 * Mantid MD arrays are in F77 storage order. Only the holy cucumber knows why....

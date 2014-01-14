@@ -16,11 +16,10 @@ from mantid.api import AlgorithmFactory
 from mantid.api import PythonAlgorithm, WorkspaceFactory, FileProperty, FileAction, WorkspaceProperty, FrameworkManager
 from mantid.kernel import Direction, StringListValidator, ConfigServiceImpl
 import mantid.simpleapi
+from mantid import config
+import os.path
 
-
-#--------- place to look for dictionary files
-#dictsearch='/home/christophe/poldi/dev/mantid-2.3.2-Source/PSIScripts'
-dictsearch=''
+dictsearch= ''
 
 class LoadSINQFile(PythonAlgorithm):
     def category(self):
@@ -35,15 +34,11 @@ class LoadSINQFile(PythonAlgorithm):
                              StringListValidator(instruments),
                              "Choose Instrument",direction=Direction.Input)
         self.declareProperty(FileProperty(name="Filename",defaultValue="",
-                                          action=FileAction.Load, extensions=["h5","hdf"]))
-        self.declareProperty("OutputWorkspace","nexus")
-        dictsearch = ConfigServiceImpl.Instance().getInstrumentDirectory() + '/nexusdictionaries'
+                                          action=FileAction.Load, extensions=[".h5",".hdf"]))
+        self.declareProperty(WorkspaceProperty("OutputWorkspace","",direction=Direction.Output))
 
     def PyExec(self):
         inst=self.getProperty('Instrument').value
-        fname =self.getProperty('Filename').value
-        self.log().error('Running LoadSINQFile for ' + inst)
-
 
         if inst =="AMOR":
             self.doAmor()

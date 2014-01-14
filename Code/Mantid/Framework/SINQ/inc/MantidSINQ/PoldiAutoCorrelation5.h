@@ -4,7 +4,7 @@
 //----------------------------------------------------------------------
 // Includes
 //----------------------------------------------------------------------
-#include "MantidKernel/System.h"
+#include "MantidSINQ/DllConfig.h"
 #include "MantidAPI/Algorithm.h"
 #include "MantidAPI/ITableWorkspace.h"
 #include "MantidDataObjects/Workspace2D.h"
@@ -60,7 +60,7 @@ const double deg2rad = M_PI/180.;
     Code Documentation is available at <http://doxygen.mantidproject.org>
 */
 
-class DLLExport PoldiAutoCorrelation5 : public API::Algorithm
+class MANTID_SINQ_DLL PoldiAutoCorrelation5 : public API::Algorithm
 {
 public:
 	/// Default constructor
@@ -72,7 +72,7 @@ public:
 	/// Algorithm's version for identification overriding a virtual method
 	virtual int version() const { return 5; }
 	/// Algorithm's category for identification overriding a virtual method
-	virtual const std::string category() const { return "Poldi\\PoldiSet"; }
+	virtual const std::string category() const { return "SINQ\\Poldi\\PoldiSet"; }
 
 
 
