@@ -57,4 +57,4 @@ class ViewBOA(PythonAlgorithm):
             tofdata[i] = (3.9560346E-7*(tofdata[i]*1.E-7/CD))*1.E10
         
 
-AlgorithmFactory.subscribe(ViewBOA())
+AlgorithmFactory.subscribe(ViewBOA)

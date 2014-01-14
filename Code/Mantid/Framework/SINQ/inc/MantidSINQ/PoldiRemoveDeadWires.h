@@ -4,7 +4,7 @@
 //----------------------------------------------------------------------
 // Includes
 //----------------------------------------------------------------------
-#include "MantidKernel/System.h"
+#include "MantidSINQ/DllConfig.h"
 #include "MantidAPI/Algorithm.h"
 #include "MantidAPI/ITableWorkspace.h"
 #include "MantidDataObjects/Workspace2D.h"
@@ -51,7 +51,7 @@ namespace Mantid
       File change history is stored at: <https://svn.mantidproject.org/mantid/trunk/Code/Mantid>
       Code Documentation is available at <http://doxygen.mantidproject.org>
   */
-    class DLLExport PoldiRemoveDeadWires : public API::Algorithm
+    class MANTID_SINQ_DLL PoldiRemoveDeadWires : public API::Algorithm
     {
     public:
       /// Default constructor
@@ -63,7 +63,7 @@ namespace Mantid
       /// Algorithm's version for identification overriding a virtual method
       virtual int version() const { return 1; }
       /// Algorithm's category for identification overriding a virtual method
-      virtual const std::string category() const { return "Poldi\\PoldiSet"; }
+      virtual const std::string category() const { return "SINQ\\Poldi\\PoldiSet"; }
 
 
 
@@ -79,7 +79,7 @@ namespace Mantid
       /// Should we auto detecte dead wires?
       bool m_runAutoDetectDW;
       /// threshold for dead wires auto detection
-      bool m_defautDWThreshold;
+      double m_defautDWThreshold;
 
 
       /// The number of spectra in the raw file

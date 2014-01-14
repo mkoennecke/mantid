@@ -331,17 +331,22 @@ namespace Algorithms
     // Loop over the spectra - there will be one per monitor
     for ( std::size_t spec = 0; spec < monitorWorkspace->getNumberHistograms(); ++spec )
     {
-      // Create a column for this monitor
-      const std::string monitorName = monitorWorkspace->getDetector(spec)->getName();
-      auto monitorCounts = outputWorkspace->addColumn("int",monitorName);
-      const IEventList & eventList = monitorWorkspace->getEventList(spec);
-      // Accumulate things in a local vector before transferring to the table workspace
-      std::vector<int> Y(xLength);
-      filterEventList(eventList, minVal, maxVal, log, Y);
-      // Transfer the results to the table
-      for ( int i = 0; i < xLength; ++i )
-      {
-        monitorCounts->cell<int>(i) = Y[i];
+      try {
+        // Create a column for this monitor
+        const std::string monitorName = monitorWorkspace->getDetector(spec)->getName();
+        auto monitorCounts = outputWorkspace->addColumn("int",monitorName);
+        const IEventList & eventList = monitorWorkspace->getEventList(spec);
+        // Accumulate things in a local vector before transferring to the table workspace
+        std::vector<int> Y(xLength);
+        filterEventList(eventList, minVal, maxVal, log, Y);
+        // Transfer the results to the table
+        for ( int i = 0; i < xLength; ++i )
+        {
+          monitorCounts->cell<int>(i) = Y[i];
+        }
+      } catch (Exception::NotFoundError&) {
+        // ADARA-generated nexus files have sometimes been seen to contain 'phantom' monitors that aren't in the IDF.
+        // This handles that by ignoring those spectra.
       }
     }
   }
@@ -432,7 +437,6 @@ namespace Algorithms
       {
         // Find the value of the log at the time of this event
         const double logValue = log->getSingleValue( pulseTimes[eventIndex] );
-        // TODO: Refactor getBinIndex to use a binary search and allow out-of-range values
         if ( logValue >= XValues.front() && logValue < XValues.back() )
         {
           PARALLEL_ATOMIC
@@ -445,7 +449,7 @@ namespace Algorithms
     }
     PARALLEL_CHECK_INTERUPT_REGION
 
-    // For now, the errors are the sqrt of the counts. TODO: change as part of weighted event handling
+    // The errors are the sqrt of the counts so long as we don't deal with weighted events.
     std::transform( Y.begin(),Y.end(),outputWorkspace->dataE(0).begin(), (double(*)(double)) std::sqrt );
 
     setProperty("OutputWorkspace",outputWorkspace);

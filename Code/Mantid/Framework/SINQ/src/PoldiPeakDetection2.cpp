@@ -19,11 +19,9 @@ wiki page of [[PoldiProjectRun]].
 #include "MantidAPI/TableRow.h"
 #include "MantidAPI/FunctionFactory.h"
 #include "MantidAPI/IPeakFunction.h"
+#include "MantidAPI/ConstraintFactory.h"
 
 #include <boost/shared_ptr.hpp>
-
-#include "../../CurveFitting/inc/MantidCurveFitting/BoundaryConstraint.h"
-
 
 #include <cmath>
 
@@ -163,9 +161,9 @@ void PoldiPeakDetection2::exec()
 		double fwhm = X[ifwhm_max] - X[ifwhm_min+1];
 
 		//determination of the range used for the peak definition
-		size_t ipeak_min = max(0,            imax - int(2.5*(imax-ifwhm_min)));
-		size_t ipeak_max = min(nb_d_channel, imax + int(2.5*(ifwhm_max-imax)));
-		int i_delta_peak = ipeak_max - ipeak_min;
+		size_t ipeak_min = max(0,            imax - int(2.5*static_cast<double>(imax-ifwhm_min)));
+		size_t ipeak_max = min(nb_d_channel, imax + int(2.5*static_cast<double>(ifwhm_max-imax)));
+		size_t i_delta_peak = ipeak_max - ipeak_min;
 
 		// the used wires are removed
 		for(size_t i = ipeak_min; i<ipeak_max; i++) {
@@ -253,13 +251,13 @@ bool PoldiPeakDetection2::doFitGaussianPeak(DataObjects::Workspace2D_sptr dataws
 	// 3. Constraint
 	double centerleftend = center-sigma*0.5;
 	double centerrightend = center+sigma*0.5;
-	CurveFitting::BoundaryConstraint* centerbound =
-			new CurveFitting::BoundaryConstraint(gaussianpeak.get(),"PeakCentre", centerleftend, centerrightend, false);
+	std::ostringstream os;
+	os << centerleftend << " < PeakCentre < " << centerrightend;
+	auto * centerbound = API::ConstraintFactory::Instance().createInitialized(gaussianpeak.get(), os.str(), false);
 	gaussianpeak->addConstraint(centerbound);
 
 	// 4. Fit
-    API::IAlgorithm_sptr fitalg = createChildAlgorithm("Fit", -1, -1, true);
-//	API::IAlgorithm_sptr fitalg = createSubAlgorithm("Fit", -1, -1, true);
+	API::IAlgorithm_sptr fitalg = createChildAlgorithm("Fit", -1, -1, true);
 	fitalg->initialize();
 
 	fitalg->setProperty("Function", boost::dynamic_pointer_cast<API::IFunction>(gaussianpeak));
@@ -312,7 +310,7 @@ int PoldiPeakDetection2::getIndexOfMax(){
 			temp = this->ws_auto_corr->dataY(0)[i];
 			if(temp > vmax){
 				vmax = temp;
-				imax = i;
+				imax = static_cast<int>(i);
 			}
 		}
 	}

@@ -2,17 +2,36 @@
  * This algorithm takes a MDHistoWorkspace and allows to select a slab out of
  * it which is storeed into the result workspace.
  *
- * copyright: do not bother me or use mantid copyright
+ * Original contributor: Mark Koennecke: mark.koennecke@psi.ch
+ * 
+ * Copyright &copy; 2013 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+
+ * This file is part of Mantid.
+
+ * Mantid is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
  *
- * Mark Koennecke, November 2012
+ * Mantid is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+ * File change history is stored at: <https://github.com/mantidproject/mantid>
+ * Code Documentation is available at: <http://doxygen.mantidproject.org>
  */
 #ifndef SLICEMDHISTO_H_
 #define SLICEMDHISTO_H_
 
+#include "MantidSINQ/DllConfig.h"
 #include "MantidAPI/Algorithm.h"
 #include "MantidMDEvents/MDHistoWorkspace.h"
 
-class SliceMDHisto : public Mantid::API::Algorithm
+class MANTID_SINQ_DLL SliceMDHisto : public Mantid::API::Algorithm
 {
 public:
   /// (Empty) Constructor
@@ -37,7 +56,7 @@ private:
   void cutData(Mantid::API::IMDHistoWorkspace_sptr inWS,
 		  Mantid::API::IMDHistoWorkspace_sptr outWS,
 		  Mantid::coord_t *sourceDim, Mantid::coord_t *targetDim,
-		  std::vector<int> start, std::vector<int> end, int dim);
+		  std::vector<int> start, std::vector<int> end, unsigned int dim);
 
   void copyMetaData( Mantid::API::IMDHistoWorkspace_sptr inws,  Mantid::API::IMDHistoWorkspace_sptr outws);
 

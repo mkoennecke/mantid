@@ -19,7 +19,6 @@ wiki page of [[PoldiProjectRun]].
 #include "MantidAPI/FileProperty.h"
 #include <boost/shared_ptr.hpp>
 
-#include "MantidNexus/NexusClasses.h"
 #include <nexus/NeXusFile.hpp>
 #include <nexus/NeXusException.hpp>
 
@@ -48,7 +47,6 @@ using namespace Kernel;
 using namespace API;
 using Geometry::Instrument;
 using namespace::NeXus;
-using namespace Mantid::NeXus;
 
 
 /// Initialisation method.
@@ -128,7 +126,7 @@ void PoldiLoadLog::exec()
 	std::map<std::string,std::string>::const_iterator it;
 	File fin(filename);
 
-	for(it = dictionary.begin(); it != dictionary.end(); it++){
+	for(it = dictionary.begin(); it != dictionary.end(); ++it){
 
 //		g_log.error() << "_Poldi -   dico       " <<  it->first  << " " << it->second << std::endl;
 
@@ -138,11 +136,11 @@ void PoldiLoadLog::exec()
 			(&fin)->openPath(it->second);
 
 			Info inf = (&fin)->getInfo();
-			if(inf.type == CHAR){
+			if(inf.type == ::NeXus::CHAR){
 				std::string data = (&fin)->getStrData();
 				t10 << it->first << it->second << data ;
 				g_log.debug() << "_Poldi -        log     " <<  it->first  << " " << it->second << " "  << data << std::endl;
-			} else if(inf.type == FLOAT32 || inf.type == FLOAT64){
+			} else if(inf.type == ::NeXus::FLOAT32 || inf.type == ::NeXus::FLOAT64){
 				std::vector<double> data;
 				(&fin)->getDataCoerce(data);
 				std::ostringstream s;
@@ -189,7 +187,7 @@ void PoldiLoadLog::exec()
 
 void PoldiLoadLog::loadDictionary(std::string dictFile)
 {
-	std::ifstream in(dictFile, std::ifstream::in);
+	std::ifstream in(dictFile.c_str(), std::ifstream::in);
 	std::string line, key, value;
 
 	while(std::getline(in,line)){

@@ -96,8 +96,13 @@ public:
 
   /// Create a new function
   PropertyHandler* addFunction(const std::string& fnName);
+
   /// Get Composite Function
   boost::shared_ptr<Mantid::API::CompositeFunction> compositeFunction()const{return m_compositeFunction;}
+
+  /// Return the fitting function
+  Mantid::API::IFunction_sptr getFittingFunction() const;
+
   /// Get the default function type
   std::string defaultFunctionType()const;
   /// Set the default function type
@@ -133,6 +138,8 @@ public:
   void setIgnoreInvalidData(bool on);
   /// Get the cost function
   std::string costFunction()const;
+  /// Get the "ConvolveMembers" option
+  bool convolveMembers()const;
 
   /// Get the start X
   double startX()const;
@@ -207,9 +214,10 @@ public:
   /// Create a MatrixWorkspace from a TableWorkspace
   Mantid::API::Workspace_sptr createMatrixFromTableWorkspace()const;
 
+
 public slots:
   virtual void fit(){ doFit(500); }
-  void sequentialFit();
+  virtual void sequentialFit();
   void undoFit();
   void clear();
   void clearBrowser();
@@ -361,6 +369,7 @@ protected:
   QtProperty *m_logValue;
   QtProperty *m_plotDiff;
   QtProperty *m_plotCompositeMembers;
+  QtProperty *m_convolveMembers;
   QtProperty *m_rawData;
   QtProperty *m_xColumn;
   QtProperty *m_yColumn;
