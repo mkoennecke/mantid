@@ -35,11 +35,13 @@ class LoadSINQFile(PythonAlgorithm):
                              "Choose Instrument",direction=Direction.Input)
         self.declareProperty(FileProperty(name="Filename",defaultValue="",
                                           action=FileAction.Load, extensions=[".h5",".hdf"]))
-        self.declareProperty(WorkspaceProperty("OutputWorkspace","",direction=Direction.Output))
+        self.declareProperty("OutputWorkspace","nexus")        
+        dictsearch = os.path.join(config['instrumentDefinition.directory'],"nexusdictionaries")
+
 
     def PyExec(self):
         inst=self.getProperty('Instrument').value
-
+ 
         if inst =="AMOR":
             self.doAmor()
         if inst =="AMORS1":
@@ -70,6 +72,8 @@ class LoadSINQFile(PythonAlgorithm):
             self.doTRICS()
         else: 
             pass
+        wname = self.getProperty('OutputWorkspace').value
+        mantid.simpleapi.RenameWorkspace('ws',OutputWorkspace =wname)
         
     def doAmor(self):
         dicname = dictsearch +"/mantidamor.dic"
@@ -136,7 +140,7 @@ class LoadSINQFile(PythonAlgorithm):
         fname =self.getProperty('Filename').value 
         wname =self.getProperty('OutputWorkspace').value
         ws = mantid.simpleapi.LoadFlexiNexus(fname,dicname,'tmp')
-        exec(wname + '= mantid.simpleapi.SINQTranspose3D(\'tmp\',\'TRICS\')')
+#        exec(wname + '= mantid.simpleapi.SINQTranspose3D(\'tmp\',\'TRICS\')')
         mantid.simpleapi.DeleteWorkspace('tmp')
     def doRITA(self):
         dicname = dictsearch +"/mantidrita.dic"

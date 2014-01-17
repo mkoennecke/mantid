@@ -9,7 +9,7 @@ necessary.
 
 from mantid.api import AlgorithmFactory
 from mantid.api import PythonAlgorithm, WorkspaceFactory, WorkspaceProperty
-from mantid.kernel import Direction, StringListValidator
+from mantid.kernel import Direction, StringListValidator, StringArrayProperty
 import mantid.simpleapi 
 from mantid.simpleapi import mtd
 import math
@@ -25,12 +25,12 @@ class AMORAxis(PythonAlgorithm):
         return 1
 
     def PyInit(self):
-        self.declareProperty(WorkspaceProperty("Workspace", "", Direction.Input))
+        self.declareProperty(StringArrayProperty("Workspaces", values=[], direction=Direction.Input))
         modes=["Wavelength","Q"]
         self.declareProperty("Axis type","Wavelength",
                              StringListValidator(modes),
                              "Choose axis conversion",direction=Direction.Input)
-        self.declareProperty("OutputWorkspace", "", Direction.Input)
+        self.declareProperty("OutputWorkspacePrefix", "", Direction.Input)
         self.declareProperty("CD", -100,"chopper detector distance in m")
         self.declareProperty("Omega", -100,"Sample rotation, two-theta/2")
         self.declareProperty("ApplyTOFOffset", False,
@@ -40,43 +40,57 @@ class AMORAxis(PythonAlgorithm):
 
     def PyExec(self):
         targetmode = self.getProperty('Axis type').value
-        ws = self.getProperty('Workspace').value
-        om = self.getProperty('Omega').value
-        if om < -90:
-            try:
-                p = ws.run().getProperty('detectors2t').value
-                om = p[0]/2.
-            except:
-                raise Exception('File value for omega not available')
-        CD = self.getProperty('CD').value
-        if CD < -90:
-            try:
-                p = ws.run().getProperty('chopper_detector_distance').value
-                CD = p[0]/1000.
-            except:
-                raise Exception('File value for CD not available')
-        tofoffset = 0
+        wsnamelist = self.getProperty('Workspaces').value
+        prefix = self.getProperty('OutputWorkspacePrefix').value
         override = self.getProperty('ApplyTOFOffset').value
+        tofoffset = 0
         if override:
             tofoffset = self.getProperty('TOFOffset').value
+        self.log().notice('wsnamelist = ' + str(wsnamelist))
 
-        self.log().notice('Running AMORAxis with chopper detector distance = ' 
-                          + str(CD) + ' and om = ' + str(om))
+        for name in wsnamelist:
+            ws = mtd[name]
+            om = self.getProperty('Omega').value
+            CD = self.getProperty('CD').value
+            if om < -90:
+                try:
+                    p = ws.run().getProperty('detectors2t').value
+                    om = p[0]/2.
+                except:
+                    raise Exception('File value for omega not available')
+            if CD < -90:
+                try:
+                    p = ws.run().getProperty('chopper_detector_distance').value
+                    CD = p[0]/1000.
+                except:
+                    raise Exception('File value for CD not available')
 
-        wsname = self.getProperty('OutputWorkspace').value
-        exec(wsname + '= mantid.simpleapi.CloneWorkspace(ws)')
-        out = mtd[wsname]
+            self.log().notice('Running AMORAxis with chopper detector distance = ' 
+                          + str(CD) + ' and om = ' + str(om) + ' for ' + name)
+            wsname = prefix + name
+            exec(wsname + '= mantid.simpleapi.CloneWorkspace(ws)')
+            out = mtd[wsname]
 
-        axis = out.dataX(0)
-        end = len(axis)
-        if axis[end-1] - axis[0] < 100:
-            raise Exception('Axis does not appear to be TOF')
-        if targetmode == 'Wavelength':
-            self.TOFToLambda(axis,tofoffset,CD)
-        else:
-            self.TOFToLambda(axis,tofoffset,CD)
-            self.LambdaToQ(axis,om)
-            self.invertData(out)
+            axis = out.dataX(0)
+            tof = ws.run().getProperty('tof').value
+            end = len(axis)
+            """
+                    Replace TOF with separatly loaded values. This, because loading area 
+                    detector data will mess up the TOF array to equidistant steps which just is not 
+                    right at AMOR
+            """
+            for i in range(end):
+                axis[i] = tof[i]
+
+            if axis[end-1] - axis[0] < 100:
+                raise Exception('Axis does not appear to be TOF')
+            if targetmode == 'Wavelength':
+                self.TOFToLambda(axis,tofoffset,CD)
+            else:
+                self.TOFToLambda(axis,tofoffset,CD)
+                self.LambdaToQ(axis,om)
+                self.invertData(out)
+            mantid.simpleapi.ConvertToHistogram(InputWorkspace=out,OutputWorkspace=wsname)
 
 
     def TOFToLambda(self, tofdata, tofoffset,CD):

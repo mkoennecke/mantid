@@ -7,8 +7,9 @@ Appropriate scaling according to monitor counts is applied.
 *WIKI*"""
 
 from mantid.api import AlgorithmFactory
-from mantid.api import PythonAlgorithm, WorkspaceFactory, FileProperty, FileAction, WorkspaceProperty
-from mantid.kernel import Direction, StringListValidator, ConfigServiceImpl, IntArrayBoundedValidator, IntArrayProperty
+from mantid.api import PythonAlgorithm, WorkspaceFactory, FileProperty, FileAction, \
+    WorkspaceProperty
+from mantid.kernel import Direction, StringListValidator, ConfigServiceImpl, IntArrayBoundedValidator, IntArrayProperty, StringArrayProperty
 import mantid.simpleapi 
 from mantid.simpleapi import mtd
 
@@ -23,31 +24,36 @@ class AMORNorm(PythonAlgorithm):
         return 1
 
     def PyInit(self):
-        self.declareProperty(WorkspaceProperty("DataWorkspace", "", Direction.Input))
+        self.declareProperty(StringArrayProperty("DataWorkspaces",values=[],direction=Direction.Input))
         self.declareProperty(WorkspaceProperty("NormWorkspace", "", Direction.Input))
-        self.declareProperty("OutputWorkspace", "", Direction.Input)
+        self.declareProperty("OutputWorkspacePrefix", "", Direction.Input)
         self.setWikiSummary('Normalize AMOR data')
 
 
     def PyExec(self):
-        wsdata = self.getProperty("DataWorkspace").value
+        wsdata = self.getProperty("DataWorkspaces").value
         normdata = self.getProperty("NormWorkspace").value
+        prefix = self.getProperty("OutputWorkspacePrefix").value
 
-        try:
-            datam1 = wsdata.run().getProperty('Monitor1').value
-            normm1 = normdata.run().getProperty('Monitor1').value
-        except:
-            """
-              For generalisation, try to find the monitor elsewhere, like in the instrument 
-              data or such
-            """
-            self.log().error('Failed to find monitor values in Workspace')
-            raise Exception('No monitor data')
-                            
-        scale = datam1[0]/normm1[0]
-        
-        outname = self.getProperty('OutputWorkspace').value
-        exec(outname + '= wsdata/(scale*normdata)')
+        wslist = []
+        for name in wsdata:
+            wslist.append(mtd[name])
+
+        for ws in wslist:
+            try:
+                datam1 = ws.run().getProperty('Monitor1').value
+                normm1 = normdata.run().getProperty('Monitor1').value
+            except:
+                """
+                For generalisation, try to find the monitor elsewhere, like in the instrument 
+                data or such
+                """
+                self.log().error('Failed to find monitor values in Workspace')
+                raise Exception('No monitor data')
+                
+            scale = datam1[0]/normm1[0]
+            outname = prefix + ws.getName()
+            exec(outname + '= ws/(scale*normdata)')
 
 
 

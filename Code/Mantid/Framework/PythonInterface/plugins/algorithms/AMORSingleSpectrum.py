@@ -27,7 +27,7 @@ class AMORSingleSpectrum(PythonAlgorithm):
         greaterThanZero = IntArrayBoundedValidator()
         greaterThanZero.setLower(0)
         self.declareProperty(IntArrayProperty("Numors",values=[0], \
-                                                  validator=greaterThanZero), doc="Run numbers tp process")
+                                                  validator=greaterThanZero), doc="Run numbers to process")
         dets=["Single1","Single2"]
         self.declareProperty("Detector","Single1",
                              StringListValidator(dets),
