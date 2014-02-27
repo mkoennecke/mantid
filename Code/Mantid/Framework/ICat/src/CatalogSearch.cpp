@@ -25,22 +25,19 @@ namespace Mantid
 {
   namespace ICat
   {
-    using namespace Kernel;
-    using namespace API;
-
     DECLARE_ALGORITHM(CatalogSearch)
 
     /// Sets documentation strings for this algorithm
     void CatalogSearch::initDocs()
     {
-      this->setWikiSummary("Searches investigations");
-      this->setOptionalMessage("Searches investigations");
+      this->setWikiSummary("Searches investigations in the catalog using the properties set.");
+      this->setOptionalMessage("Searches investigations in the catalog using the properties set.");
     }
 
     /// Initialisation method.
     void CatalogSearch::init()
     {
-      auto isDate = boost::make_shared<DateValidator>();
+      auto isDate = boost::make_shared<Kernel::DateValidator>();
 
       // Properties related to the search fields the user will fill in to improve search.
       declareProperty("InvestigationName", "", "The name of the investigation to search.");
@@ -49,6 +46,7 @@ namespace Mantid
       declareProperty("StartDate","", isDate, "The start date for the range of investigations to be searched.The format is DD/MM/YYYY.");
       declareProperty("EndDate","", isDate, "The end date for the range of investigations to be searched.The format is DD/MM/YYYY.");
       declareProperty("Keywords","","An option to search investigations data");
+      declareProperty("InvestigationId","","The ID of the investigation.");
       declareProperty("InvestigatorSurname", "", "The surname of the investigator associated to the investigation.");
       declareProperty("SampleName", "", "The name of the sample used in the investigation to search.");
       declareProperty("DataFileName","", "The name of the data file to search.");
@@ -60,9 +58,9 @@ namespace Mantid
       declareProperty<int>("Limit", 0, "");
       declareProperty<int>("Offset",0, "");
 
-      declareProperty(new WorkspaceProperty<API::ITableWorkspace> ("OutputWorkspace", "", Direction::Output),
+      declareProperty(new API::WorkspaceProperty<API::ITableWorkspace> ("OutputWorkspace", "", Kernel::Direction::Output),
           "The name of the workspace that will be created to store the ICat investigations search result.");
-      declareProperty<int64_t>("NumberOfSearchResults", 0, "", Direction::Output);
+      declareProperty<int64_t>("NumberOfSearchResults", 0, "", Kernel::Direction::Output);
     }
 
     /// Execution method.
@@ -73,7 +71,7 @@ namespace Mantid
       // Get the user input search terms to search for.
       getInputProperties(params);
       // Create output workspace.
-      auto workspace = WorkspaceFactory::Instance().createTable("TableWorkspace");
+      auto workspace = API::WorkspaceFactory::Instance().createTable("TableWorkspace");
       // Create a catalog since we use it twice on execution.
       API::ICatalog_sptr catalog = CatalogAlgorithmHelper().createCatalog();
       // Search for investigations with user specific search inputs.
@@ -102,6 +100,7 @@ namespace Mantid
       params.setStartDate(params.getTimevalue(getPropertyValue("StartDate")));
       params.setEndDate(params.getTimevalue(getPropertyValue("EndDate")));
       params.setKeywords(getPropertyValue("Keywords"));
+      params.setInvestigationId(getPropertyValue("InvestigationId"));
       params.setInvestigationName(getPropertyValue("InvestigationName"));
       params.setInvestigatorSurName(getPropertyValue("InvestigatorSurname"));
       params.setSampleName(getPropertyValue("SampleName"));

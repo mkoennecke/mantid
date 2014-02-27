@@ -3,6 +3,7 @@
 #include "MantidKernel/ConfigService.h"
 #include "MantidKernel/FacilityInfo.h"
 #include "MantidQtMantidWidgets/CatalogSearch.h"
+#include <Poco/ActiveResult.h>
 #include <Poco/Path.h>
 
 #include <QDesktopServices>
@@ -439,6 +440,7 @@ namespace MantidQt
       }
       searchFieldInput.insert(std::pair<std::string, std::string>("InvestigatorSurname", m_icatUiForm.InvestigatorSurname->text().toStdString()));
       searchFieldInput.insert(std::pair<std::string, std::string>("DataFileName", m_icatUiForm.DataFileName->text().toStdString()));
+      searchFieldInput.insert(std::pair<std::string, std::string>("InvestigationId", m_icatUiForm.InvestigationId->text().toStdString()));
 
       // Right side of form.
       if (m_icatUiForm.StartDate->text().size() > 2)
@@ -652,6 +654,7 @@ namespace MantidQt
       m_icatUiForm.InvestigationName_err->setVisible(false);
       m_icatUiForm.Instrument_err->setVisible(false);
       m_icatUiForm.RunRange_err->setVisible(false);
+      m_icatUiForm.InvestigationId_err->setVisible(false);
       m_icatUiForm.InvestigatorSurname_err->setVisible(false);
       m_icatUiForm.InvestigationAbstract_err->setVisible(false);
       // Right side of form.
@@ -725,9 +728,6 @@ namespace MantidQt
 
       // Add data from the workspace to the results table.
       populateTable(resultsTable, workspace);
-
-      // Hide the "Investigation id" column (It's used by the CatalogGetDataFiles algorithm).
-      resultsTable->setColumnHidden(0, true);
 
       // Show only a portion of the title as they can be quite long.
       resultsTable->setColumnWidth(headerIndexByName(resultsTable, "Title"), 210);
@@ -1003,35 +1003,6 @@ namespace MantidQt
     ///////////////////////////////////////////////////////////////////////////////
 
     /**
-     * If the user has checked "check all", then check and select ALL rows. Otherwise, deselect all.
-     * @param toggled :: True if user has checked the checkbox in the dataFile table header.
-     */
-    void CatalogSearch::selectAllDataFiles(const bool &toggled)
-    {
-      QTableWidget* table = m_icatUiForm.dataFileResultsTbl;
-
-      for(int col = 0 ; col < table->columnCount(); col++)
-      {
-        for(int row = 0; row < table->rowCount(); ++row)
-        {
-          QTableWidgetItem *item  = table->item(row, col);
-
-          if (toggled)
-          {
-            table->item(row, 0)->setCheckState(Qt::Checked);
-            item->setSelected(true);
-          }
-          else
-          {
-            table->item(row, 0)->setCheckState(Qt::Unchecked);
-            item->setSelected(false);
-          }
-        }
-      }
-      enableDownloadButtons();
-    }
-
-    /**
      * Enables the download & load button if user has selected a data file to download. Otherwise, disables them.
      */
     void CatalogSearch::enableDownloadButtons()
@@ -1113,6 +1084,7 @@ namespace MantidQt
       // For all the files downloaded (or in archive) we want to load them.
       for (unsigned i = 0; i < filePaths.size(); i++)
       {
+        if (filePaths.at(i).empty()) return;
         // Set the filename (path) of the algorithm to load from.
         loadAlgorithm->setPropertyValue("Filename", filePaths.at(i));
         // Sets the output workspace to be the name of the file.
@@ -1124,6 +1096,31 @@ namespace MantidQt
           QCoreApplication::processEvents();
         }
       }
+    }
+
+    /**
+     * If the user has checked "check all", then check and select ALL rows. Otherwise, deselect all.
+     * @param toggled :: True if user has checked the checkbox in the dataFile table header.
+     */
+    void CatalogSearch::selectAllDataFiles(const bool &toggled)
+    {
+      QTableWidget* table = m_icatUiForm.dataFileResultsTbl;
+
+      // Used to gain easier access to table selection.
+      QItemSelectionModel *selectionModel = table->selectionModel();
+
+      // Select or deselect all rows depending on toggle.
+      if (toggled) table->selectAll();
+      else selectionModel->select(selectionModel->selection(), QItemSelectionModel::Deselect);
+
+      // Check/un-check the checkboxes of each row.
+      for (int row = 0; row < table->rowCount(); ++row)
+      {
+        if (toggled) table->item(row, 0)->setCheckState(Qt::Checked);
+        else table->item(row, 0)->setCheckState(Qt::Unchecked);
+      }
+
+      enableDownloadButtons();
     }
 
     /**
