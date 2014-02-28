@@ -649,7 +649,7 @@ namespace API
     else if(emode == Kernel::DeltaEMode::Indirect)
     {
       if(!detector) throw std::runtime_error("ExperimentInfo::getEFixed - Indirect mode efixed requested without a valid detector.");
-      Parameter_sptr par = constInstrumentParameters().getRecursive(detector.get(),"Efixed");
+      Parameter_sptr par = constInstrumentParameters().getRecursive(detector.get(),"Efixed","");
       if (par)
       {
         return par->value<double>();

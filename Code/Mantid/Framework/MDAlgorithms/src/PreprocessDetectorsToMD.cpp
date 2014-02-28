@@ -368,7 +368,7 @@ namespace Mantid
         {
           try
           {
-            Geometry::Parameter_sptr par = pmap.getRecursive(spDet.get(),"eFixed");
+            Geometry::Parameter_sptr par = pmap.getRecursive(spDet.get(),"eFixed","");
             if (par) Efi = par->value<double>();
           }
           catch(std::runtime_error&)

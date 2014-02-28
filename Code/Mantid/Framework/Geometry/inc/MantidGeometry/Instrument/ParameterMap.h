@@ -192,6 +192,7 @@ namespace Geometry
                                             const std::string & type = "")const;
     boost::shared_ptr<Parameter> getRecursive(const IComponent* comp, const char  *name,
                                               const char *type = "")const;
+    boost::shared_ptr<Parameter> getRecursive(const IComponent* comp, const char  *name)const;
     /// Use get() recursively to see if can find param in all parents of comp and given type (const char type)
     /// Looks recursively upwards in the component tree for the first instance of a parameter with a specified type.
     boost::shared_ptr<Parameter> getRecursiveByType(const IComponent* comp, const std::string& type) const;

@@ -391,7 +391,7 @@ void MatrixWSDataSource::GetInfoList( double x,
         try
         {
           const ParameterMap& pmap = mat_ws->constInstrumentParameters();
-          Parameter_sptr par = pmap.getRecursive(det.get(),"Efixed");
+          Parameter_sptr par = pmap.getRecursive(det.get(),"Efixed","");
           if (par)
           {
             efixed = par->value<double>();

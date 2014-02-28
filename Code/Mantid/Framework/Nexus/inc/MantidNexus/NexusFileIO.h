@@ -428,9 +428,8 @@ namespace Mantid
       std::string interpret_as = "A vector of " + typeName;
 
       // Write general attributes
-      NXputattr(fileID, "units",  units.c_str(), static_cast<int>(units.size()), NX_CHAR);
-      NXputattr(fileID, "interpret_as",  interpret_as.c_str(), static_cast<int>(interpret_as.size()), NX_CHAR);
-
+      NXputattr(fileID, "units",  (void *)units.c_str(), static_cast<int>(units.size()), NX_CHAR);
+      NXputattr(fileID, "interpret_as",  (void *)interpret_as.c_str(), static_cast<int>(interpret_as.size()), NX_CHAR);
       NXclosedata(fileID);
     }
 

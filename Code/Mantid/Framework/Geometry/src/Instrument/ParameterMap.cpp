@@ -664,7 +664,6 @@ namespace Mantid
       }
       return result;
     }
-    /*
     Parameter_sptr ParameterMap::getRecursive(const IComponent* comp,const char *cname) const
     {
       const std::string type("");
@@ -683,7 +682,6 @@ namespace Mantid
       }
       return result;
     }
-    */
     /**  
      * Return the value of a parameter as a string
      * @param comp :: Component to which parameter is related

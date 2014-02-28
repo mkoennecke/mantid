@@ -211,6 +211,13 @@ void Property::filterByTime(const Kernel::DateAndTime &start, const Kernel::Date
   //Do nothing in general
   return;
 }
+void Property::filterByTime(Kernel::DateAndTime &start, Kernel::DateAndTime &stop)
+{
+  UNUSED_ARG(start);
+  UNUSED_ARG(stop);
+  //Do nothing in general
+  return;
+}
 
 
 //-----------------------------------------------------------------------------------------------

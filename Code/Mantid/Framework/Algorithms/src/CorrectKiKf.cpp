@@ -147,7 +147,7 @@ void CorrectKiKf::exec()
         {
             try
             {
-              Parameter_sptr par = pmap.getRecursive(det.get(),"Efixed");
+              Parameter_sptr par = pmap.getRecursive(det.get(),"Efixed","");
               if (par)
               {
                 Efi = par->value<double>();
@@ -287,7 +287,7 @@ void CorrectKiKf::execEvent()
         {
             try
             {
-              Parameter_sptr par = pmap.getRecursive(det.get(),"Efixed");
+              Parameter_sptr par = pmap.getRecursive(det.get(),"Efixed","");
               if (par)
               {
                 Efi = par->value<double>();

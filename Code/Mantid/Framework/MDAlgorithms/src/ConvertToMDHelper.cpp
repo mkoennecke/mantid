@@ -215,7 +215,7 @@ namespace MDAlgorithms
                     try
                     {
                       spDet= ws->getDetector(i);
-                      Geometry::Parameter_sptr par = pmap.getRecursive(spDet.get(),"eFixed");
+                      Geometry::Parameter_sptr par = pmap.getRecursive(spDet.get(),"eFixed","");
                       if(par) Eftemp=par->value<double>();
                       if(Eftemp>Ef) Ef=Eftemp;
                     }

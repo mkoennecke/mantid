@@ -112,7 +112,7 @@ namespace Algorithms
         try
         {
           const Mantid::Geometry::ParameterMap& pmap = runWS->constInstrumentParameters();
-          Mantid::Geometry::Parameter_sptr par = pmap.getRecursive(det.get(),"Efixed");
+          Mantid::Geometry::Parameter_sptr par = pmap.getRecursive(det.get(),"Efixed","");
           if (par) 
           {
             efixed = par->value<double>();

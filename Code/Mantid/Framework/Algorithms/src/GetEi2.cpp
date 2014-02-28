@@ -153,7 +153,7 @@ double GetEi2::calculateEi(const double initial_guess)
   Instrument_const_sptr instrument=m_input_ws->getInstrument();
 
   //If we have a t0 formula, calculate t0 and return the initial guess
-  Parameter_sptr par = pmap.getRecursive(instrument->getChild(0).get(),"t0_formula");
+  Parameter_sptr par = pmap.getRecursive(instrument->getChild(0).get(),"t0_formula","");
   if (par)
   {
       std::string formula=par->asString();
@@ -186,7 +186,7 @@ double GetEi2::calculateEi(const double initial_guess)
 
   if (mon1==EMPTY_INT())
   {
-      par = pmap.getRecursive(instrument->getChild(0).get(),"ei-mon1-spec");
+    par = pmap.getRecursive(instrument->getChild(0).get(),"ei-mon1-spec","");
       if (par)
       {
         mon1=boost::lexical_cast<specid_t>(par->asString());
@@ -194,7 +194,7 @@ double GetEi2::calculateEi(const double initial_guess)
   }
   if (mon2==EMPTY_INT())
   {
-      par = pmap.getRecursive(instrument->getChild(0).get(),"ei-mon2-spec");
+    par = pmap.getRecursive(instrument->getChild(0).get(),"ei-mon2-spec","");
       if (par)
       {
         mon2=boost::lexical_cast<specid_t>(par->asString());
