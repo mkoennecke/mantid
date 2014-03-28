@@ -11,6 +11,7 @@ set ( SRC_FILES
     src/MDHistoToWorkspace2D.cpp
     src/ProjectMD.cpp
     src/SINQHMListener.cpp
+    src/SINQCCDListener.cpp
     src/SliceMDHisto.cpp
     src/SINQTranspose3D.cpp
 )
@@ -29,6 +30,7 @@ set ( INC_FILES
     inc/MantidSINQ/MDHistoToWorkspace2D.h
     inc/MantidSINQ/ProjectMD.h
     inc/MantidSINQ/SINQHMListener.h
+    inc/MantidSINQ/SINQCCDListener.h
     inc/MantidSINQ/SliceMDHisto.h
     inc/MantidSINQ/SINQTranspose3D.h
 )

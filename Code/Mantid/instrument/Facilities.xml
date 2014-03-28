@@ -475,6 +475,11 @@
 
 <facility name="SINQ" FileExtensions=".hdf">
 
+  <instrument name="BOA">
+    <technique>Neutron Imaging</technique>
+    <livedata address="localhost:6060" listener="SINQCCDListener" />
+  </instrument>
+
   <instrument name="HRPT">
     <technique>Neutron Diffraction</technique>
   </instrument>
