@@ -6,6 +6,8 @@
  */
 #include "MantidSINQ/SINQCCDListener.h"
 #include "MantidAPI/LiveListenerFactory.h"
+#include "MantidAPI/AlgorithmFactory.h"
+#include "MantidAPI/AlgorithmManager.h"
 #include "MantidMDEvents/MDHistoWorkspace.h"
 #include <Poco/Net/HTTPRequest.h>
 #include <Poco/Net/HTTPResponse.h>
@@ -17,6 +19,8 @@
 #include <Poco/DOM/Document.h>
 #include <Poco/DOM/NodeList.h>
 #include <Poco/Timespan.h>
+#include <Poco/ActiveResult.h>
+#include <MantidSINQ/WaitCancel.h>
 
 using namespace Mantid::API;
 using namespace Mantid::Geometry;
@@ -24,6 +28,7 @@ using namespace Mantid;
 using namespace Mantid::MDEvents;
 using namespace Poco::Net;
 using namespace Poco::XML;
+using namespace Mantid::SINQ;
 
 DECLARE_LISTENER(SINQCCDListener)
 
@@ -34,6 +39,23 @@ SINQCCDListener::SINQCCDListener() :ILiveListener(), httpcon(), response()
 	connected = false;
 	imageNo = -1;
 	imageCount = 0;
+	std::vector<IAlgorithm_const_sptr> wc = AlgorithmManager::Instance().runningInstancesOf("WaitCancel");
+	if(wc.empty()){
+		waitCancels = API::AlgorithmFactory::Instance().create("WaitCancel",-1);
+	    WaitCancel * waitCancel = dynamic_cast<WaitCancel*>(waitCancels.get());
+
+		if ( !waitCancel ) return;
+		waitCancel->initialize();
+		try
+		{
+			waitCancel->executeAsync();
+		}
+		catch (std::runtime_error&)
+		{
+			g_log.information("Unable to successfully run WaitCancel Child Algorithm");
+		}
+	}
+
 }
 
 SINQCCDListener::~SINQCCDListener()
@@ -45,17 +67,18 @@ bool SINQCCDListener::connect(const Poco::Net::SocketAddress& address)
 {
 	Poco::Timespan ts(0,6,0,0,0);
 
-    std::string host = address.toString();
-    std::string::size_type i = host.find(':');
-    if ( i != std::string::npos )
-    {
-      host.erase( i );
-    }
-    httpcon.setHost(host);
-    httpcon.setPort(address.port());
-    httpcon.setKeepAlive(true);
-    httpcon.setTimeout(ts);
-    connected = true;
+	std::string host = address.toString();
+	std::string::size_type i = host.find(':');
+	if ( i != std::string::npos )
+	{
+		host.erase( i );
+	}
+	httpcon.setHost(host);
+	httpcon.setPort(address.port());
+	httpcon.setKeepAlive(true);
+	httpcon.setTimeout(ts);
+	connected = true;
+
 	return true;
 }
 
@@ -70,14 +93,42 @@ ILiveListener::RunStatus SINQCCDListener::runStatus()
 	return Running;
 
 }
+unsigned int SINQCCDListener::getImageCount()
+{
+	HTTPRequest req(HTTPRequest::HTTP_GET,"/ccd/imagecount", HTTPMessage::HTTP_1_1);
+	httpcon.reset();
+	req.setKeepAlive(true);
+	HTTPBasicCredentials cred("spy","007");
+	cred.authenticate(req);
+	httpcon.sendRequest(req);
+	std::istream& istr = httpcon.receiveResponse(response);
+	if(response.getStatus() != HTTPResponse::HTTP_OK){
+		printf("Failed reading CCD with %s\n", response.getReason().c_str());
+		throw  std::runtime_error("Failed to get /ccd/imagecount with reason " + response.getReason());
+	}
+	std::string sCount;
+	istr >> sCount;
+
+	return (unsigned int)atoi(sCount.c_str());
+}
 
 boost::shared_ptr<Workspace> SINQCCDListener::extractData()
 {
 	int dim[2], imNo = -2;
 	char *dimNames[] = {"x","y"};
 	char request[132];
+	Poco::Timespan polli(0,0,0,0,10);
 
 	//printf("Executing SINQCCDListener::extractData with %d\n", imageCount);
+
+	while(getImageCount() == imageCount){
+		std::vector<IAlgorithm_const_sptr> wc = AlgorithmManager::Instance().runningInstancesOf("WaitCancel");
+		if(wc.empty()){
+			httpcon.reset();
+			throw std::runtime_error("SINQCCDListener Execution interrupted");
+		}
+		usleep(50);
+	}
 
 	snprintf(request,sizeof(request),"/ccd/waitdata?imageCount=%d", imageCount);
 	HTTPRequest req(HTTPRequest::HTTP_GET,request, HTTPMessage::HTTP_1_1);
@@ -87,7 +138,19 @@ boost::shared_ptr<Workspace> SINQCCDListener::extractData()
 	cred.authenticate(req);
 	httpcon.sendRequest(req);
 
-	//printf("In Loop: SINQCCDListener::extractData trying to read response\n");
+	printf("SINQCCDListener::extractData waiting for response\n");
+
+/*
+ * This does not work. According to the docs it should.....
+	while(!httpcon.socket().poll(polli,Socket::SELECT_READ)){
+		std::vector<IAlgorithm_const_sptr> wc = AlgorithmManager::Instance().runningInstancesOf("WaitCancel");
+		if(wc.empty()){
+			httpcon.reset();
+			throw std::runtime_error("SINQCCDListener Execution interrupted");
+		}
+		usleep(50);
+	}
+*/
 
 	std::istream& istr = httpcon.receiveResponse(response);
 	if(response.getStatus() != HTTPResponse::HTTP_OK){
@@ -95,7 +158,7 @@ boost::shared_ptr<Workspace> SINQCCDListener::extractData()
 		throw  std::runtime_error("Failed to get /ccd/waitdata with reason " + response.getReason());
 	}
 
-	//printf("In Loop: SINQCCDListener::extractData after reading HTTP\n");
+	printf("In Loop: SINQCCDListener::extractData after reading HTTP\n");
 
 	std::string ImageDim = response.get("ImageDim");
 	unsigned pos = ImageDim.find("x");

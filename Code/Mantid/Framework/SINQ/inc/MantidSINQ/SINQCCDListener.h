@@ -38,6 +38,7 @@
 #include "MantidGeometry/MDGeometry/MDTypes.h"
 #include <Poco/Net/HTTPResponse.h>
 #include <Poco/Net/HTTPClientSession.h>
+#include "MantidAPI/Algorithm.h"
 
 using namespace Mantid;
 
@@ -72,8 +73,11 @@ private:
      */
     unsigned int imageCount;
 
+    unsigned int getImageCount();
+
     static Kernel::Logger& g_log;
 
+    Mantid::API::IAlgorithm_sptr waitCancels;
 };
 
 #endif /* SINQCCDLISTENER_H_ */

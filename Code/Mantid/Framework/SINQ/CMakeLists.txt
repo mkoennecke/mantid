@@ -15,6 +15,7 @@ set ( SRC_FILES
 	src/SINQHMListener.cpp
 	src/SINQTranspose3D.cpp
 	src/SliceMDHisto.cpp
+	src/WaitCancel.cpp
 )
 
 set ( INC_FILES
@@ -35,6 +36,7 @@ set ( INC_FILES
 	inc/MantidSINQ/SINQHMListener.h
 	inc/MantidSINQ/SINQTranspose3D.h
 	inc/MantidSINQ/SliceMDHisto.h
+	inc/MantidSINQ/WaitCancel.h
 )
 
 set ( TEST_FILES
@@ -44,6 +46,7 @@ set ( TEST_FILES
 	MDHistoToWorkspace2DTest.h
 	ProjectMDTest.h
 	SliceMDHistoTest.h
+	WaitCancelTest.h
 )
 
 
