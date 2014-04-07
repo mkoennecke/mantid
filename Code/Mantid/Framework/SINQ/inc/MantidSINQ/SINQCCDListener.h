@@ -77,7 +77,6 @@ private:
 
     static Kernel::Logger& g_log;
 
-    Mantid::API::IAlgorithm_sptr waitCancels;
 };
 
 #endif /* SINQCCDLISTENER_H_ */

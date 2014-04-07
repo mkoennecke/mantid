@@ -39,9 +39,11 @@ SINQCCDListener::SINQCCDListener() :ILiveListener(), httpcon(), response()
 	connected = false;
 	imageNo = -1;
 	imageCount = 0;
+    Mantid::API::IAlgorithm_sptr waitCancels;
+
 	std::vector<IAlgorithm_const_sptr> wc = AlgorithmManager::Instance().runningInstancesOf("WaitCancel");
 	if(wc.empty()){
-		waitCancels = API::AlgorithmFactory::Instance().create("WaitCancel",-1);
+		waitCancels = API::AlgorithmManager::Instance().create("WaitCancel",-1,false);
 	    WaitCancel * waitCancel = dynamic_cast<WaitCancel*>(waitCancels.get());
 
 		if ( !waitCancel ) return;
