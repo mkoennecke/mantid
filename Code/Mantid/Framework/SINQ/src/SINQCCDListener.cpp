@@ -121,7 +121,7 @@ boost::shared_ptr<Workspace> SINQCCDListener::extractData()
 	char request[132];
 	Poco::Timespan polli(0,0,0,0,10);
 
-	//printf("Executing SINQCCDListener::extractData with %d\n", imageCount);
+	printf("Executing SINQCCDListener::extractData with %d\n", imageCount);
 
 	while(getImageCount() == imageCount){
 		std::vector<IAlgorithm_const_sptr> wc = AlgorithmManager::Instance().runningInstancesOf("WaitCancel");
@@ -131,6 +131,7 @@ boost::shared_ptr<Workspace> SINQCCDListener::extractData()
 		}
 		usleep(50);
 	}
+	printf("Detected new image %d versus %d\n", imageCount, getImageCount());
 
 	snprintf(request,sizeof(request),"/ccd/waitdata?imageCount=%d", imageCount);
 	HTTPRequest req(HTTPRequest::HTTP_GET,request, HTTPMessage::HTTP_1_1);
@@ -141,18 +142,6 @@ boost::shared_ptr<Workspace> SINQCCDListener::extractData()
 	httpcon.sendRequest(req);
 
 	printf("SINQCCDListener::extractData waiting for response\n");
-
-/*
- * This does not work. According to the docs it should.....
-	while(!httpcon.socket().poll(polli,Socket::SELECT_READ)){
-		std::vector<IAlgorithm_const_sptr> wc = AlgorithmManager::Instance().runningInstancesOf("WaitCancel");
-		if(wc.empty()){
-			httpcon.reset();
-			throw std::runtime_error("SINQCCDListener Execution interrupted");
-		}
-		usleep(50);
-	}
-*/
 
 	std::istream& istr = httpcon.receiveResponse(response);
 	if(response.getStatus() != HTTPResponse::HTTP_OK){
@@ -192,7 +181,7 @@ boost::shared_ptr<Workspace> SINQCCDListener::extractData()
 		ws->setErrorSquaredAt(i,signal_t(data[i]));
 	}
 
-	//printf("In Loop: SINQCCDListener::extractData after reading data\n");
+	printf("In Loop: SINQCCDListener::extractData after reading data\n");
 
 	std::string ImageNo = response.get("ImageCount");
 	imageCount = atoi(ImageNo.c_str());
@@ -204,7 +193,8 @@ boost::shared_ptr<Workspace> SINQCCDListener::extractData()
 	ws->getExperimentInfo(0)->mutableRun().addProperty("Image-No",ImageNo, true);
 	ws->setTitle(std::string("Image-NO: ") + ImageNo);
 
-	g_log.information() << "Loaded SINQ CCD Live Image No " << imNo << std::endl;
+	g_log.information() << "Loaded SINQ CCD Live Image No " << imageNo << " imageCount " \
+			    << imageCount << std::endl;
 
 	return ws;
 

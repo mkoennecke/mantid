@@ -477,7 +477,12 @@
 
   <instrument name="BOA">
     <technique>Neutron Imaging</technique>
-    <livedata address="localhost:6060" listener="SINQCCDListener" />
+    <livedata address="boaccd:8080" listener="SINQCCDListener" />
+  </instrument>
+
+  <instrument name="BOAE">
+    <technique>Neutron Imaging</technique>
+    <livedata address="129.129.92.148:80" listener="SINQHMListener" />
   </instrument>
 
   <instrument name="HRPT">

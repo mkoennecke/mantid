@@ -6,7 +6,7 @@ It thereby renames it with a consecutive number. This is meant to
 work together with a LiveDataListener which delivers new data at each 
 point of a scan. This algorithm collects them into a group.
 
-In order for the scan Replace or New Group options to work, this alogorithm
+In order for the scan Replace or New Group options to work, this algorithm
 expects a workspace title of the form Image-NO: number. If number = 0, 
 the requested processing is triggered.
 
