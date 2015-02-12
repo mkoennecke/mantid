@@ -67,7 +67,7 @@ SINQCCDListener::~SINQCCDListener()
 
 bool SINQCCDListener::connect(const Poco::Net::SocketAddress& address)
 {
-	Poco::Timespan ts(0,6,0,0,0);
+	Poco::Timespan ts(0,0,30,0,0);
 
 	std::string host = address.toString();
 	std::string::size_type i = host.find(':');
@@ -78,6 +78,7 @@ bool SINQCCDListener::connect(const Poco::Net::SocketAddress& address)
 	httpcon.setHost(host);
 	httpcon.setPort(address.port());
 	httpcon.setKeepAlive(true);
+	httpcon.setKeepAliveTimeout(ts);
 	httpcon.setTimeout(ts);
 	connected = true;
 
@@ -98,10 +99,10 @@ ILiveListener::RunStatus SINQCCDListener::runStatus()
 unsigned int SINQCCDListener::getImageCount()
 {
 	HTTPRequest req(HTTPRequest::HTTP_GET,"/ccd/imagecount", HTTPMessage::HTTP_1_1);
-	httpcon.reset();
 	req.setKeepAlive(true);
 	HTTPBasicCredentials cred("spy","007");
 	cred.authenticate(req);
+	httpcon.reset();
 	httpcon.sendRequest(req);
 	std::istream& istr = httpcon.receiveResponse(response);
 	if(response.getStatus() != HTTPResponse::HTTP_OK){
@@ -126,7 +127,6 @@ boost::shared_ptr<Workspace> SINQCCDListener::extractData()
 	while(getImageCount() == imageCount){
 		std::vector<IAlgorithm_const_sptr> wc = AlgorithmManager::Instance().runningInstancesOf("WaitCancel");
 		if(wc.empty()){
-			httpcon.reset();
 			throw std::runtime_error("SINQCCDListener Execution interrupted");
 		}
 		usleep(50);
@@ -135,8 +135,8 @@ boost::shared_ptr<Workspace> SINQCCDListener::extractData()
 
 	snprintf(request,sizeof(request),"/ccd/waitdata?imageCount=%d", imageCount);
 	HTTPRequest req(HTTPRequest::HTTP_GET,request, HTTPMessage::HTTP_1_1);
-	httpcon.reset();
 	req.setKeepAlive(true);
+	httpcon.reset();
 	HTTPBasicCredentials cred("spy","007");
 	cred.authenticate(req);
 	httpcon.sendRequest(req);
