@@ -65,17 +65,16 @@ public:
 
 	void makeMatrix(Matrix<double>& A) const
 	{
-	 const double pi=3.141592653589793238462643383279502884197169399375 ;
 		A.setMem(3,3);
 		A[0][0]=1.0;
 		A[1][0]=0.0; 
 		A[0][1]=0.0;
 		A[0][2]=0.0;
 		A[2][0]=0.0;
-		A[1][1]=cos(90.0*pi/180.0);
-		A[2][1]=-sin(90.0*pi/180.0);
-		A[1][2]=sin(90.0*pi/180.0);
-		A[2][2]=cos(90.0*pi/180.0);
+		A[1][1]=cos(90.0*M_PI/180.0);
+		A[2][1]=-sin(90.0*M_PI/180.0);
+		A[1][2]=sin(90.0*M_PI/180.0);
+		A[2][2]=cos(90.0*M_PI/180.0);
 		return;
 	}
 
@@ -142,13 +141,12 @@ public:
 		TS_ASSERT_EQUALS(B.getRadius(),1);
 		TS_ASSERT_EQUALS(B.getNormal(),V3D(0,1,0));
 
-		std::vector<V3D> pntOut;
+		std::list<V3D> pntOut;
 		A.intersect(pntOut,B);
 
 		// forward only solution for cylinders
-		TS_ASSERT_EQUALS(pntOut.size(),1);		
-		//TS_ASSERT_EQUALS(pntOut[0],V3D(-1.0,0.0,0.0));
-		TS_ASSERT_EQUALS(pntOut[0],V3D(1.0,0.0,0.0));
+		TS_ASSERT_EQUALS(pntOut.size(),1);
+		TS_ASSERT_EQUALS(pntOut.front(),V3D(1.0,0.0,0.0));
 	}
 
   	//A Line with equation equivalent to x axis will cut A Cylinder with 1 radius with center at 0,0,0  y axis normal 
@@ -164,12 +162,13 @@ public:
 		TS_ASSERT_EQUALS(B.getRadius(),1);
 		TS_ASSERT_EQUALS(B.getNormal(),V3D(0,1,0));
 
-		std::vector<V3D> pntOut;
+		std::list<V3D> pntOut;
 		A.intersect(pntOut,B);
 
-		TS_ASSERT_EQUALS(pntOut.size(),2);	
-		TS_ASSERT_EQUALS(pntOut[0],V3D(1.0,0.0,0.0));
-		TS_ASSERT_EQUALS(pntOut[1],V3D(-1.0,0.0,0.0));
+		TS_ASSERT_EQUALS(pntOut.size(),2);
+		auto itr = pntOut.begin();
+		TS_ASSERT_EQUALS(*(itr++), V3D(1.0,0.0,0.0));
+		TS_ASSERT_EQUALS(*itr,V3D(-1.0,0.0,0.0));
 	}
 
 	//A Line with equation equivalent to x axis will cut a plane YZ with equation x=5 will cut at one point 5,0,0
@@ -181,11 +180,11 @@ public:
 
 		Plane B;
 		TS_ASSERT_EQUALS(B.setSurface("px 5 0 0"),0);
-		std::vector<V3D> pntOut;
+		std::list<V3D> pntOut;
 		A.intersect(pntOut,B);
 
-		TS_ASSERT_EQUALS(pntOut.size(),1);		
-		TS_ASSERT_EQUALS(pntOut[0],V3D(5.0,0.0,0.0));
+		TS_ASSERT_EQUALS(pntOut.size(),1);
+		TS_ASSERT_EQUALS(pntOut.front(),V3D(5.0,0.0,0.0));
 	}
 
 	//A Line with equation equivalent to x axis will cut A sphere with 2 radius with center at 0,0,0 
@@ -197,12 +196,11 @@ public:
 
 		Sphere B;
 		B.setSurface("s 0.0 0.0 0.0 2");
-		std::vector<V3D> pntOut;
+		std::list<V3D> pntOut;
 		A.intersect(pntOut,B);
 		// forward only solutions
-		TS_ASSERT_EQUALS(pntOut.size(),1);		
-		//TS_ASSERT_EQUALS(pntOut[0],V3D(-2.0,0.0,0.0));
-		TS_ASSERT_EQUALS(pntOut[0],V3D(2.0,0.0,0.0));
+		TS_ASSERT_EQUALS(pntOut.size(),1);
+		TS_ASSERT_EQUALS(pntOut.front(),V3D(2.0,0.0,0.0));
 	}
 
   //A Line with equation equivalent to x axis starting at -10 will cut A sphere with 2 radius with center at 0,0,0 
@@ -214,11 +212,12 @@ public:
 
 		Sphere B;
 		B.setSurface("s 0.0 0.0 0.0 2");
-		std::vector<V3D> pntOut;
+		std::list<V3D> pntOut;
 		A.intersect(pntOut,B);
-		TS_ASSERT_EQUALS(pntOut.size(),2);	
-		TS_ASSERT_EQUALS(pntOut[0],V3D(2.0,0.0,0.0));
-		TS_ASSERT_EQUALS(pntOut[1],V3D(-2.0,0.0,0.0));
+		TS_ASSERT_EQUALS(pntOut.size(),2);
+    auto itr = pntOut.begin();
+		TS_ASSERT_EQUALS(*(itr++), V3D(2.0,0.0,0.0));
+		TS_ASSERT_EQUALS(*itr, V3D(-2.0,0.0,0.0));
 	}
 };
 

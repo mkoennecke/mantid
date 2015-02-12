@@ -15,7 +15,7 @@ namespace MantidQt
 
     @date 2013-06-10
 
-    Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+    Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
     This file is part of Mantid.
 
@@ -38,10 +38,11 @@ namespace MantidQt
     class DLLExport PeakOverlayMultiCrossFactory : public PeakOverlayViewFactoryBase
     {
       public:
-      PeakOverlayMultiCrossFactory(boost::shared_ptr<Mantid::API::MDGeometry> mdWS, PeakTransform_const_sptr transform, Mantid::API::IPeaksWorkspace_sptr peaksWS, QwtPlot * plot, QWidget * parent, const size_t colourNumber=0);
+      PeakOverlayMultiCrossFactory(boost::shared_ptr<Mantid::API::MDGeometry> mdWS, Mantid::API::PeakTransform_const_sptr transform, Mantid::API::IPeaksWorkspace_sptr peaksWS, QwtPlot * plot, QWidget * parent, const size_t colourNumber=0);
       virtual ~PeakOverlayMultiCrossFactory();
-      virtual boost::shared_ptr<PeakOverlayView> createView(PeakTransform_const_sptr transform) const;
+      virtual boost::shared_ptr<PeakOverlayView> createView(Mantid::API::PeakTransform_const_sptr transform) const;
       virtual int FOM() const;
+      virtual void swapPeaksWorkspace(boost::shared_ptr<Mantid::API::IPeaksWorkspace>& peaksWS);
     private:
       /// Peaks workspace.
       boost::shared_ptr<const Mantid::API::IPeaksWorkspace> m_peaksWS;

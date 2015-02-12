@@ -10,17 +10,19 @@
 #include <set>
 #include <string>
 
-namespace Mantid
-{
-namespace Kernel
-{
-/** The MultiFileValidator validates a MultiFileProperty, which contains a *vector of
-    vectors* of filenames - the meaning of which is discussed in MultiFileProperty.h.
+namespace Mantid {
+namespace Kernel {
+/** The MultiFileValidator validates a MultiFileProperty, which contains a
+   *vector of
+    vectors* of filenames - the meaning of which is discussed in
+   MultiFileProperty.h.
 
-    This is essentially a wrapper around the FileValidator class; a single instance
+    This is essentially a wrapper around the FileValidator class; a single
+   instance
     of which is called, once for each filename.
 
-    Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+    Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge
+   National Laboratory & European Spallation Source
 
     This file is part of Mantid.
 
@@ -40,18 +42,18 @@ namespace Kernel
     File change history is stored at: <https://github.com/mantidproject/mantid>.
     Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
-class MANTID_KERNEL_DLL MultiFileValidator : public TypedValidator<std::vector<std::vector<std::string> > >
-{
+class MANTID_KERNEL_DLL MultiFileValidator
+    : public TypedValidator<std::vector<std::vector<std::string>>> {
 public:
   MultiFileValidator();
-  MultiFileValidator(const MultiFileValidator & mfv);
-  explicit MultiFileValidator(const std::vector<std::string>& extensions);
+  MultiFileValidator(const MultiFileValidator &mfv);
+  explicit MultiFileValidator(const std::vector<std::string> &extensions);
   virtual ~MultiFileValidator();
 
   IValidator_sptr clone() const;
 
   /// Returns the set of allowed extensions.
-  virtual std::set<std::string> allowedValues() const;
+  virtual std::vector<std::string> allowedValues() const;
 
 protected:
   /// FileValidator instance used for validating multiple files.
@@ -59,10 +61,8 @@ protected:
 
 private:
   /// Returns an error if at least one of the files is not valid, else "".
-  virtual std::string checkValidity(const std::vector<std::vector<std::string> > &values) const;
-
-  /// A reference to the logger
-  static Logger & g_log;
+  virtual std::string
+  checkValidity(const std::vector<std::vector<std::string>> &values) const;
 };
 
 } // namespace Kernel

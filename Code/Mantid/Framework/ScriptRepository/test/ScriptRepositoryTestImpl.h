@@ -1,5 +1,5 @@
 #ifndef SCRIPTREPOSITORYIMPLTEST_H_
-#define SCRIPTREPOSITORYIMPL_H_
+#define SCRIPTREPOSITORYIMPLTEST_H_
 
 #include <cxxtest/TestSuite.h>
 #include "MantidScriptRepository/ScriptRepositoryImpl.h"
@@ -21,7 +21,8 @@
 #include <boost/algorithm/string.hpp>
 #include "MantidKernel/ConfigService.h"
 using Mantid::Kernel::ConfigService;
-using Mantid::Kernel::ConfigServiceImpl; 
+using Mantid::Kernel::ConfigServiceImpl;
+using Mantid::Kernel::DateAndTime;
 using namespace std; 
 using Mantid::API::ScriptRepositoryImpl;
 using Mantid::API::ScriptRepoException;

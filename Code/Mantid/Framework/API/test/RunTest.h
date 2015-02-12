@@ -202,16 +202,6 @@ public:
     TS_ASSERT_THROWS(runInfo.getPropertyAsSingleValue(name), std::invalid_argument);
   }
 
-  void test_GetPropertyAsSingleValue_Throws_If_StatisticType_Is_Unknown_And_Type_Is_TimeSeries()
-  {
-    Run runInfo;
-    const std::string name = "series";
-    addTestTimeSeries(runInfo, name);
-
-    const unsigned int statistic(100);
-    TS_ASSERT_THROWS(runInfo.getPropertyAsSingleValue(name, (Math::StatisticType)statistic), std::invalid_argument);
-  }
-
   void test_GetPropertyAsSingleValue_Returns_Simple_Mean_By_Default_For_Time_Series()
   {
     Run runInfo;
@@ -374,6 +364,21 @@ public:
     TS_ASSERT_THROWS_NOTHING(edges = runInfo.histogramBinBoundaries(m_test_energy_bins.back()));
     TS_ASSERT_DELTA(edges.first, 1.6, 1e-12);
     TS_ASSERT_DELTA(edges.second, 3.2, 1e-12);
+  }
+
+  void test_getBinBoundaries()
+  {
+      using namespace Mantid::Kernel;
+      Run runInfo;
+      runInfo.storeHistogramBinBoundaries(m_test_energy_bins);
+
+      std::vector<double> bounds;
+      TS_ASSERT_THROWS_NOTHING(bounds = runInfo.getBinBoundaries());
+      for(size_t i=0;i<m_test_energy_bins.size();++i)
+      {
+          TS_ASSERT_DELTA(bounds.at(i),m_test_energy_bins.at(i), 1e-12);
+      }
+
   }
 
   void test_getGoniometer()

@@ -155,6 +155,7 @@ void LabelTool::populateMantidCurves()
 void LabelTool::graphAreaClicked(const QwtPolygon &c)
 { 
   populateMantidCurves();
+  m_dataCoords.clear();
 
   QPoint cc = c.point(0);
   int xPosition = cc.x();
@@ -169,104 +170,111 @@ void LabelTool::graphAreaClicked(const QwtPolygon &c)
   int tolerance = 7;
      
   foreach(MantidMatrixCurve * mantidMatrixCurve, m_mantidMatrixCurves)
-{
-  // Sets the upper and lower limits in pixel coordinates for the x and y-axes.
-  int upperLimitX = xPosition + tolerance;
-  int lowerLimitX = xPosition - tolerance;
-  int upperLimitY = yPosition + tolerance;
-  int lowerLimitY = yPosition - tolerance;
-  
-  /*
-  // Gets the workspace name for which the curve belongs to.
-  QString workspaceNameOfCurve = mantidMatrixCurve->workspaceName();
-  */
-
-  // Gets the number of data points on the curve.
-  MantidQwtMatrixWorkspaceData *mwd = mantidMatrixCurve->mantidData();
-  size_t numberOfDataPoints = mwd->size();
-    
-  /**
-   * Gets the pixel value of the x-coordinate value of each data point within range.  
-   * Of the data points within range along x-axis, finds out if the pixel values of their y-coordinates are within range.
-   * If they are, their position within the iteration - i - is stored in a set.
-   */
-      
-  QSet<size_t> pointsWithinRange;
-    
-  for(size_t i = 0; i < numberOfDataPoints; ++i)
   {
-    // The pixel values of the x and y coordinates of the data points.
-    int iPixelValueX = d_graph->plotWidget()->transform(QwtPlot::xBottom, mwd->x(i));
-    int iPixelvalueY = d_graph->plotWidget()->transform(QwtPlot::yLeft, mwd->y(i));
+    // Sets the upper and lower limits in pixel coordinates for the x and y-axes.
+    int upperLimitX = xPosition + tolerance;
+    int lowerLimitX = xPosition - tolerance;
+    int upperLimitY = yPosition + tolerance;
+    int lowerLimitY = yPosition - tolerance;
 
-    // Comparing the point of clicking with the positioning of the data points.
-    if(((iPixelValueX <= upperLimitX) && (iPixelValueX >= lowerLimitX)) && ((iPixelvalueY <= upperLimitY) && (iPixelvalueY >= lowerLimitY)))
+    /*
+    // Gets the workspace name for which the curve belongs to.
+    QString workspaceNameOfCurve = mantidMatrixCurve->workspaceName();
+    */
+
+    // Gets the number of data points on the curve.
+    auto *mwd = mantidMatrixCurve->mantidData();
+    size_t numberOfDataPoints = mwd->size();
+
+    /**
+    * Gets the pixel value of the x-coordinate value of each data point within range.  
+    * Of the data points within range along x-axis, finds out if the pixel values of their y-coordinates are within range.
+    * If they are, their position within the iteration - i - is stored in a set.
+    */
+
+    QSet<size_t> pointsWithinRange;
+
+    for(size_t i = 0; i < numberOfDataPoints; ++i)
     {
+      // The pixel values of the x and y coordinates of the data points.
+      int iPixelValueX = d_graph->plotWidget()->transform(QwtPlot::xBottom, mwd->x(i));
+      int iPixelvalueY = d_graph->plotWidget()->transform(QwtPlot::yLeft, mwd->y(i));
+
+      // Comparing the point of clicking with the positioning of the data points.
+      if(((iPixelValueX <= upperLimitX) && (iPixelValueX >= lowerLimitX)) && ((iPixelvalueY <= upperLimitY) && (iPixelvalueY >= lowerLimitY)))
+      {
         pointsWithinRange.insert(i);
+      }
     }
-  }
 
-  // Calls the function for when a blank graph area is clicked if there are no points within the specified ranges.
-  if( pointsWithinRange.isEmpty() )
+    // If there are points within the specified ranges.
+    if ( !pointsWithinRange.isEmpty() )
+    {
+      /**
+      * Uses Pythagoras' theorem to calculate the distance between the position of a click and 
+      * the surrounding data points that lie within both the x and y ranges. 
+      */
+
+      QMap<double, size_t> map;
+
+      foreach(size_t i, pointsWithinRange)
+      {
+        double deltaX = m_xPos - mwd->x(i);
+        double deltaY = m_yPos - mwd->y(i);
+        double deltaXSquared = deltaX * deltaX;
+        double deltaYSquared = deltaY * deltaY;
+
+        double distance = sqrt(deltaXSquared + deltaYSquared);
+
+        map[distance] = i;
+      }
+
+      // Distances are stored in a list in ascending order.
+      QList<double> distances = map.keys();
+
+      // The first element in the list therefore has the shortest distance.
+      double shortestDistance = distances[0];
+      size_t nearestPointIndex = map[shortestDistance];
+
+      // Obtains the x and y coordinates of the closest data point, ready to be displayed.
+      double nearestPointXCoord = mwd->x(nearestPointIndex);
+      double nearestPointYCoord = mwd->y(nearestPointIndex);
+      double errorOfNearestPoint = mwd->e(nearestPointIndex);
+
+      std::stringstream precisionValueX;
+      precisionValueX.precision(6);
+      precisionValueX << nearestPointXCoord;
+      m_xPosSigFigs = precisionValueX.str();
+
+      std::stringstream precisionValueY;
+      precisionValueY.precision(6);
+      precisionValueY << nearestPointYCoord;
+      m_yPosSigFigs = precisionValueY.str();
+
+      std::stringstream error;
+      error.precision(6);
+      error << errorOfNearestPoint;
+      std::string errorSigFigs = error.str();
+
+      m_dataCoords = "(" + m_xPosSigFigs + ", " + m_yPosSigFigs + ")";
+      m_error = m_yPosSigFigs + "+/-" + errorSigFigs;
+
+      // Gets the workspace name for which the curve with the datapoint belongs to.
+      QString workspaceNameOfCurve = mantidMatrixCurve->workspaceName();
+      m_curveWsName = workspaceNameOfCurve;
+    }    
+  } // foreach
+
+  if ( !m_dataCoords.size() )
   {
+    // m_dataCoords has not been initialized
+    // this means that there are no points near the clicked region
     blankRegionClicked();
-    break;
   }
-
-  /**
-   * Uses Pythagoras' theorem to calculate the distance between the position of a click and 
-   * the surrounding data points that lie within both the x and y ranges. 
-   */
-
-  QMap<double, size_t> map;
-
-  foreach(size_t i, pointsWithinRange)
+  else
   {
-    double deltaX = m_xPos - mwd->x(i);
-    double deltaY = m_yPos - mwd->y(i);
-    double deltaXSquared = deltaX * deltaX;
-    double deltaYSquared = deltaY * deltaY;
-
-    double distance = sqrt(deltaXSquared + deltaYSquared);
-
-    map[distance] = i;
-  }
-
-  // Distances are stored in a list in ascending order.
-  QList<double> distances = map.keys();
-
-  // The first element in the list therefore has the shortest distance.
-  double shortestDistance = distances[0];
-  size_t nearestPointIndex = map[shortestDistance];
-
-  // Obtains the x and y coordinates of the closest data point, ready to be displayed.
-  double nearestPointXCoord = mwd->x(nearestPointIndex);
-  double nearestPointYCoord = mwd->y(nearestPointIndex);
-  double errorOfNearestPoint = mwd->e(nearestPointIndex);
-
-  std::stringstream precisionValueX;
-  precisionValueX.precision(6);
-  precisionValueX << nearestPointXCoord;
-  m_xPosSigFigs = precisionValueX.str();
-
-  std::stringstream precisionValueY;
-  precisionValueY.precision(6);
-  precisionValueY << nearestPointYCoord;
-  m_yPosSigFigs = precisionValueY.str();
-
-  std::stringstream error;
-  error.precision(6);
-  error << errorOfNearestPoint;
-  std::string errorSigFigs = error.str();
-
-  m_dataCoords = "(" + m_xPosSigFigs + ", " + m_yPosSigFigs + ")";
-  m_error = m_yPosSigFigs + "+/-" + errorSigFigs;
-
-  // Gets the workspace name for which the curve with the datapoint belongs to.
-  QString workspaceNameOfCurve = mantidMatrixCurve->workspaceName();
-  m_curveWsName = workspaceNameOfCurve;
-  
-  dataPointClicked();
+    // at least one point was close enough to the clicked region
+    dataPointClicked();
   }
 }
 
@@ -290,7 +298,9 @@ void LabelTool::blankRegionClicked()
 
   foreach(QString wsName, workspaceNames())
   {
-    workspaces->addAction(new QAction(tr(wsName), this));
+		QAction * qa = new QAction(tr(wsName),this);
+		workspaces->addAction(qa);
+		connect(qa,SIGNAL(triggered()),this,SLOT(insertLegend()));
   }
 
   // For viewing log values.
@@ -298,7 +308,9 @@ void LabelTool::blankRegionClicked()
 
   foreach(QString logProperty, logValues())
   {
-   logVals->addAction(new QAction(tr(logProperty), this));
+		QAction * qa = new QAction(tr(logProperty),this);
+		logVals->addAction(qa);
+		connect(qa,SIGNAL(triggered()),this,SLOT(insertLegend()));
   }
 
   clickMenu->exec(QCursor::pos());
@@ -330,40 +342,39 @@ void LabelTool::dataPointClicked()
  
   // For workspace information.
   QMenu * info = clickMenu->addMenu(tr("More info..."));
-  QMenu * workspaces = info->addMenu(tr("Workspace"));
-  
-  QAction * wsNameToDisplay = new QAction((tr(m_curveWsName)), this);
-  workspaces->addAction(wsNameToDisplay);
-
-  
-  /*
-
-  // Before final testing, make sure that when you select a datapoint, its respective Ws name is displayed
+  QMenu * workspaces = info->addMenu(tr("Workspaces"));
 
   foreach(QString wsName, workspaceNames())
   {
-    QAction * wsNameToDisplay = new QAction((tr(wsName)), this);
-    workspaces->addAction(wsNameToDisplay);
+		QAction * qa = new QAction(tr(wsName),this);
+		workspaces->addAction(qa);
+		connect(qa,SIGNAL(triggered()),this,SLOT(insertLegend()));
   }
 
-  
-  // For displaying workspace title.
-  Mantid::API::Workspace *name; 
-  std::string wsTitle = name->getTitle();
-  
-  QMenu * workspaceTitle = workspaces->addMenu(tr(wsTitle), this);
-  */
+	// For viewing log values.
+	QMenu * logVals = info->addMenu(tr("Log values"));
 
+	foreach(QString logProperty, logValues())
+	{
+		QAction * qa = new QAction(tr(logProperty),this);
+		logVals->addAction(qa);
+		connect(qa,SIGNAL(triggered()),this,SLOT(insertLegend()));
+	}
 
-  // For viewing log values.
-  QMenu * logVals = info->addMenu(tr("Log values"));
-
-  foreach(QString logProperty, logValues())
-  {
-   logVals->addAction(new QAction(tr(logProperty), this));
-  }
-  
   clickMenu->exec(QCursor::pos());
+}
+
+/// Creates a label with size equal to the axisFont size
+void LabelTool::insertLegend()
+{
+	QAction *action = qobject_cast<QAction *>(sender());
+	if (action)
+	{
+		LegendWidget *label = new LegendWidget(d_graph->plotWidget());
+		label->setOriginCoord(m_xPos,m_yPos);
+		label->setFont(d_graph->axisFont(0));
+		label->setText(action->text());
+	}
 }
 
 /// Displays a dialog box to input the contents of a label, then creates the label.

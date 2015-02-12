@@ -1,12 +1,3 @@
-/*WIKI* 
-
-
-Returns the relative efficiency of the forward detector group compared to the backward detector group. If Alpha is larger than 1 more counts has been collected in the forward group.
-
-This algorithm leave the input workspace unchanged. To group detectors in a workspace use [[GroupDetectors]].
-
-
-*WIKI*/
 //----------------------------------------------------------------------
 // Includes
 //----------------------------------------------------------------------
@@ -16,70 +7,71 @@ This algorithm leave the input workspace unchanged. To group detectors in a work
 #include "MantidKernel/ArrayProperty.h"
 #include "MantidAlgorithms/AlphaCalc.h"
 
-namespace Mantid
-{
-namespace Algorithms
-{
+namespace Mantid {
+namespace Algorithms {
 
 using namespace Kernel;
 using API::Progress;
 
 // Register the class into the algorithm factory
-DECLARE_ALGORITHM( AlphaCalc)
+DECLARE_ALGORITHM(AlphaCalc)
 
 /** Initialisation method. Declares properties to be used in algorithm.
  *
  */
-void AlphaCalc::init()
-{
-  this->setWikiSummary("Muon algorithm for calculating the detector efficiency between two groups of detectors.");
-  declareProperty(new API::WorkspaceProperty<>("InputWorkspace", "",
-      Direction::Input), "Name of the input workspace");
+void AlphaCalc::init() {
+
+  declareProperty(
+      new API::WorkspaceProperty<>("InputWorkspace", "", Direction::Input),
+      "Name of the input workspace");
 
   std::vector<int> forwardDefault;
   forwardDefault.push_back(1);
-  declareProperty(new ArrayProperty<int> ("ForwardSpectra", forwardDefault),
-      "The spectra numbers of the forward group (default to 1)");
+  declareProperty(new ArrayProperty<int>("ForwardSpectra", forwardDefault),
+                  "The spectra numbers of the forward group (default to 1)");
 
   std::vector<int> backwardDefault;
   backwardDefault.push_back(2);
-  declareProperty(new ArrayProperty<int> ("BackwardSpectra", backwardDefault),
-      "The spectra numbers of the backward group (default to 2)");
+  declareProperty(new ArrayProperty<int>("BackwardSpectra", backwardDefault),
+                  "The spectra numbers of the backward group (default to 2)");
 
-  declareProperty("FirstGoodValue", EMPTY_DBL(), "First good value (default lowest value of x)", Direction::Input);
-  declareProperty("LastGoodValue", EMPTY_DBL(), "Last good value (default highest value of x)", Direction::Input);
+  declareProperty("FirstGoodValue", EMPTY_DBL(),
+                  "First good value (default lowest value of x)",
+                  Direction::Input);
+  declareProperty("LastGoodValue", EMPTY_DBL(),
+                  "Last good value (default highest value of x)",
+                  Direction::Input);
 
-  declareProperty("Alpha", 1.0, "The alpha efficiency (default to 1.0)", Direction::Output);
+  declareProperty("Alpha", 1.0, "The alpha efficiency (default to 1.0)",
+                  Direction::Output);
 }
 
 /** Executes the algorithm
  *
  */
-void AlphaCalc::exec()
-{
+void AlphaCalc::exec() {
   std::vector<int> forwardSpectraList = getProperty("ForwardSpectra");
   std::vector<int> backwardSpectraList = getProperty("BackwardSpectra");
 
-  double alpha = getProperty("Alpha"); 
+  double alpha = getProperty("Alpha");
 
   // no point in attempting to calculate alpha if input workspace on contains
   // one spectra
   API::MatrixWorkspace_sptr inputWS = getProperty("InputWorkspace");
-  if ( inputWS->getNumberHistograms() < 2 )
-  {
-    g_log.error() << "Can't calculate alpha value for workspace which"
-      << " contains one spectrum. A default value of alpha = 1.0 is returned";
+  if (inputWS->getNumberHistograms() < 2) {
+    g_log.error()
+        << "Can't calculate alpha value for workspace which"
+        << " contains one spectrum. A default value of alpha = 1.0 is returned";
     setProperty("Alpha", alpha);
     return;
   }
 
   // if for some reason the size of forward and backward lists are zero
   // default these to their defaults
-  if ( forwardSpectraList.empty() )
+  if (forwardSpectraList.empty())
     forwardSpectraList.push_back(1);
-  if ( backwardSpectraList.empty() )
+  if (backwardSpectraList.empty())
     backwardSpectraList.push_back(2);
-
 
   // first step is to create two workspaces which groups all forward and
   // backward spectra
@@ -90,7 +82,8 @@ void AlphaCalc::exec()
   groupForward->setProperty("SpectraList", forwardSpectraList);
   groupForward->setProperty("KeepUngroupedSpectra", false);
   groupForward->execute();
-  API::MatrixWorkspace_sptr forwardWS = groupForward->getProperty("OutputWorkspace");
+  API::MatrixWorkspace_sptr forwardWS =
+      groupForward->getProperty("OutputWorkspace");
 
   API::IAlgorithm_sptr groupBackward = createChildAlgorithm("GroupDetectors");
   groupBackward->setProperty("InputWorkspace", inputWS);
@@ -98,8 +91,8 @@ void AlphaCalc::exec()
   groupBackward->setProperty("SpectraList", backwardSpectraList);
   groupBackward->setProperty("KeepUngroupedSpectra", false);
   groupBackward->execute();
-  API::MatrixWorkspace_sptr backwardWS = groupBackward->getProperty("OutputWorkspace");
-
+  API::MatrixWorkspace_sptr backwardWS =
+      groupBackward->getProperty("OutputWorkspace");
 
   // calculate sum of forward counts
 
@@ -108,7 +101,7 @@ void AlphaCalc::exec()
 
   API::IAlgorithm_sptr integr = createChildAlgorithm("Integration");
   integr->setProperty("InputWorkspace", forwardWS);
-  integr->setPropertyValue("OutputWorkspace","tmp");
+  integr->setPropertyValue("OutputWorkspace", "tmp");
   if (firstGoodvalue != EMPTY_DBL())
     integr->setProperty("RangeLower", firstGoodvalue);
   if (lastGoodvalue != EMPTY_DBL())
@@ -118,20 +111,18 @@ void AlphaCalc::exec()
 
   double sumForward = out->readY(0)[0];
 
-  if ( sumForward < 0 )
-  {
+  if (sumForward < 0) {
     g_log.error() << "Sum of forward detector counts is negative."
-      << "Therefore can't calculate alpha. Return alpha = 1.0.";
+                  << "Therefore can't calculate alpha. Return alpha = 1.0.";
     setProperty("Alpha", alpha);
     return;
   }
-
 
   // calculate sum of backward counts
 
   API::IAlgorithm_sptr integrB = createChildAlgorithm("Integration");
   integrB->setProperty("InputWorkspace", backwardWS);
-  integrB->setPropertyValue("OutputWorkspace","tmp");
+  integrB->setPropertyValue("OutputWorkspace", "tmp");
   if (firstGoodvalue != EMPTY_DBL())
     integrB->setProperty("RangeLower", firstGoodvalue);
   if (lastGoodvalue != EMPTY_DBL())
@@ -141,20 +132,17 @@ void AlphaCalc::exec()
 
   double sumBackward = out->readY(0)[0];
 
-  if ( sumBackward <= 0 )
-  {
+  if (sumBackward <= 0) {
     g_log.error() << "Sum of backward detector counts is negative or zero."
-      << "Therefore can't calculate alpha. Return alpha = 1.0.";
+                  << "Therefore can't calculate alpha. Return alpha = 1.0.";
     setProperty("Alpha", alpha);
     return;
   }
 
   // finally calculate alpha
 
-  setProperty("Alpha", sumForward/sumBackward);
+  setProperty("Alpha", sumForward / sumBackward);
 }
 
 } // namespace Algorithm
 } // namespace Mantid
-
-

@@ -6,6 +6,7 @@
 #include "MantidPythonInterface/kernel/Converters/PySequenceToVector.h"
 #include "MantidPythonInterface/kernel/Converters/CloneToNumpy.h"
 #include "MantidPythonInterface/kernel/Registry/DataItemInterface.h"
+#include "MantidPythonInterface/kernel/Policies/VectorToNumpy.h"
 
 #include <boost/python/class.hpp>
 #include <boost/python/list.hpp>
@@ -13,6 +14,7 @@
 #include <boost/python/converter/builtin_converters.hpp>
 #include <boost/preprocessor/list/for_each.hpp>
 #include <boost/preprocessor/tuple/to_list.hpp>
+#include <cstring>
 #include <vector>
 
 // See http://docs.scipy.org/doc/numpy/reference/c-api.array.html#PY_ARRAY_UNIQUE_SYMBOL
@@ -32,7 +34,7 @@ namespace
   /// Boost macro for "looping" over builtin types
   #define BUILTIN_TYPES \
     BOOST_PP_TUPLE_TO_LIST( \
-      6, (double, std::string, int, int64_t, float, size_t)    \
+    7, (double, std::string, int, uint32_t, int64_t, float, uint64_t)    \
     )
   #define USER_TYPES \
     BOOST_PP_TUPLE_TO_LIST( \
@@ -64,7 +66,7 @@ namespace
       result = to_python_value<const T&>()(column->cell<T>(row));\
     }
     #define GET_USER(R, _, T) \
-    else if(typeID == typeid(T))\
+    else if(strcmp(typeID.name(), typeid(T).name()) == 0) \
     {\
       const converter::registration *entry = converter::registry::query(typeid(T));\
       if(!entry) throw std::invalid_argument("Cannot find converter from C++ type.");\
@@ -98,19 +100,20 @@ namespace
    */
   void setValue(const Column_sptr column, const int row, const bpl::object & value)
   {
-    if(column->get_type_info() == typeid(Mantid::API::Boolean))
+    const auto & typeID = column->get_type_info();
+    if(typeID == typeid(Mantid::API::Boolean))
     {
       column->cell<Mantid::API::Boolean>(row) = bpl::extract<bool>(value)();
       return;
     }
 
     #define SET_CELL(R, _, T) \
-    else if(typeID == typeid(T)) \
+    else if(strcmp(typeID.name(), typeid(T).name()) == 0)\
     {\
       column->cell<T>(row) = bpl::extract<T>(value)();\
     }
     #define SET_VECTOR_CELL(R, _, T) \
-    else if(typeID == typeid(T)) \
+    else if(typeID == typeid(T))       \
     {\
       if( ! PyArray_Check( value.ptr() ) ) \
       { \
@@ -122,16 +125,12 @@ namespace
       } \
     }
 
-
     // -- Use the boost preprocessor to generate a list of else if clause to cut out copy
     // and pasted code.
-    // I think cppcheck is getting confused by the define
-    // cppcheck-suppress unreadVariable
-    const std::type_info & typeID = column->get_type_info();
     if(false){} // So that it always falls through to the list checking
     BOOST_PP_LIST_FOR_EACH(SET_CELL, _ , BUILTIN_TYPES)
-    BOOST_PP_LIST_FOR_EACH(SET_VECTOR_CELL, _ , ARRAY_TYPES)
     BOOST_PP_LIST_FOR_EACH(SET_CELL, _ , USER_TYPES)
+    BOOST_PP_LIST_FOR_EACH(SET_VECTOR_CELL, _ , ARRAY_TYPES)
     else
     {
       throw std::invalid_argument("Cannot convert Python type to C++: " + column->type());
@@ -341,6 +340,8 @@ namespace
 
 void export_ITableWorkspace()
 {
+  using Mantid::PythonInterface::Policies::VectorToNumpy;
+
   std::string iTableWorkspace_docstring = "Most of the information from a table workspace is returned ";
   iTableWorkspace_docstring += "as native copies. All of the column accessors return lists while the ";
   iTableWorkspace_docstring += "rows return dicts. This object does support the idom 'for row in ";
@@ -366,9 +367,9 @@ void export_ITableWorkspace()
 
     .def("__len__",  &ITableWorkspace::rowCount, "Returns the number of rows within the workspace")
 
-    .def("getColumnNames",&ITableWorkspace::getColumnNames, "Return a list of the column names")
+    .def("getColumnNames",&ITableWorkspace::getColumnNames, boost::python::return_value_policy<VectorToNumpy>(),"Return a list of the column names")
 
-    .def("keys", &ITableWorkspace::getColumnNames,  "Return a list of the column names")
+    .def("keys", &ITableWorkspace::getColumnNames, boost::python::return_value_policy<VectorToNumpy>(),  "Return a list of the column names")
 
     .def("column", &column, "Return all values of a specific column as a list")
 

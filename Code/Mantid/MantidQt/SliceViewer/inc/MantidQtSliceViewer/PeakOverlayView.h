@@ -3,7 +3,7 @@
 
 #include "MantidKernel/System.h"
 #include "MantidKernel/V2D.h"
-#include "MantidQtSliceViewer/PeakTransform.h"
+#include "MantidAPI/PeakTransform.h"
 #include "MantidQtSliceViewer/PeakPalette.h"
 #include "MantidQtSliceViewer/PeakBoundingBox.h"
 #include <QPointF>
@@ -17,7 +17,7 @@ namespace MantidQt
     
     @date 2012-08-24
 
-    Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+    Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
     This file is part of Mantid.
 
@@ -49,7 +49,7 @@ namespace MantidQt
       /// Show the view.
       virtual void showView() = 0;
       /// Move the peak overlay to a new position.
-      virtual void movePosition(PeakTransform_sptr peakTransform) = 0;
+      virtual void movePosition(Mantid::API::PeakTransform_sptr peakTransform) = 0;
       /// Change foreground colour
       virtual void changeForegroundColour(const QColor) = 0;
       /// Change background colour

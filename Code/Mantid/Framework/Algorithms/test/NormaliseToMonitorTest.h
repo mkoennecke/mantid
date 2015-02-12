@@ -35,9 +35,9 @@ public:
 
      input->getAxis(0)->unit() = Mantid::Kernel::UnitFactory::Instance().create("Wavelength");
     // Now need to set up a minimal instrument
-    input->getAxis(1)->setValue(0, 0);
-    input->getAxis(1)->setValue(1, 1);
-    input->getAxis(1)->setValue(2, 2);
+    input->getSpectrum(0)->setSpectrumNo(0);
+    input->getSpectrum(1)->setSpectrumNo(1);
+    input->getSpectrum(2)->setSpectrumNo(2);
     boost::shared_ptr<Instrument> instr(new Instrument);
     input->setInstrument(instr);
     Mantid::Geometry::Detector *mon = new Mantid::Geometry::Detector("monitor",0,NULL);
@@ -53,7 +53,7 @@ public:
     MatrixWorkspace_sptr monWS = WorkspaceCreationHelper::Create2DWorkspaceBinned(1,20,0.1,0.5);
     monWS->getAxis(0)->unit() = Mantid::Kernel::UnitFactory::Instance().create("Wavelength");
     // Now need to set up a minimal instrument and spectra-detector map
-    monWS->getAxis(1)->setValue(0, 0);
+    input->getSpectrum(0)->setSpectrumNo(0);
     monWS->setInstrument(input->getInstrument());
 
     AnalysisDataService::Instance().addOrReplace("monWS",monWS);
@@ -99,6 +99,7 @@ public:
     if ( ! sameOutputWS ) outputWS.append("2");
     TS_ASSERT_THROWS_NOTHING( norm.setPropertyValue("OutputWorkspace",outputWS) )
     TS_ASSERT_THROWS_NOTHING( norm.setPropertyValue("MonitorSpectrum","0") )
+    TS_ASSERT_THROWS_NOTHING( norm.setPropertyValue("NormFactorWS","NormFactor") )
     TS_ASSERT_THROWS_NOTHING( norm.execute() )
     TS_ASSERT( norm.isExecuted() )
 
@@ -129,6 +130,9 @@ public:
       EventWorkspace_const_sptr eventOut = boost::dynamic_pointer_cast<const EventWorkspace>(output);
       TS_ASSERT(eventOut);
     }
+    TS_ASSERT_THROWS_NOTHING( output = AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>("NormFactor") )
+    TS_ASSERT_EQUALS(output->getNumberHistograms(),1);
+    AnalysisDataService::Instance().remove("NormFactor");
   }
 
 
@@ -164,6 +168,7 @@ public:
     TS_ASSERT_THROWS_NOTHING( norm2.setPropertyValue("MonitorSpectrum","0") )
     TS_ASSERT_THROWS_NOTHING( norm2.setPropertyValue("IntegrationRangeMin","5") )
     TS_ASSERT_THROWS_NOTHING( norm2.setPropertyValue("IntegrationRangeMax","20") )
+    TS_ASSERT_THROWS_NOTHING( norm2.setPropertyValue("NormFactorWS","normMon3") )
     TS_ASSERT_THROWS_NOTHING( norm2.execute() )
     TS_ASSERT( norm2.isExecuted() )
 
@@ -190,6 +195,10 @@ public:
       TS_ASSERT_EQUALS( output->readY(0)[k], 0.2 )
       TS_ASSERT_DELTA( output->readE(0)[k], 0.0657, 0.0001 )
     }
+    TS_ASSERT_THROWS_NOTHING( output = AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>("normMon3_normFactor") )
+    TS_ASSERT_EQUALS(output->getNumberHistograms(),1);
+    AnalysisDataService::Instance().remove("normMon3_normFactor");
+
   }
 
   void testNormaliseByIntegratedCountIncPartBins()
@@ -229,18 +238,25 @@ public:
       TS_ASSERT_DELTA( output->readE(0)[k], 0.0518, 0.0001 )
     }
     AnalysisDataService::Instance().remove("normMon4");
+    TS_ASSERT(!AnalysisDataService::Instance().doesExist("NormWS") );
+
   }
 
   void testFailsOnSettingBothMethods()
   {
     NormaliseToMonitor norm3;
     norm3.initialize();
-    TS_ASSERT_THROWS_NOTHING( norm3.setPropertyValue("InputWorkspace","normMon") )
-    TS_ASSERT_THROWS_NOTHING( norm3.setPropertyValue("OutputWorkspace","normMon3") )
-    TS_ASSERT_THROWS_NOTHING( norm3.setPropertyValue("MonitorWorkspaceIndex","0") )
-    TS_ASSERT_THROWS_NOTHING( norm3.setPropertyValue("MonitorWorkspace","monWS") )
+    TS_ASSERT_THROWS_NOTHING( norm3.setPropertyValue("InputWorkspace","normMon") );
+    TS_ASSERT_THROWS_NOTHING( norm3.setPropertyValue("OutputWorkspace","normMon3") );
+    TS_ASSERT_THROWS_NOTHING( norm3.setPropertyValue("MonitorWorkspaceIndex","0") );
+    TS_ASSERT_THROWS_NOTHING( norm3.setPropertyValue("MonitorWorkspace","monWS") );
+    TS_ASSERT_THROWS_NOTHING( norm3.setPropertyValue("NormFactorWS","NormWS") );
     TS_ASSERT_THROWS_NOTHING( norm3.execute() )
-    TS_ASSERT(  norm3.isExecuted() )
+    TS_ASSERT(  norm3.isExecuted() );
+
+    TS_ASSERT( AnalysisDataService::Instance().doesExist("NormWS") );
+    AnalysisDataService::Instance().remove("NormWS");
+
   }
 
   void testSeparateWorkspaceWithRebin()
@@ -249,9 +265,16 @@ public:
     norm4.initialize();
     TS_ASSERT_THROWS_NOTHING( norm4.setPropertyValue("InputWorkspace","normMon") )
     TS_ASSERT_THROWS_NOTHING( norm4.setPropertyValue("OutputWorkspace","normMon4") )
-    TS_ASSERT_THROWS_NOTHING( norm4.setPropertyValue("MonitorWorkspace","monWS") )
+    TS_ASSERT_THROWS_NOTHING( norm4.setPropertyValue("MonitorWorkspace","monWS") )  
+    TS_ASSERT_THROWS_NOTHING( norm4.setPropertyValue("NormFactorWS","NormWS") );
+
+
     TS_ASSERT_THROWS_NOTHING( norm4.execute() )
     TS_ASSERT( norm4.isExecuted() )
+
+    TS_ASSERT( AnalysisDataService::Instance().doesExist("NormWS") );
+    AnalysisDataService::Instance().remove("NormWS");
+
   }
 
   void testMonIDPropChangerEnabled()
@@ -321,7 +344,7 @@ public:
         TS_ASSERT_THROWS_NOTHING(pSett= monSpec->getSettings());
         TS_ASSERT_THROWS_NOTHING(pSett->applyChanges(&norm6, monSpec));
         // it should return the list of allowed monitor ID-s
-        std::set<std::string> monitors = monSpec->allowedValues();
+        std::vector<std::string> monitors = monSpec->allowedValues();
         TS_ASSERT_EQUALS(1,monitors.size());
         TS_ASSERT_EQUALS("0",*(monitors.begin()));
 

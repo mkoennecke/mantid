@@ -47,7 +47,7 @@ public:
       space2D->setX(j, x);
       space2D->setData(j, a, e);
       // Just set the spectrum number to match the index
-      space2D->getAxis(1)->setValue(j, j);
+      space2D->getSpectrum(j)->setSpectrumNo(j);
       space2D->getSpectrum(j)->setDetectorID(j);
     }
     space2D->getAxis(0)->unit() = UnitFactory::Instance().create("TOF");
@@ -220,9 +220,14 @@ public:
     TS_ASSERT_THROWS_NOTHING( output = AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>("quickOut") );
     TS_ASSERT_EQUALS( output->getAxis(0)->unit()->unitID(), "dSpacing");
     TS_ASSERT_EQUALS( &(output->dataX(0)[0]), &(output->dataX(0)[0]) );
-    for (MatrixWorkspace::const_iterator it(*output); it != it.end(); ++it)
+    const size_t xsize = output->blocksize();
+    for(size_t i = 0; i < output->getNumberHistograms(); ++i)
     {
-      TS_ASSERT_EQUALS( it->X(), 2.0*M_PI );
+      const auto & outX = output->readX(i);
+      for(size_t j = 0; j <= xsize; ++j)
+      {
+        TS_ASSERT_EQUALS( outX[j], 2.0*M_PI );
+      }
     }
 
     AnalysisDataService::Instance().remove("quickIn");
@@ -288,24 +293,13 @@ public:
   void setup_Event()
   {
     this->inputSpace = "eventWS";
-    Mantid::DataHandling::LoadEventPreNexus loader;
-    loader.initialize();
-    std::string eventfile( "CNCS_7860_neutron_event.dat" );
-    std::string pulsefile( "CNCS_7860_pulseid.dat" );
-    pulsefile = "";
-    loader.setPropertyValue("EventFilename", eventfile);
-    loader.setPropertyValue("PulseidFilename", pulsefile);
-    loader.setPropertyValue("MappingFilename", "CNCS_TS_2008_08_18.dat");
-    loader.setPropertyValue("OutputWorkspace", this->inputSpace);
-    loader.setPropertyValue("ChunkNumber", "1");
-    loader.setPropertyValue("TotalChunks", "10");
-    loader.execute();
-    TS_ASSERT (loader.isExecuted() );
+    EventWorkspace_sptr ws = WorkspaceCreationHelper::createEventWorkspaceWithFullInstrument(1, 10,false);
+    AnalysisDataService::Instance().addOrReplace(inputSpace, ws);
   }
 
   void testExecEvent_sameOutputWS()
   {
-    std::size_t wkspIndex = 4348; // a good workspace index (with events)
+    std::size_t wkspIndex = 0;
     this->setup_Event();
 
     //Retrieve Workspace
@@ -313,8 +307,9 @@ public:
     TS_ASSERT( WS ); //workspace is loaded
     size_t start_blocksize = WS->blocksize();
     size_t num_events = WS->getNumberEvents();
-    double a_tof = WS->getEventList(wkspIndex).getEvents()[0].tof();
-    double a_x = WS->getEventList(wkspIndex).dataX()[1];
+    EventList el = WS->getEventList(wkspIndex);
+    double a_tof = el.getEvents()[0].tof();
+    double a_x = el.dataX()[1];
 
     if ( !alg.isInitialized() ) alg.initialize();
     TS_ASSERT( alg.isInitialized() );

@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- For help on the notation used to specify an Instrument Definition File 
      see http://www.mantidproject.org/IDF -->
-<instrument xmlns="http://www.mantidproject.org/IDF/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mantidproject.org/IDF/1.0 Schema/IDFSchema.xsd" 
+<instrument xmlns="http://www.mantidproject.org/IDF/1.0" 
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://www.mantidproject.org/IDF/1.0 http://schema.mantidproject.org/IDF/1.0/IDFSchema.xsd"
  name="OFFSPEC" valid-from   ="2012-07-10 22:00:00"
                            valid-to     ="2100-01-31 23:59:59"
 		           last-modified="2012-07-26 15:00:00">
@@ -25,10 +27,10 @@
   </component>
   <type name="source" is="Source"/>
    
-  <component type="sampleholder">
+  <component type="some-surface-holder">
     <location x="0.0" y="0.0" z="0.0" />
   </component>
-  <type name="sampleholder" is="SamplePos"/>
+  <type name="some-surface-holder" is="SamplePos"/>
   
   <!-- LIST OF PHYSICAL COMPONENTS (which the instrument consists of) -->
   
@@ -95,7 +97,7 @@
   </component>
 
   <type name="DetectorBench">
-   <component type="HeDetector">
+   <component type="point-detector">
     <!-- <location z="3.2" />  -->
      <location z="3.19" /> 
    </component>   
@@ -108,7 +110,7 @@
    </component>
   </type>
 
-  <type name="HeDetector" is="detector">
+  <type name="point-detector" is="detector">
     <cylinder id="shape">
       <centre-of-bottom-base x="-0.05" y="0.0" z="0.0" />
       <axis x="1.0" y="0.0" z="0.0" /> 

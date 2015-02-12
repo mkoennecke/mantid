@@ -1,4 +1,4 @@
-#ifndef @MULTIPLYDIVIDETEST_CLASS@_H
+#ifndef @MULTIPLYDIVIDETEST_CLASS@_H_
 #define @MULTIPLYDIVIDETEST_CLASS@_H_
 
 #include <cxxtest/TestSuite.h>
@@ -128,6 +128,26 @@ public:
     MatrixWorkspace_sptr work_in2 = histWS_5x10_bin;
     performTest(work_in1,work_in2, false /*not event*/,
         DO_DIVIDE ? 1.0 : 4.0, DO_DIVIDE ? 1.0 : 4.0, false, false, true /*in place*/);
+  }
+    
+  void test_2D_1D_different_spectrum_number()
+  {
+    if(DO_DIVIDE)
+    {
+    int nHist = 5,nBins=5;
+    MatrixWorkspace_sptr numerator  = WorkspaceCreationHelper::Create2DWorkspace123(nHist-1,nBins); // Cropped
+    MatrixWorkspace_sptr denominator = WorkspaceCreationHelper::Create2DWorkspace123(nHist, 1); // Integrated
+    Divide alg;
+    alg.initialize();
+    alg.setChild(true);
+    alg.setProperty("LHSWorkspace", numerator);
+    alg.setProperty("RHSWorkspace", denominator);
+    alg.setPropertyValue("OutputWorkspace", "dummy");
+    alg.setProperty("AllowDifferentNumberSpectra", true);
+    alg.execute();
+    MatrixWorkspace_sptr outWS = alg.getProperty("OutputWorkspace");
+    TS_ASSERT_EQUALS(outWS->getNumberHistograms(), nHist-1);
+    }
   }
 
   void test_2D_1DColumn()
@@ -960,4 +980,4 @@ public:
 };
 
 
-#endif /*MULTIPLYTEST_H_ or DIVIDETEST_H*/
+#endif /*MULTIPLYTEST_H_ or DIVIDETEST_H_*/

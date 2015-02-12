@@ -9,7 +9,7 @@
 
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/FrameworkManager.h"
-#include "MantidQtCustomInterfaces/IO_MuonGrouping.h"
+#include "MantidQtCustomInterfaces/Muon/IO_MuonGrouping.h"
 
 using namespace Mantid::API;
 using namespace MantidQt::CustomInterfaces::Muon;
@@ -34,14 +34,14 @@ public:
     {
       Poco::Path path(*it);
 
-      if(path.directory(path.depth() - 1) == "AutoTestData")
+      if(path.directory(path.depth() - 1) == "UnitTest")
       {
         m_testDataDir = *it;
         break;
       }
     }
 
-    TSM_ASSERT("Unable to find AutoTestData directory", !m_testDataDir.empty());
+    TSM_ASSERT("Unable to find UnitTest data directory", !m_testDataDir.empty());
 
     m_tmpDir = ConfigService::Instance().getTempDir();
 
@@ -128,7 +128,7 @@ public:
     IAlgorithm_sptr loadAlg = AlgorithmManager::Instance().create("LoadMuonNexus");
     loadAlg->setChild(true); // So outptu ws don't end up in the ADS
     loadAlg->initialize();
-    loadAlg->setPropertyValue("Filename", m_testDataDir + "MUSR00015189.nxs");
+    loadAlg->setPropertyValue("Filename", "MUSR00015189.nxs");
     loadAlg->setPropertyValue("OutputWorkspace", "data"); // Is not used, just for validator
     loadAlg->execute();
 

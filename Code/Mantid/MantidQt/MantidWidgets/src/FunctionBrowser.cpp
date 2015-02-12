@@ -23,6 +23,9 @@
 #include "MantidAPI/ICostFunction.h"
 
 #include "MantidQtMantidWidgets/UserFunctionDialog.h"
+#include "MantidQtMantidWidgets/FilenameDialogEditor.h"
+#include "MantidQtMantidWidgets/FormulaDialogEditor.h"
+#include "MantidQtMantidWidgets/WorkspaceEditorFactory.h"
 
 #include "qttreepropertybrowser.h"
 #include "qtpropertymanager.h"
@@ -36,8 +39,9 @@
   #pragma GCC diagnostic ignored "-Woverloaded-virtual"
 #endif
 #include "qteditorfactory.h"
-#include "StringDialogEditorFactory.h"
 #include "DoubleEditorFactory.h"
+#include "CompositeEditorFactory.h"
+#include "ButtonEditorFactory.h"
 #if defined(__INTEL_COMPILER)
   #pragma warning enable 1125
 #elif defined(__GNUC__)
@@ -63,53 +67,22 @@
 
 #include <algorithm>
 
+namespace{
+  const char * globalOptionName = "Global";
+}
 
 namespace MantidQt
 {
 namespace MantidWidgets
 {
 
-namespace
-{
-
-class FormulaDialogEditor: public StringDialogEditor
-{
-public:
-  FormulaDialogEditor(QtProperty *property, QWidget *parent)
-    :StringDialogEditor(property,parent){}
-protected slots:
-  void runDialog()
-  {
-    MantidQt::MantidWidgets::UserFunctionDialog *dlg = new MantidQt::MantidWidgets::UserFunctionDialog((QWidget*)parent(),getText());
-    if (dlg->exec() == QDialog::Accepted)
-    {
-      setText(dlg->getFormula());
-      updateProperty();
-    };
-  }
-};
-
-class FormulaDialogEditorFactory: public StringDialogEditorFactory
-{
-public:
-  FormulaDialogEditorFactory(QObject* parent):StringDialogEditorFactory(parent){}
-protected:
-  using QtAbstractEditorFactoryBase::createEditor; // Avoid Intel compiler warning
-  QWidget *createEditor(QtStringPropertyManager *manager, QtProperty *property,QWidget *parent)
-  {
-    (void) manager; //Avoid unused warning
-    return new FormulaDialogEditor(property,parent);
-  }
-};
-
-}
-
 /**
  * Constructor
  * @param parent :: The parent widget.
+ * @param multi  :: Option to use the browser for multi-dataset fitting.
  */
-FunctionBrowser::FunctionBrowser(QWidget *parent)
-:QWidget(parent)
+FunctionBrowser::FunctionBrowser(QWidget *parent, bool multi)
+  :QWidget(parent),m_multiDataset(multi)
 {
   // create m_browser
   createBrowser();
@@ -134,6 +107,12 @@ FunctionBrowser::~FunctionBrowser()
  */
 void FunctionBrowser::createBrowser()
 {
+  QStringList options;
+  if ( m_multiDataset )
+  {
+    options << globalOptionName;
+  }
+
   /* Create property managers: they create, own properties, get and set values  */
   m_functionManager = new QtGroupPropertyManager(this);
   m_parameterManager = new QtDoublePropertyManager(this);
@@ -144,7 +123,9 @@ void FunctionBrowser::createBrowser()
   m_indexManager = new QtStringPropertyManager(this);
   m_tieManager = new QtStringPropertyManager(this);
   m_constraintManager = new QtStringPropertyManager(this);
+  m_filenameManager = new QtStringPropertyManager(this);
   m_formulaManager = new QtStringPropertyManager(this);
+  m_workspaceManager = new QtStringPropertyManager(this);
   m_attributeVectorManager = new QtGroupPropertyManager(this);
   m_attributeSizeManager = new QtIntPropertyManager(this);
   m_attributeVectorDoubleManager = new QtDoublePropertyManager(this);
@@ -152,14 +133,30 @@ void FunctionBrowser::createBrowser()
   // create editor factories
   QtSpinBoxFactory *spinBoxFactory = new QtSpinBoxFactory(this);
   DoubleEditorFactory *doubleEditorFactory = new DoubleEditorFactory(this);
+
+  QtAbstractEditorFactory<QtDoublePropertyManager> *parameterEditorFactory(NULL);
+  if ( m_multiDataset )
+  {
+    auto buttonFactory = new DoubleButtonEditorFactory(this);
+    auto compositeFactory = new CompositeEditorFactory<QtDoublePropertyManager>(this,buttonFactory);
+    compositeFactory->setSecondaryFactory(globalOptionName, doubleEditorFactory);
+    parameterEditorFactory = compositeFactory;
+    connect(buttonFactory,SIGNAL(buttonClicked(QtProperty*)), this,SLOT(parameterButtonClicked(QtProperty*)));
+  }
+  else
+  {
+    parameterEditorFactory = doubleEditorFactory;
+  }
+  
   QtLineEditFactory *lineEditFactory = new QtLineEditFactory(this);
   QtCheckBoxFactory *checkBoxFactory = new QtCheckBoxFactory(this);
-  //StringDialogEditorFactory* stringDialogEditFactory = new StringDialogEditorFactory(this);
+  FilenameDialogEditorFactory* filenameDialogEditorFactory = new FilenameDialogEditorFactory(this);
   FormulaDialogEditorFactory* formulaDialogEditFactory = new FormulaDialogEditorFactory(this);
+  WorkspaceEditorFactory* workspaceEditorFactory = new WorkspaceEditorFactory(this);
 
-  m_browser = new QtTreePropertyBrowser();
+  m_browser = new QtTreePropertyBrowser(NULL,options);
   // assign factories to property managers
-  m_browser->setFactoryForManager(m_parameterManager, doubleEditorFactory);
+  m_browser->setFactoryForManager(m_parameterManager, parameterEditorFactory);
   m_browser->setFactoryForManager(m_attributeStringManager, lineEditFactory);
   m_browser->setFactoryForManager(m_attributeDoubleManager, doubleEditorFactory);
   m_browser->setFactoryForManager(m_attributeIntManager, spinBoxFactory);
@@ -167,20 +164,27 @@ void FunctionBrowser::createBrowser()
   m_browser->setFactoryForManager(m_indexManager, lineEditFactory);
   m_browser->setFactoryForManager(m_tieManager, lineEditFactory);
   m_browser->setFactoryForManager(m_constraintManager, lineEditFactory);
+  m_browser->setFactoryForManager(m_filenameManager, filenameDialogEditorFactory);
   m_browser->setFactoryForManager(m_formulaManager, formulaDialogEditFactory);
+  m_browser->setFactoryForManager(m_workspaceManager, workspaceEditorFactory);
   m_browser->setFactoryForManager(m_attributeSizeManager, spinBoxFactory);
   m_browser->setFactoryForManager(m_attributeVectorDoubleManager, doubleEditorFactory);
 
   m_browser->setContextMenuPolicy(Qt::CustomContextMenu);
   connect(m_browser, SIGNAL(customContextMenuRequested(const QPoint &)), this, SLOT(popupMenu(const QPoint &)));
-  //connect(m_browser, SIGNAL(currentItemChanged(QtBrowserItem*)), this, SLOT(currentItemChanged(QtBrowserItem*)));
 
   connect(m_attributeStringManager,SIGNAL(propertyChanged(QtProperty*)),this,SLOT(attributeChanged(QtProperty*)));
   connect(m_attributeDoubleManager,SIGNAL(propertyChanged(QtProperty*)),this,SLOT(attributeChanged(QtProperty*)));
   connect(m_attributeIntManager,SIGNAL(propertyChanged(QtProperty*)),this,SLOT(attributeChanged(QtProperty*)));
   connect(m_attributeBoolManager,SIGNAL(propertyChanged(QtProperty*)),this,SLOT(attributeChanged(QtProperty*)));
   connect(m_formulaManager,SIGNAL(propertyChanged(QtProperty*)),this,SLOT(attributeChanged(QtProperty*)));
+  connect(m_filenameManager,SIGNAL(propertyChanged(QtProperty*)),this,SLOT(attributeChanged(QtProperty*)));
   connect(m_attributeVectorDoubleManager,SIGNAL(propertyChanged(QtProperty*)),this,SLOT(attributeVectorDoubleChanged(QtProperty*)));
+
+  connect(m_parameterManager, SIGNAL(valueChanged(QtProperty*,double)),
+          SLOT(parameterChanged(QtProperty*)));
+
+  connect(m_browser, SIGNAL(currentItemChanged(QtBrowserItem*)), SLOT(updateCurrentFunctionIndex()));
 }
 
 /**
@@ -261,6 +265,7 @@ void FunctionBrowser::setFunction(Mantid::API::IFunction_sptr fun)
 {
   clear();
   addFunction(NULL,fun);
+  emit functionStructureChanged();
 }
 
 /**
@@ -401,7 +406,12 @@ FunctionBrowser::AProperty FunctionBrowser::addParameterProperty(QtProperty* par
     throw std::runtime_error("Unexpected error in FunctionBrowser [3]");
   }
   QtProperty* prop = m_parameterManager->addProperty(paramName);
+  m_parameterManager->setDecimals(prop,6);
   m_parameterManager->setValue(prop,paramValue);
+  if ( m_multiDataset )
+  {
+    prop->setOption(globalOptionName,false);
+  }
   return addProperty(parent,prop);
 }
 
@@ -444,6 +454,7 @@ void FunctionBrowser::addFunction(QtProperty* prop, Mantid::API::IFunction_sptr 
     cf->addFunction(fun);
     setFunction(prop, cf);
   }
+  updateFunctionIndices();
 }
 
 /**
@@ -467,10 +478,20 @@ protected:
   FunctionBrowser::AProperty apply(const std::string& str)const
   {
     QtProperty* prop = NULL;
-    if ( m_attName == "Formula" )
+    if (m_attName == "FileName")
+    {
+      prop = m_browser->m_filenameManager->addProperty(m_attName);
+      m_browser->m_filenameManager->setValue(prop, QString::fromStdString(str));
+    }
+    else if ( m_attName == "Formula" )
     {
       prop = m_browser->m_formulaManager->addProperty(m_attName);
       m_browser->m_formulaManager->setValue(prop, QString::fromStdString(str));
+    }
+    else if ( m_attName == "Workspace" )
+    {
+      prop = m_browser->m_workspaceManager->addProperty(m_attName);
+      m_browser->m_workspaceManager->setValue(prop, QString::fromStdString(str));
     }
     else
     {
@@ -546,9 +567,17 @@ protected:
   void apply(std::string& str)const
   {
     QString attName = m_prop->propertyName();
-    if ( attName == "Formula" )
+    if ( attName == "FileName" )
+    {
+      str = m_browser->m_filenameManager->value(m_prop).toStdString();
+    }
+    else if ( attName == "Formula" )
     {
       str = m_browser->m_formulaManager->value(m_prop).toStdString();
+    }
+    else if ( attName == "Workspace" )
+    {
+      str = m_browser->m_workspaceManager->value(m_prop).toStdString();
     }
     else
     {
@@ -714,7 +743,7 @@ void FunctionBrowser::updateFunctionIndices(QtProperty* prop, QString index)
 /**
  * Get property of the overall function.
  */
-FunctionBrowser::AProperty FunctionBrowser::getFunctionProperty()
+FunctionBrowser::AProperty FunctionBrowser::getFunctionProperty() const
 {
   auto props = m_browser->properties();
   if ( props.isEmpty() )
@@ -729,6 +758,39 @@ FunctionBrowser::AProperty FunctionBrowser::getFunctionProperty()
   return m_properties[prop];
 }
 
+/**
+ * Get a list of names of global parameters
+ */
+QStringList FunctionBrowser::getGlobalParameters() const
+{
+  QStringList out;
+  for(auto propIt = m_properties.begin(); propIt != m_properties.end(); ++propIt)
+  {
+    QtProperty *prop = propIt->prop;
+    if ( prop->hasOption(globalOptionName) && prop->checkOption(globalOptionName) )
+    {
+      out << getIndex(prop) + prop->propertyName();
+    }
+  }
+  return out;
+}
+
+/**
+ * Get a list of names of local parameters
+ */
+QStringList FunctionBrowser::getLocalParameters() const
+{
+  QStringList out;
+  for(auto propIt = m_properties.begin(); propIt != m_properties.end(); ++propIt)
+  {
+    QtProperty *prop = propIt->prop;
+    if ( prop->hasOption(globalOptionName) && !prop->checkOption(globalOptionName) )
+    {
+      out << getIndex(prop) + prop->propertyName();
+    }
+  }
+  return out;
+}
 
 /**
  * Check if property is a function group
@@ -740,14 +802,16 @@ bool FunctionBrowser::isFunction(QtProperty* prop) const
 }
 
 /**
- * Check if property is a function attribute
+ * Check if property is any of the string attributes
  * @param prop :: Property to check
  */
 bool FunctionBrowser::isStringAttribute(QtProperty* prop) const
 {
   return prop && (
     dynamic_cast<QtAbstractPropertyManager*>(m_attributeStringManager) == prop->propertyManager() ||
-    dynamic_cast<QtAbstractPropertyManager*>(m_formulaManager) == prop->propertyManager()
+    dynamic_cast<QtAbstractPropertyManager*>(m_formulaManager) == prop->propertyManager() ||
+    dynamic_cast<QtAbstractPropertyManager*>(m_filenameManager) == prop->propertyManager() ||
+    dynamic_cast<QtAbstractPropertyManager*>(m_workspaceManager) == prop->propertyManager()
     );
 }
 
@@ -846,7 +910,28 @@ QString FunctionBrowser::getIndex(QtProperty* prop) const
   }
 
   auto ap = m_properties[prop];
-  return getIndex(ap.parent); 
+  return getIndex(ap.parent);
+}
+
+/**
+ * Return function property for a function with given index.
+ * @param index :: Function index to search, or empty string for top-level function
+ * @return Function property, or NULL if not found
+ */
+QtProperty* FunctionBrowser::getFunctionProperty(const QString& index) const
+{
+  // Might not be the most efficient way to do it. m_functionManager might be searched instead,
+  // but it is not being kept up-to-date at the moment (is not cleared).
+  foreach (auto property, m_properties.keys())
+  {
+    if(isFunction(property) && getIndex(property) == index)
+    {
+      return property;
+    }
+  }
+
+  // No function with such index
+  return NULL;
 }
 
 
@@ -1258,7 +1343,7 @@ void FunctionBrowser::addFunction()
   {// the browser is empty - add first function
     addFunction(NULL,f);
   }
-  updateFunctionIndices();
+  emit functionStructureChanged();
 }
 
 /**
@@ -1307,7 +1392,15 @@ Mantid::API::IFunction_sptr FunctionBrowser::getFunction(QtProperty* prop, bool 
         SetAttributeFromProperty setter(this,child);
         Mantid::API::IFunction::Attribute attr = fun->getAttribute(attName);
         attr.apply(setter);
-        fun->setAttribute(attName,attr);
+        try
+        {
+          fun->setAttribute(attName,attr);
+        }
+        catch(std::exception& expt)
+        {
+          QMessageBox::critical(this,"MantidPlot - Error", "Cannot set attribute " + QString::fromStdString(attName) + 
+            " of function " + prop->propertyName() + ":\n\n" + QString::fromStdString(expt.what()));
+        }
       }
       else if (!attributesOnly && isParameter(child))
       {
@@ -1380,6 +1473,123 @@ Mantid::API::IFunction_sptr FunctionBrowser::getFunction(QtProperty* prop, bool 
 }
 
 /**
+ * Return function at specified function index (e.g. f0.)
+ * @param index :: Index of the function, or empty string for top-level function
+ * @return Function at index, or null pointer if not found
+ */
+Mantid::API::IFunction_sptr FunctionBrowser::getFunctionByIndex(const QString& index)
+{
+  if(auto prop = getFunctionProperty(index))
+  {
+    return getFunction(prop);
+  }
+  else
+  {
+    return Mantid::API::IFunction_sptr();
+  }
+}
+
+/**
+ * Updates the function parameter value
+ * @param funcIndex :: Index of the function
+ * @param paramName :: Parameter name
+ * @param value :: New value
+ */
+void FunctionBrowser::setParameter(const QString& funcIndex, const QString& paramName, double value)
+{
+  if (auto prop = getFunctionProperty(funcIndex))
+  {
+    auto children = prop->subProperties();
+    foreach(QtProperty* child, children)
+    {
+      if (isParameter(child) && child->propertyName() == paramName)
+      {
+        m_parameterManager->setValue(child, value);
+        break;
+      }
+    }
+  }
+}
+
+/**
+ * Get a value of a parameter
+ * @param funcIndex :: Index of the function
+ * @param paramName :: Parameter name
+ */
+double FunctionBrowser::getParameter(const QString& funcIndex, const QString& paramName) const
+{
+  if (auto prop = getFunctionProperty(funcIndex))
+  {
+    auto children = prop->subProperties();
+    foreach(QtProperty* child, children)
+    {
+      if (isParameter(child) && child->propertyName() == paramName)
+      {
+        return m_parameterManager->value(child);
+      }
+    }
+  }
+  throw std::runtime_error("Unknown function parameter " + (funcIndex + paramName).toStdString());
+}
+
+/**
+ * Split a qualified parameter name into function index and local parameter name.
+ * @param paramName :: Fully qualified parameter name (includes function index)
+ * @return :: A string list with the first item is the function index and the second
+ *   item is the param local name.
+ */
+QStringList FunctionBrowser::splitParameterName(const QString& paramName) const
+{
+  QString functionIndex;
+  QString parameterName = paramName;
+  int j = paramName.lastIndexOf('.');
+  if ( j > 0 )
+  {
+    ++j;
+    functionIndex = paramName.mid(0,j);
+    parameterName = paramName.mid(j);
+  }
+  QStringList res;
+  res << functionIndex << parameterName;
+  return res;
+}
+
+/**
+ * Updates the function parameter value
+ * @param paramName :: Fully qualified parameter name (includes function index)
+ * @param value :: New value
+ */
+void FunctionBrowser::setParameter(const QString& paramName, double value)
+{
+  QStringList name = splitParameterName(paramName);
+  setParameter(name[0],name[1],value);
+}
+
+/**
+ * Get a value of a parameter
+ * @param paramName :: Fully qualified parameter name (includes function index)
+ */
+double FunctionBrowser::getParameter(const QString& paramName) const
+{
+  QStringList name = splitParameterName(paramName);
+  return getParameter(name[0],name[1]);
+}
+
+/**
+ * Update parameter values in the browser to match those of a function.
+ * @param fun :: A function to copy the values from. It must have the same
+ *   type (composition) as the function in the browser.
+ */
+void FunctionBrowser::updateParameters(const Mantid::API::IFunction& fun)
+{
+  auto paramNames = fun.getParameterNames();
+  for(auto par = paramNames.begin(); par != paramNames.end(); ++par)
+  {
+    setParameter( QString::fromStdString(*par), fun.getParameter(*par) );
+  }
+}
+
+/**
  * Return FunctionFactory function string
  */
 QString FunctionBrowser::getFunctionString()
@@ -1400,6 +1610,7 @@ void FunctionBrowser::removeFunction()
   if (!isFunction(prop)) return;
   removeProperty(prop);
   updateFunctionIndices();
+  emit functionStructureChanged();
 }
 
 /**
@@ -1559,6 +1770,23 @@ void FunctionBrowser::removeConstraint()
   removeProperty( prop );
 }
 
+void FunctionBrowser::updateCurrentFunctionIndex()
+{
+  boost::optional<QString> newIndex;
+
+  if (auto item = m_browser->currentItem())
+  {
+    auto prop = item->property();
+    newIndex = getIndex(prop);
+  }
+
+  if (m_currentFunctionIndex != newIndex)
+  {
+    m_currentFunctionIndex = newIndex;
+    emit currentFunctionChanged();
+  }
+}
+
 /**
  * Slot connected to all function attribute managers. Update the corresponding function.
  * @param prop :: An attribute property that was changed
@@ -1586,6 +1814,20 @@ void FunctionBrowser::attributeVectorDoubleChanged(QtProperty *prop)
     attributeChanged( vectorProp );
 }
 
+void FunctionBrowser::parameterChanged(QtProperty* prop)
+{
+  emit parameterChanged(getIndex(prop), prop->propertyName());
+}
+
+void FunctionBrowser::parameterButtonClicked(QtProperty *prop)
+{
+  emit localParameterButtonClicked(getIndex(prop) + prop->propertyName());
+}
+
+bool FunctionBrowser::hasFunction() const
+{
+  return ! m_functionManager->properties().isEmpty();
+}
 
 } // MantidWidgets
 } // MantidQt

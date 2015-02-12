@@ -52,7 +52,7 @@ public:
     TS_ASSERT(ws);
     if (!ws) return;
     TS_ASSERT_EQUALS( ws->getDimension(0)->getName(), "Q_lab_x");
-    TS_ASSERT_EQUALS( ws->getSpecialCoordinateSystem(), Mantid::API::QLab);
+    TS_ASSERT_EQUALS( ws->getSpecialCoordinateSystem(), Mantid::Kernel::QLab);
 
     //TODO: Now you can add differenc dimension types to each other, but this should be fixed
     alg = FrameworkManager::Instance().exec("ConvertToDiffractionMDWorkspace", 8,
@@ -83,7 +83,7 @@ public:
     TS_ASSERT(ws);
     if (!ws) return;
     TS_ASSERT_EQUALS( ws->getDimension(0)->getName(), "[H,0,0]");
-    TS_ASSERT_EQUALS( ws->getSpecialCoordinateSystem(), Mantid::API::HKL);
+    TS_ASSERT_EQUALS( ws->getSpecialCoordinateSystem(), Mantid::Kernel::HKL);
 
     AnalysisDataService::Instance().remove("testOutMD");
     alg = FrameworkManager::Instance().exec("ConvertToDiffractionMDWorkspace", 6,
@@ -97,11 +97,11 @@ public:
     TS_ASSERT(ws);
     if (!ws) return;
     TS_ASSERT_EQUALS( ws->getDimension(0)->getName(), "Q_sample_x");
-    TS_ASSERT_EQUALS( ws->getSpecialCoordinateSystem(), Mantid::API::QSample);
+    TS_ASSERT_EQUALS( ws->getSpecialCoordinateSystem(), Mantid::Kernel::QSample);
   }
 
   void do_test_MINITOPAZ(EventType type, size_t numTimesToAdd = 1,
-      bool OneEventPerBin=false, bool MakeWorkspace2D = false,size_t nEventsRetrieved=100000)
+      bool OneEventPerBin=false, bool MakeWorkspace2D = false,size_t nEventsRetrieved=400)
   {
 
     int numEventsPer = 100;
@@ -201,7 +201,7 @@ public:
   void test_MINITOPAZ_fromWorkspace2D()
   {
     // this is questionable change, indicating that ConvertToMD and CovertToDiffractionWorkspace treat 0 differently
-    do_test_MINITOPAZ(TOF, 1, false, true,1000);
+    do_test_MINITOPAZ(TOF, 1, false, true,399);
   }
 
 

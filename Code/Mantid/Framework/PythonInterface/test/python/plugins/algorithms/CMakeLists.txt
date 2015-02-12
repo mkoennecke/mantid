@@ -7,14 +7,18 @@ set ( TEST_PY_FILES
   ConjoinSpectraTest.py
   CorrectLogTimesTest.py
   CreateLeBailFitInputTest.py
+  CreateCalibrationWorkspaceTest.py
   CreateWorkspaceTest.py
-  CreateTransmissionWorkspaceTest.py
-  CreateTransmissionWorkspaceAutoTest.py
   DakotaChiSquaredTest.py
+  DensityOfStatesTest.py
   DSFinterpTest.py
   FilterLogByTimeTest.py
   FindReflectometryLinesTest.py
   GetEiT0atSNSTest.py
+  IndirectILLReductionTest.py
+  InelasticIndirectReductionTest.py
+  IndirectTransmissionTest.py
+  IndirectTransmissionMonitorTest.py
   LoadFullprofFileTest.py
   LoadLiveDataTest.py
   LoadLogPropertyTableTest.py
@@ -24,19 +28,26 @@ set ( TEST_PY_FILES
   MaskWorkspaceToCalFileTest.py
   MeanTest.py
   MergeCalFilesTest.py
-  ReflectometryReductionOneTest.py
-  ReflectometryReductionOneAutoTest.py
+  MolDynTest.py
+  PDDetermineCharacterizationsTest.py
   RetrieveRunInfoTest.py
   SANSWideAngleCorrectionTest.py
+  SavePlot1DTest.py
+  SaveVulcanGSSTest.py
+  SortByQVectorsTest.py
+  SofQWMomentsTest.py
   SortDetectorsTest.py
   SortXAxisTest.py
-  Stitch1DTest.py
   Stitch1DManyTest.py
   SuggestTibCNCSTest.py
   SuggestTibHYSPECTest.py
+  SymmetriseTest.py
   UpdatePeakParameterTableValueTest.py
   SANSSubtractTest.py
-  #FixGSASInstrumentFileTest.py
+  TimeSliceTest.py
+  ExportSampleLogsToCSVFileTest.py
+  ExportExperimentLogTest.py
+  PoldiMergeTest.py
 )
 
 check_tests_valid ( ${CMAKE_CURRENT_SOURCE_DIR} ${TEST_PY_FILES} )

@@ -6,66 +6,66 @@
 #include "MantidKernel/Property.h"
 #include "MantidKernel/TimeSeriesProperty.h"
 
-namespace Mantid
-{
-namespace DataHandling
-{
+namespace Mantid {
+namespace DataHandling {
 
-  /** Merge2WorkspaceLogs : TODO: DESCRIPTION
-    
-    @date 2011-12-15
+/** Merge2WorkspaceLogs : TODO: DESCRIPTION
 
-    Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+  @date 2011-12-15
 
-    This file is part of Mantid.
+  Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge
+  National Laboratory & European Spallation Source
 
-    Mantid is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 3 of the License, or
-    (at your option) any later version.
+  This file is part of Mantid.
 
-    Mantid is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+  Mantid is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 3 of the License, or
+  (at your option) any later version.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  Mantid is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
-    File change history is stored at: <https://github.com/mantidproject/mantid>
-    Code Documentation is available at: <http://doxygen.mantidproject.org>
-  */
-  class DLLExport Merge2WorkspaceLogs : public API::Algorithm
-  {
-  public:
-    Merge2WorkspaceLogs();
-    virtual ~Merge2WorkspaceLogs();
-    
-    /// Algorithm's name for identification
-    virtual const std::string name() const { return "MergeLogs";};
-    /// Algorithm's version for identification
-    virtual int version() const { return 1;};
-    /// Algorithm's category for identification
-    virtual const std::string category() const { return "DataHandling\\Logs";}
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-  private:
-    virtual void initDocs();
+  File change history is stored at: <https://github.com/mantidproject/mantid>
+  Code Documentation is available at: <http://doxygen.mantidproject.org>
+*/
+class DLLExport Merge2WorkspaceLogs : public API::Algorithm {
+public:
+  Merge2WorkspaceLogs();
+  virtual ~Merge2WorkspaceLogs();
 
-    void init();
+  /// Algorithm's name for identification
+  virtual const std::string name() const { return "MergeLogs"; };
+  /// Summary of algorithms purpose
+  virtual const std::string summary() const {
+    return "Merge 2 TimeSeries logs in a given Workspace.";
+  }
 
-    void exec();
+  /// Algorithm's version for identification
+  virtual int version() const { return 1; };
+  /// Algorithm's category for identification
+  virtual const std::string category() const { return "DataHandling\\Logs"; }
 
-    void mergeLogs(std::string ilogname1, std::string ilogname2, std::string ologname,
-        bool resetlogvalue, double logvalue1, double logvalue2);
+private:
+  void init();
 
-    Kernel::TimeSeriesProperty<double>* getTimeSeriesLog(std::string logname);
+  void exec();
 
-    API::MatrixWorkspace_sptr matrixWS;
+  void mergeLogs(std::string ilogname1, std::string ilogname2,
+                 std::string ologname, bool resetlogvalue, double logvalue1,
+                 double logvalue2);
 
-  };
+  Kernel::TimeSeriesProperty<double> *getTimeSeriesLog(std::string logname);
 
+  API::MatrixWorkspace_sptr matrixWS;
+};
 
 } // namespace DataHandling
 } // namespace Mantid
 
-#endif  /* MANTID_DATAHANDLING_MERGELOGS_H_ */
+#endif /* MANTID_DATAHANDLING_MERGELOGS_H_ */

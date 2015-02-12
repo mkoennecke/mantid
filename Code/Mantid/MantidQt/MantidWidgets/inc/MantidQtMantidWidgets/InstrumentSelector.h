@@ -24,13 +24,13 @@ namespace MantidQt
 {
   namespace MantidWidgets
   {
-    /** 
+    /**
     This class defines a widget for selecting an instrument known to Mantid
 
     @author Martyn Gigg, Tessella Support Services plc
     @date 10/08/2010
 
-    Copyright &copy; 2010 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+    Copyright &copy; 2010 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
     This file is part of Mantid.
 
@@ -48,12 +48,15 @@ namespace MantidQt
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
     File change history is stored at: <https://github.com/mantidproject/mantid>
-    Code Documentation is available at: <http://doxygen.mantidproject.org>    
+    Code Documentation is available at: <http://doxygen.mantidproject.org>
     */
     class EXPORT_OPT_MANTIDQT_MANTIDWIDGETS InstrumentSelector : public QComboBox
     {
       Q_OBJECT
+
       Q_PROPERTY(QStringList techniques READ getTechniques WRITE setTechniques)
+      Q_PROPERTY(bool updateOnFacilityChange READ getAutoUpdate WRITE setAutoUpdate)
+      Q_PROPERTY(QString facility READ getFacility WRITE setFacility)
 
     public:
       /// Default Constructor
@@ -64,6 +67,16 @@ namespace MantidQt
       QStringList getTechniques() const;
       /// Set the list of techniques
       void setTechniques(const QStringList & techniques);
+      /// Returns true of auto reloading on facility change is enabled
+      bool getAutoUpdate();
+      /// Enable or disable reloading on facility change
+      void setAutoUpdate(bool autoUpdate);
+      /// Get the name of the facility instrumetns are currently loaded from
+      QString getFacility();
+      /// Load instruments from a given facility
+      void setFacility(const QString & facilityName);
+      /// Sets whether to update the default instrument on selection change
+      void updateInstrumentOnSelection(const bool storeChanges);
 
     public slots:
       /// Update list for a new facility
@@ -77,12 +90,12 @@ namespace MantidQt
     private slots:
       /// Update Mantid's default instrument
       void updateDefaultInstrument(const QString & name) const;
-      
+
     private:
       void handleConfigChange(Mantid::Kernel::ConfigValChangeNotification_ptr pNf);
       /// Filter the list to only show those supporting the given technique
       void filterByTechniquesAtFacility(const QStringList & techniques, const Mantid::Kernel::FacilityInfo & facility);
-      
+
     private: // members
       /// Poco Observer for Config Service Notifications
       Poco::NObserver<InstrumentSelector, Mantid::Kernel::ConfigValChangeNotification> m_changeObserver;
@@ -92,6 +105,10 @@ namespace MantidQt
       const Mantid::Kernel::FacilityInfo *m_currentFacility;
       /// Should the object be initialized
       bool m_init;
+      /// Should the default instrument be changed when the selection changes
+      bool m_storeChanges;
+      /// If the instrument list should be reloaded when the facility changes
+      bool m_updateOnFacilityChange;
     };
 
   }

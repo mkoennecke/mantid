@@ -4,7 +4,6 @@
 #include "ui_SANSRunWindow.h"
 #include "MantidQtAPI/UserSubWindow.h"
 #include "MantidAPI/Workspace.h"
-#include "MantidKernel/Logger.h"
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidGeometry/IDetector.h"
 
@@ -21,7 +20,7 @@ namespace CustomInterfaces
   @date 03/02/2011
 
 
-  Copyright &copy; 2010 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+  Copyright &copy; 2010 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
   This file is part of Mantid.
 
@@ -44,7 +43,7 @@ namespace CustomInterfaces
   {
   public:
     /// constructor
-    RectDetectorDetails(){}
+    RectDetectorDetails(): m_minDetId(0), m_maxDetId(0) {}
     ///destructor
     ~RectDetectorDetails(){}
     /// set minimum detector id
@@ -74,7 +73,7 @@ namespace CustomInterfaces
     @author Sofia Antony, Rutherford Appleton Laboratory
     @date 27/01/2011
     
-    Copyright &copy; 2009 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+    Copyright &copy; 2009 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
     This file is part of Mantid.
 
@@ -209,7 +208,6 @@ private:
   int m_Period; ///<Current period
   std::vector<std::string> m_wsVec;///< workspace vector
   std::vector<boost::shared_ptr<RectDetectorDetails> > m_rectDetectors;
-  Mantid::Kernel::Logger& g_log; ///< reference to logger class.
 
 
 private slots:

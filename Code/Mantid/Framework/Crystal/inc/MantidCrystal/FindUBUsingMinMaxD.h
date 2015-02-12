@@ -1,22 +1,19 @@
 #ifndef MANTID_CRYSTAL_FIND_UB_USING_MIN_MAX_D_H_
-#define MANTID_CRYSTAL_FIND_UB_USING_MIN_MAX_D_H_ 
-    
-#include "MantidKernel/System.h"
-#include "MantidAPI/Algorithm.h" 
-#include "MantidAPI/DeprecatedAlgorithm.h"
-#include "MantidKernel/Logger.h"
+#define MANTID_CRYSTAL_FIND_UB_USING_MIN_MAX_D_H_
 
-namespace Mantid
-{
-namespace Crystal
-{
+#include "MantidKernel/System.h"
+#include "MantidAPI/Algorithm.h"
+#include "MantidAPI/DeprecatedAlgorithm.h"
+
+namespace Mantid {
+namespace Crystal {
 /** FindUBUsingMinMaxD : Algorithm to calculate a UB matrix, given bounds
     on the lattice parameters and a list of peaks.
-    
+
     @author Dennis Mikkelson(adapted from Andrei Savici's CalculateUMatrix)
     @date   2011-08-17
 
-    Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory & 
+    Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory &
                      NScD Oak Ridge National Laboratory
 
     This file is part of Mantid.
@@ -34,42 +31,40 @@ namespace Crystal
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-    File change history is stored at: 
+    File change history is stored at:
     <https://github.com/mantidproject/mantid>
     Code Documentation is available at: <http://doxygen.mantidproject.org>
   */
-  class DLLExport FindUBUsingMinMaxD : public API::Algorithm, public API::DeprecatedAlgorithm
-  {
-  public:
-    FindUBUsingMinMaxD();
-    ~FindUBUsingMinMaxD();
-    
-    /// Algorithm's name for identification 
-    virtual const std::string name() const;
+class DLLExport FindUBUsingMinMaxD : public API::Algorithm,
+                                     public API::DeprecatedAlgorithm {
+public:
+  FindUBUsingMinMaxD();
+  ~FindUBUsingMinMaxD();
 
-    /// Algorithm's version for identification 
-    virtual int version() const;
+  /// Algorithm's name for identification
+  virtual const std::string name() const;
 
-    /// Algorithm's category for identification
-    virtual const std::string category() const;
-    
-  private:
+  /// Algorithm's version for identification
+  virtual int version() const;
 
-    /// Sets documentation strings for this algorithm
-    virtual void initDocs();
+  /// Algorithm's category for identification
+  virtual const std::string category() const;
 
-    /// Initialise the properties
-    void init();
+  /// Summary of algorithms purpose
+  virtual const std::string summary() const {
+    return "Calculate the UB matrix from a peaks workspace, given min(a,b,c) "
+           "and max(a,b,c).";
+  }
 
-    /// Run the algorithm
-    void exec();
+private:
+  /// Initialise the properties
+  void init();
 
-    /// Static reference to the logger class
-    static Kernel::Logger& g_log;
-  };
-
+  /// Run the algorithm
+  void exec();
+};
 
 } // namespace Crystal
 } // namespace Mantid
 
-#endif  /* MANTID_CRYSTAL_FIND_UB_USING_MIN_MAX_D_H_ */
+#endif /* MANTID_CRYSTAL_FIND_UB_USING_MIN_MAX_D_H_ */

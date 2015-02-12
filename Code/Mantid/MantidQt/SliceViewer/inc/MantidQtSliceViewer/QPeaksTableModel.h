@@ -27,7 +27,7 @@ namespace MantidQt
     @author Owen Arnold
     @date 07/01/2013
 
-    Copyright &copy; 2011-12 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+    Copyright &copy; 2011-12 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
     This file is part of Mantid.
 
@@ -62,6 +62,7 @@ namespace MantidQt
       int numCharacters(const int column) const;
       std::vector<int> defaultHideCols();
       ~QPeaksTableModel();
+      void setPeaksWorkspace(boost::shared_ptr<const Mantid::API::IPeaksWorkspace> peaksWS);
      signals:
       void peaksSorted(const std::string&, const bool);
     private:

@@ -21,6 +21,7 @@
 
 #include <QObject>
 #include <QList>
+#include <QRgb>
 
 class GLActorVisitor;
 class GLActorConstVisitor;
@@ -43,7 +44,7 @@ namespace Mantid
   Base class for all objects in a 3D Scene. Methods are provided to position and rotate the objects.
   The objects can also be set as active or not. Actors maintain safe pointer to a GLObject.
 
-  Copyright &copy; 2007 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+  Copyright &copy; 2007 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
   This file is part of Mantid.
 
@@ -90,7 +91,7 @@ public:
   /// Convert a "pick ID" to a colour to put into the pick image.
   static GLColor makePickColor(size_t pickID);
   /// Decode a pick colour and return corresponding "pick ID"
-  static size_t decodePickColor(const GLColor& c);
+  static size_t decodePickColor(const QRgb& c);
   /// Decode a pick colour and return corresponding "pick ID"
   static size_t decodePickColor(unsigned char r,unsigned char g,unsigned char b);
   /// Get colour of a component which doesn't have any counts associated with it.

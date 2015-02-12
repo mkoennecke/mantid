@@ -18,7 +18,7 @@ try:
     os.system("pyuic4 -o ui/sans/ui_eqsans_instrument.py ui/sans/eqsans_instrument.ui")
     os.system("pyuic4 -o ui/sans/ui_eqsans_sample_data.py ui/sans/eqsans_sample_data.ui")
     os.system("pyuic4 -o ui/sans/ui_eqsans_info.py ui/sans/eqsans_info.ui")
-    
+
     os.system("pyuic4 -o ui/ui_cluster_status.py ui/cluster_status.ui")
     os.system("pyuic4 -o ui/ui_cluster_details_dialog.py ui/cluster_details_dialog.ui")
     os.system("pyuic4 -o ui/ui_reduction_main.py ui/reduction_main.ui")
@@ -28,8 +28,5 @@ try:
     os.system("pyuic4 -o ui/ui_instrument_dialog.py ui/instrument_dialog.ui")
     os.system("pyuic4 -o ui/ui_data_catalog.py ui/data_catalog.ui")
     os.system("pyuic4 -o ui/ui_stitcher.py ui/stitcher.ui")
-        
-    # Example
-    #os.system("pyuic4 -o ui/ui_example.py ui/example.ui")
 except:
     print "Could not compile resource file"

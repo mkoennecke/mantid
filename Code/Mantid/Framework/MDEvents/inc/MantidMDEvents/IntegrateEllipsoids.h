@@ -5,33 +5,34 @@
 #include "MantidDataObjects/EventWorkspace.h"
 #include "MantidMDEvents/MDWSDescription.h"
 
-namespace Mantid
-{
-namespace MDEvents
-{
+namespace Mantid {
+namespace MDEvents {
 
-  class DLLExport IntegrateEllipsoids : public API::Algorithm
-  {
-  public:
-    IntegrateEllipsoids();
-    virtual ~IntegrateEllipsoids();
-    
-    virtual const std::string name() const;
-    virtual int   version() const;
-    virtual const std::string category() const;
+class DLLExport IntegrateEllipsoids : public API::Algorithm {
+public:
+  IntegrateEllipsoids();
+  virtual ~IntegrateEllipsoids();
 
-  private:
-    virtual void initDocs();
-    void init();
-    void exec();
+  virtual const std::string name() const;
+  /// Summary of algorithms purpose
+  virtual const std::string summary() const {
+    return "Integrate Single Crystal Diffraction Bragg peaks using 3D "
+           "ellipsoids.";
+  }
 
-    MDWSDescription m_targWSDescr;
+  virtual int version() const;
+  virtual const std::string category() const;
 
-    void initTargetWSDescr(DataObjects::EventWorkspace_sptr wksp);
-  };
+private:
+  void init();
+  void exec();
 
+  MDWSDescription m_targWSDescr;
+
+  void initTargetWSDescr(DataObjects::EventWorkspace_sptr wksp);
+};
 
 } // namespace MDEvents
 } // namespace Mantid
 
-#endif  /* MANTID_MDEVENTS_INTEGRATE_ELLIPSOIDS_H_ */
+#endif /* MANTID_MDEVENTS_INTEGRATE_ELLIPSOIDS_H_ */

@@ -23,7 +23,9 @@ _translations = {
     'Jose Borreguero'         : 'Borreguero, Jose',
     'Keith Brown'             : 'Brown, Keith',
     'Alex Buts'               : 'Buts, Alex',
+    'abuts'                   : 'Buts, Alex',
     'Stuart Campbell'         : 'Campbell, Stuart',
+    'Stuart I. Campbell'      : 'Campbell, Stuart',
     'Dickon Champion'         : 'Champion, Dickon',
     'Laurent Chapon'          : 'Chapon, Laurent',
     'Matt Clarke'             : 'Clarke, Matt',
@@ -33,12 +35,15 @@ _translations = {
     'Mathieu Doucet'          : 'Doucet, Mathieu',
     'Doucet, Mathieu'         : 'Doucet, Mathieu',
     'Nick Draper'             : 'Draper, Nick',
+    'NickDraper'              : 'Draper, Nick',
     'Ronald Fowler'           : 'Fowler, Ronald',
     'Martyn Gigg'             : 'Gigg, Martyn A.',
     'Samuel Jackson'          : 'Jackson, Samuel',
     'Dereck Kachere'          : 'Kachere, Dereck',
     'Mark Koennecke'          : 'Koennecke, Mark',
     'Ricardo Leal'            : 'Leal, Ricardo',
+    'Ricardo Ferraz Leal'     : 'Leal, Ricardo',
+    'Ricardo M. Ferraz Leal'  : 'Leal, Ricardo',
     'Christophe Le Bourlot'   : 'Le Bourlot, Christophe',
     'VickieLynch'             : 'Lynch, Vickie',
     'Vickie Lynch'            : 'Lynch, Vickie',
@@ -57,6 +62,7 @@ _translations = {
     'Pete Peterson'           : 'Peterson, Peter F.',
     'Peter Peterson'          : 'Peterson, Peter F.',
     'Jay Rainey'              : 'Rainey, Jay',
+    'Yannick Raoul'           : 'Raoul, Yannick',
     'Shelly Ren'              : 'Ren, Shelly',
     'Michael Reuter'          : 'Reuter, Michael',
     'Lakshmi Sastry'          : 'Sastry, Lakshmi',
@@ -65,12 +71,30 @@ _translations = {
     'Russell Taylor'          : 'Taylor, Russell J.',
     'Mike Thomas'             : 'Thomas, Mike',
     'Roman Tolchenov'         : 'Tolchenov, Roman',
+    'MichaelWedel'            : 'Wedel, Michael',
+    'Michael Wedel'           : 'Wedel, Michael',
+    'Ross Whitfield'          : 'Whitfield, Robert',
     'Robert Whitley'          : 'Whitley, Robert',
     'Michael Whitty'          : 'Whitty, Michael',
     'Steve Williams'          : 'Williams, Steve',
     'Marie Yao'               : 'Yao, Marie',
     'Wenduo Zhou'             : 'Zhou, Wenduo',
-    'Janik Zikovsky'          : 'Zikovsky, Janik'
+    'Janik Zikovsky'          : 'Zikovsky, Janik',
+    'Harry Jeffery'           : 'Jeffery, Harry',
+    'Federico M Pouzols'      : 'Pouzols, Federico M',
+    'FedeMPouzols'            : 'Pouzols, Federico M',
+    'Federico Montesino Pouzols': 'Pouzols, Federico M',
+    'Anton Piccardo-Selg'     : 'Piccardo-Selg, Anton',
+    'Lottie Greenwood'        : 'Greenwood, Lottie',
+    'Dan Nixon'               : 'Nixon, Dan',
+    'Raquel Alvarez Banos'    : 'Banos, Raquel Alvarez',
+    'John Hill'               : 'Hill, John',
+    'Ian Bush'                : 'Bush, Ian',
+    'Steven Hahn'             : 'Hahn, Steven',
+    'Joachim Wuttke (o)'      : 'Wuttke, Joachim',
+    'DiegoMonserrat'          : 'Monserrat, Diego',
+    'Diego Monserrat'         : 'Monserrat, Diego',
+    'David Mannicke'          : 'Mannicke, David'
 }
 
 # Used to ensure a Git author does not appear in any of the DOIs.  This is NOT
@@ -234,5 +258,5 @@ def authors_under_git_tag(tag):
     all_tags = _get_all_git_tags()
 
     previous_tag = all_tags[all_tags.index(tag) - 1]
-    
+
     return _authors_from_tag_info(previous_tag + '..' + tag)

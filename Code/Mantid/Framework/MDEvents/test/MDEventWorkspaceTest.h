@@ -119,7 +119,6 @@ public:
     TSM_ASSERT_DIFFERS( "Dimensions were not deep-copied", copy.getDimension(0), ew3.getDimension(0));
 
     /*Test that the boxes were deep copied and that their BoxController pointers have been updated too.*/
-    typedef MDBoxBase<MDLeanEvent<3>, 3> MDBoxBaseType;
     std::vector<API::IMDNode *> originalBoxes;
     ew3.getBox()->getBoxes(originalBoxes, 10000, false);
 
@@ -598,16 +597,16 @@ public:
   void test_getSpecialCoordinateSystem_default()
   {
     MDEventWorkspace1Lean::sptr ws = MDEventsTestHelper::makeMDEW<1>(10, 0.0, 10.0, 1 /*event per box*/);
-    TSM_ASSERT_EQUALS("Should default to no special coordinate system.", Mantid::API::None, ws->getSpecialCoordinateSystem());
+    TSM_ASSERT_EQUALS("Should default to no special coordinate system.", Mantid::Kernel::None, ws->getSpecialCoordinateSystem());
   }
 
   void test_setSpecialCoordinateSystem_default()
   {
      MDEventWorkspace1Lean::sptr ws = MDEventsTestHelper::makeMDEW<1>(10, 0.0, 10.0, 1 /*event per box*/);
-    TS_ASSERT_EQUALS(Mantid::API::None, ws->getSpecialCoordinateSystem());
+    TS_ASSERT_EQUALS(Mantid::Kernel::None, ws->getSpecialCoordinateSystem());
 
-    ws->setCoordinateSystem(Mantid::API::QLab);
-    TS_ASSERT_EQUALS(Mantid::API::QLab, ws->getSpecialCoordinateSystem());
+    ws->setCoordinateSystem(Mantid::Kernel::QLab);
+    TS_ASSERT_EQUALS(Mantid::Kernel::QLab, ws->getSpecialCoordinateSystem());
   }
 
 };
@@ -631,7 +630,7 @@ public:
 
 private:
   MDEventWorkspace3Lean::sptr m_ws;
-  size_t nEvents,nBoxes;
+  size_t nBoxes;
 public: 
     void setUp()
     {

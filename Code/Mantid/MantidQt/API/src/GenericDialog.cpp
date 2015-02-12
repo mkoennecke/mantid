@@ -43,7 +43,8 @@ using namespace Mantid::API;
 /**
 * Default Constructor
 */
-GenericDialog::GenericDialog(QWidget* parent) : AlgorithmDialog(parent)
+GenericDialog::GenericDialog(QWidget* parent) : AlgorithmDialog(parent),
+  m_algoPropertiesWidget(NULL)
 {
 }
 
@@ -167,18 +168,13 @@ void GenericDialog::accept()
   else
   {
     // Highlight the validators that are in error (combined from them + whole algorithm)
-    auto itr = m_algoPropertiesWidget->m_propWidgets.begin();
-    for(; itr != m_algoPropertiesWidget->m_propWidgets.end(); itr++ )
-    {
-      if (m_errors.contains(itr.key()))
-        itr.value()->setError( m_errors[itr.key()] );
-    }
+    // If got there, there were errors
+    for(auto it = m_errors.begin(); it != m_errors.end(); it++)
+      m_algoPropertiesWidget->m_propWidgets[it.key()]->updateIconVisibility(it.value());
 
     QMessageBox::critical(this, "",
               "One or more properties are invalid. The invalid properties are\n"
         "marked with a *, hold your mouse over the * for more information." );
   }
 }
-
-
 

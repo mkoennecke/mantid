@@ -1,6 +1,6 @@
 #ifndef MANTID_MDALGORITHMS_FINDPEAKSMD_H_
 #define MANTID_MDALGORITHMS_FINDPEAKSMD_H_
-    
+
 #include "MantidAPI/Algorithm.h"
 #include "MantidAPI/ExperimentInfo.h"
 #include "MantidAPI/IMDEventWorkspace.h"
@@ -12,92 +12,93 @@
 #include "MantidKernel/Matrix.h"
 #include "MantidKernel/V3D.h"
 
-namespace Mantid
-{
-namespace MDAlgorithms
-{
+namespace Mantid {
+namespace MDAlgorithms {
 
-  /** FindPeaksMD : TODO: DESCRIPTION
-   * 
-   * @author
-   * @date 2011-06-02
-   */
-  class DLLExport FindPeaksMD  : public API::Algorithm
-  {
-  public:
-    FindPeaksMD();
-    ~FindPeaksMD();
-    
-    /// Algorithm's name for identification 
-    virtual const std::string name() const { return "FindPeaksMD";};
-    /// Algorithm's version for identification 
-    virtual int version() const { return 1;};
-    /// Algorithm's category for identification
-    virtual const std::string category() const { return "Optimization\\PeakFinding;MDAlgorithms";}
-    
-  private:
-    /// Sets documentation strings for this algorithm
-    virtual void initDocs();
-    /// Initialise the properties
-    void init();
-    /// Run the algorithm
-    void exec();
+/** FindPeaksMD : TODO: DESCRIPTION
+ *
+ * @author
+ * @date 2011-06-02
+ */
+class DLLExport FindPeaksMD : public API::Algorithm {
+public:
+  FindPeaksMD();
+  ~FindPeaksMD();
 
-    /// Read member variables from experiment info
-    void readExperimentInfo(const Mantid::API::ExperimentInfo_sptr & ei, const Mantid::API::IMDWorkspace_sptr & ws);
+  /// Algorithm's name for identification
+  virtual const std::string name() const { return "FindPeaksMD"; };
+  /// Summary of algorithms purpose
+  virtual const std::string summary() const {
+    return "Find peaks in reciprocal space in a MDEventWorkspace or a "
+           "MDHistoWorkspace.";
+  }
 
-    /// Adds a peak based on Q, bin count & a set of detector IDs
-    void addPeak(const Mantid::Kernel::V3D & Q, const double binCount);
+  /// Algorithm's version for identification
+  virtual int version() const { return 1; };
+  /// Algorithm's category for identification
+  virtual const std::string category() const {
+    return "Optimization\\PeakFinding;MDAlgorithms";
+  }
 
-    /// Adds a peak based on Q, bin count
-    boost::shared_ptr<DataObjects::Peak> createPeak(const Mantid::Kernel::V3D & Q, const double binCount);
+private:
+  /// Initialise the properties
+  void init();
+  /// Run the algorithm
+  void exec();
 
-    /// Run find peaks on an MDEventWorkspace
-    template<typename MDE, size_t nd>
-    void findPeaks(typename MDEvents::MDEventWorkspace<MDE, nd>::sptr ws);
-    /// Run find peaks on a histo workspace
-    void findPeaksHisto(Mantid::MDEvents::MDHistoWorkspace_sptr ws);
+  /// Read member variables from experiment info
+  void readExperimentInfo(const Mantid::API::ExperimentInfo_sptr &ei,
+                          const Mantid::API::IMDWorkspace_sptr &ws);
 
-    /// Output PeaksWorkspace
-    Mantid::DataObjects::PeaksWorkspace_sptr peakWS;
+  /// Adds a peak based on Q, bin count & a set of detector IDs
+  void addPeak(const Mantid::Kernel::V3D &Q, const double binCount);
 
-    /// Estimated radius of peaks. Boxes closer than this are rejected
-    coord_t peakRadiusSquared;
+  /// Adds a peak based on Q, bin count
+  boost::shared_ptr<DataObjects::Peak> createPeak(const Mantid::Kernel::V3D &Q,
+                                                  const double binCount);
 
-    /// Thresholding factor
-    double DensityThresholdFactor;
+  /// Run find peaks on an MDEventWorkspace
+  template <typename MDE, size_t nd>
+  void findPeaks(typename MDEvents::MDEventWorkspace<MDE, nd>::sptr ws);
+  /// Run find peaks on a histo workspace
+  void findPeaksHisto(Mantid::MDEvents::MDHistoWorkspace_sptr ws);
 
-    /// Max # of peaks
-    int64_t MaxPeaks;
+  /// Output PeaksWorkspace
+  Mantid::DataObjects::PeaksWorkspace_sptr peakWS;
 
-    /// Flag to include the detectors within the peak
-    bool m_addDetectors;
+  /// Estimated radius of peaks. Boxes closer than this are rejected
+  coord_t peakRadiusSquared;
 
-    /// Arbitrary scaling factor for density to make more manageable numbers, especially for older file formats.
-    signal_t m_densityScaleFactor;
+  /// Thresholding factor
+  double DensityThresholdFactor;
 
-    /// Progress reporter.
-    Mantid::API::Progress * prog;
+  /// Max # of peaks
+  int64_t MaxPeaks;
 
+  /// Flag to include the detectors within the peak
+  bool m_addDetectors;
 
-    /** Enum describing which type of dimensions in the MDEventWorkspace */
-    enum eDimensionType
-    {
-      HKL, QLAB, QSAMPLE
-    };
+  /// Arbitrary scaling factor for density to make more manageable numbers,
+  /// especially for older file formats.
+  signal_t m_densityScaleFactor;
 
-    /// Instrument
-    Mantid::Geometry::Instrument_const_sptr inst;
-    /// Run number of the peaks
-    int runNumber;
-    /// Dimension type
-    eDimensionType dimType;
-    /// Goniometer matrix
-    Mantid::Kernel::Matrix<double> goniometer;
-  };
+  /// Progress reporter.
+  Mantid::API::Progress *prog;
 
+  /** Enum describing which type of dimensions in the MDEventWorkspace */
+  enum eDimensionType { HKL, QLAB, QSAMPLE };
+
+  /// Instrument
+  Mantid::Geometry::Instrument_const_sptr inst;
+  /// Run number of the peaks
+  int runNumber;
+  /// Dimension type
+  eDimensionType dimType;
+  /// Goniometer matrix
+  Mantid::Kernel::Matrix<double> goniometer;
+};
 
 } // namespace Mantid
 } // namespace MDEvents
 
-#endif  /* MANTID_MDEVENTS_FINDPEAKSMD_H_ */
+#endif /* MANTID_MDEVENTS_FINDPEAKSMD_H_ */

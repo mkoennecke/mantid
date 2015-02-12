@@ -30,27 +30,30 @@
 #define NOTE_H
 
 #include "MdiSubWindow.h"
+#include "Mantid/IProjectSerialisable.h"
 #include <QTextEdit>
+
+class ApplicationWindow;
 
 /**\brief Notes window class.
  *
  * \section future Future Plans
  * - Search and replace
  */
-class Note: public MdiSubWindow
+class Note: public MdiSubWindow, public Mantid::IProjectSerialisable
 {
   Q_OBJECT
 
 public:
-  Note(const QString& label, ApplicationWindow* parent, const QString& name = QString(), Qt::WFlags f=0);
+  Note(const QString& label, QWidget* parent, const QString& name = QString(), Qt::WFlags f=0);
   ~Note(){};
+
+  void loadFromProject(const std::string& lines, ApplicationWindow* app, const int fileVersion);
+  std::string saveToProject(ApplicationWindow* app);
 
   void setName(const QString& name);
 
 public slots:
-  QString saveToString(const QString &info, bool = false);
-  void restore(const QStringList&);
-
   QTextEdit* editor(){return te;};
   void modifiedNote();
 

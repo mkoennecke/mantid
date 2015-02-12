@@ -28,7 +28,7 @@ allows the user to plot selected log files.
 @author Martyn Gigg, Tessella Support Services plc
 @date 05/11/2009
 
-Copyright &copy; 2009 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+Copyright &copy; 2009 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
 This file is part of Mantid.
 
@@ -95,10 +95,10 @@ private:
   QRadioButton *filterNone, *filterStatus, *filterPeriod, *filterStatusPeriod;
 
   /// Number of statistic values
-  static const std::size_t NUM_STATS = 6;
+  static const std::size_t NUM_STATS = 7;
 
   /// Stats labels
-  QLabel* statLabels[NUM_STATS]; //minLabel, maxLabel, meanLabel, medianLabel, stddevLabel;
+  QLabel* statLabels[NUM_STATS]; //minLabel, maxLabel, meanLabel, timeAverageLabel, medianLabel, stddevLabel, durationLabel;
 
   /// Testboxes with stats data
   QLineEdit  * statValues[NUM_STATS];

@@ -3,79 +3,71 @@
 
 #include "MantidGeometry/DllConfig.h"
 #include "MantidGeometry/Surfaces/Surface.h"
-#include "MantidKernel/Logger.h"
 #include <vector>
 
-namespace Mantid
-{
+namespace Mantid {
 
-  namespace Geometry
-  {
+namespace Geometry {
 
-    /**
-    \class  Quadratic
-    \brief Holds a basic quadratic surface
-    \author S. Ansell
-    \date April 2004
-    \version 1.0
+/**
+\class  Quadratic
+\brief Holds a basic quadratic surface
+\author S. Ansell
+\date April 2004
+\version 1.0
 
-    Holds a basic surface with equation form
-    \f[ Ax^2+By^2+Cz^2+Dxy+Exz+Fyz+Gx+Hy+Jz+K=0 \f]
+Holds a basic surface with equation form
+\f[ Ax^2+By^2+Cz^2+Dxy+Exz+Fyz+Gx+Hy+Jz+K=0 \f]
 
-    */
+*/
 
-    class MANTID_GEOMETRY_DLL Quadratic : public Surface
-    {
-    private:
+class MANTID_GEOMETRY_DLL Quadratic : public Surface {
+private:
+  void matrixForm(Kernel::Matrix<double> &, Kernel::V3D &, double &) const;
 
-      static Kernel::Logger& PLog;           ///< The official logger
+protected:
+  std::vector<double> BaseEqn; ///< Base equation (as a 10 point vector)
 
-      void matrixForm(Kernel::Matrix<double>&,
-        Kernel::V3D&,double&) const;          
+public:
+  static const int Nprecision = 10; ///< Precision of the output
 
-    protected:
+  Quadratic();
+  Quadratic(const Quadratic &);
+  virtual Quadratic *clone() const = 0; ///< Abstract clone function
+  Quadratic &operator=(const Quadratic &);
+  virtual ~Quadratic();
 
-      std::vector<double> BaseEqn;     ///< Base equation (as a 10 point vector)
+  /// Accept visitor for line calculation
+  virtual void acceptVisitor(BaseVisit &A) const { A.Accept(*this); }
 
-    public:
+  /// Effective typeid
+  virtual std::string className() const { return "Quadratic"; }
 
-      static const int Nprecision=10;        ///< Precision of the output
+  const std::vector<double> &copyBaseEqn() const {
+    return BaseEqn;
+  } ///< access BaseEquation vector
 
-      Quadratic();
-      Quadratic(const Quadratic&);
-      virtual Quadratic* clone() const =0;   ///< Abstract clone function
-      Quadratic& operator=(const Quadratic&);
-      virtual ~Quadratic();
+  virtual int side(const Kernel::V3D &) const;
 
-      /// Accept visitor for line calculation
-      virtual void acceptVisitor(BaseVisit& A) const
-      {  A.Accept(*this); }
+  virtual void setBaseEqn() = 0; ///< Abstract set baseEqn
+  double eqnValue(const Kernel::V3D &) const;
 
-      /// Effective typeid
-      virtual std::string className() const { return "Quadratic"; }
+  virtual int
+  onSurface(const Kernel::V3D &) const; ///< is point valid on surface
+  virtual double distance(const Kernel::V3D &)
+      const; ///< distance between point and surface (approx)
+  virtual Kernel::V3D
+  surfaceNormal(const Kernel::V3D &) const; ///< Normal at surface
 
-      const std::vector<double>& copyBaseEqn() const { return BaseEqn; }  ///< access BaseEquation vector
+  virtual void displace(const Kernel::V3D &);
+  virtual void rotate(const Kernel::Matrix<double> &);
 
-      virtual int side(const Kernel::V3D&) const; 
+  virtual void write(std::ostream &) const;
+  virtual void print() const;
+};
 
-      virtual void setBaseEqn() =0;      ///< Abstract set baseEqn 
-      double eqnValue(const Kernel::V3D&) const;
+} // NAMESPACE Geometry
 
-      virtual int onSurface(const Kernel::V3D&) const;          ///< is point valid on surface 
-      virtual double distance(const Kernel::V3D&) const;        ///< distance between point and surface (approx)
-      virtual Kernel::V3D surfaceNormal(const Kernel::V3D&) const;    ///< Normal at surface
-
-      virtual void displace(const Kernel::V3D&);
-      virtual void rotate(const Kernel::Matrix<double>&);
-
-      virtual void write(std::ostream&) const;
-      virtual void print() const;
-
-
-    };
-
-  }  // NAMESPACE Geometry
-
-}  // NAMESPACE Geometry
+} // NAMESPACE Geometry
 
 #endif

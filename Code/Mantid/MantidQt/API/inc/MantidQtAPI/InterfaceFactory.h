@@ -7,10 +7,10 @@
 #include "DllOption.h"
 #include "MantidKernel/DynamicFactory.h"
 #include "MantidKernel/SingletonHolder.h"
-#include "MantidKernel/Logger.h"
 #include <QHash>
 #include <QStringList>
 #include <QSetIterator>
+#include <set>
 
 namespace MantidQt
 {
@@ -31,7 +31,7 @@ class UserSubWindow;
     @author Martyn Gigg, Tessella plc
     @date 24/02/2009
     
-    Copyright &copy; 2009 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+    Copyright &copy; 2009 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
     This file is part of Mantid.
 
@@ -89,7 +89,7 @@ private:
     @author Martyn Gigg, Tessella plc
     @date 06/07/2010
     
-    Copyright &copy; 2009 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+    Copyright &copy; 2009 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
     This file is part of Mantid.
 
@@ -164,7 +164,6 @@ private:
   QHash<QString, QList<std::string> > m_badAliases; 
   /// A map of interfaces to their categories.
   QHash<QString, QSet<QString>> m_categoryLookup;
-  Mantid::Kernel::Logger & g_log;
 };
 
 /**

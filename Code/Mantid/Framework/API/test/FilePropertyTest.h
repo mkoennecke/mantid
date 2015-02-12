@@ -111,7 +111,7 @@ public:
     std::string msg = fp->setValue("LOQ48127.raw");
     TS_ASSERT_EQUALS(msg, "");
     // I'm using part of the file's path to check that the property really has found the file, with OptionalLoad the property returns valid whether it finds the file or not
-    TS_ASSERT(fp->value().find("AutoTestData") != std::string::npos);
+    TS_ASSERT(fp->value().find("UnitTest") != std::string::npos);
     // do this in parts making no assumptions about the identity of the slash that separates directories
     TS_ASSERT(fp->value().find("Test") != std::string::npos);
 
@@ -167,12 +167,11 @@ public:
 
   void testThatRunNumberReturnsFileWithCorrectPrefix()
   {
-    Mantid::API::FileProperty *fp = 
-      new Mantid::API::FileProperty("Filename","", Mantid::API::FileProperty::Load, 
+    Mantid::API::FileProperty fp("Filename","", Mantid::API::FileProperty::Load,
                                     std::vector<std::string>(1, ".raw"));
-    std::string error = fp->setValue("48127");
+    std::string error = fp.setValue("48127");
     TS_ASSERT_EQUALS(error, "");
-    TS_ASSERT_DIFFERS(fp->value().find("LOQ48127"),std::string::npos);
+    TS_ASSERT_DIFFERS(fp.value().find("LOQ48127"),std::string::npos);
     
     // Now test one with an upper case extension
     auto & fileFinder = Mantid::API::FileFinder::Instance();
@@ -181,9 +180,9 @@ public:
     fileFinder.setCaseSensitive(false);
 
     ConfigService::Instance().setString("default.instrument","LOQ");
-    error = fp->setValue("25654");
+    error = fp.setValue("25654");
     TS_ASSERT_EQUALS(error, "");
-    TS_ASSERT(fp->value().find("LOQ25654") != std::string::npos);
+    TS_ASSERT(fp.value().find("LOQ25654") != std::string::npos);
 
     fileFinder.setCaseSensitive(startingCaseOption);
   }

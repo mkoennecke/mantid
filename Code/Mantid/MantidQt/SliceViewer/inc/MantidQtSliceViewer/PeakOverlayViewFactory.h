@@ -3,8 +3,8 @@
 
 #include "MantidKernel/System.h"
 #include "MantidKernel/V3D.h"
+#include "MantidAPI/PeakTransform.h"
 #include "MantidQtSliceViewer/PeakOverlayView.h"
-#include "MantidQtSliceViewer/PeakTransform.h"
 #include <boost/shared_ptr.hpp>
 
 namespace Mantid
@@ -13,6 +13,7 @@ namespace Mantid
   {
     // Forward dec.
     class IPeak;
+    class IPeaksWorkspace;
   }
 }
 
@@ -24,7 +25,7 @@ namespace MantidQt
     
     @date 2012-08-24
 
-    Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+    Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
     This file is part of Mantid.
 
@@ -48,7 +49,7 @@ namespace MantidQt
     {
     public:
       /// Create a peak view from the index of a peak in the peaks workspace
-      virtual boost::shared_ptr<PeakOverlayView> createView(PeakTransform_const_sptr transform) const = 0;
+      virtual boost::shared_ptr<PeakOverlayView> createView(Mantid::API::PeakTransform_const_sptr transform) const = 0;
       /// Destructor
       virtual ~PeakOverlayViewFactory()
       {
@@ -59,11 +60,14 @@ namespace MantidQt
       virtual std::string getPlotYLabel() const = 0;
       /// Get the Figure Of Merit for this factory
       virtual int FOM() const = 0;
+      /// Same factory settings for a different peaks workspace
+      virtual void swapPeaksWorkspace(boost::shared_ptr<Mantid::API::IPeaksWorkspace>& peaksWS) = 0;
     };
 
     /// Factory Shared Pointer typedef.
     typedef boost::shared_ptr<PeakOverlayViewFactory> PeakOverlayViewFactory_sptr;
   }
 }
+
 
 #endif /* MANTID_SLICEVIEWER_PEAKOVERLAY_VIEW_FACTORY_H_ */

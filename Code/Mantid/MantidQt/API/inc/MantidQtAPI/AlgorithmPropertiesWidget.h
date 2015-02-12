@@ -26,7 +26,7 @@ namespace API
     
     @date 2012-03-09
 
-    Copyright &copy; 2012 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+    Copyright &copy; 2012 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
     This file is part of Mantid.
 
@@ -59,8 +59,8 @@ namespace API
 
     void initLayout();
 
-    Mantid::API::IAlgorithm * getAlgorithm();
-    void setAlgorithm(Mantid::API::IAlgorithm * algo);
+    Mantid::API::IAlgorithm_sptr  getAlgorithm();
+    void setAlgorithm(Mantid::API::IAlgorithm_sptr algo);
 
     QString getAlgorithmName() const;
     void setAlgorithmName(QString name);
@@ -98,16 +98,13 @@ namespace API
     QString m_algoName;
 
     /// Pointer to the algorithm to view
-    Mantid::API::IAlgorithm * m_algo;
+    Mantid::API::IAlgorithm_sptr m_algo;
 
     /// The grid widget containing the input boxes
     QGridLayout *m_inputGrid;
 
     /// The current grid widget for sub-boxes
     QGridLayout *m_currentGrid;
-
-    /// We own the m_algo pointer and need to delete it.
-    bool m_deleteAlgo;
 
     /// A map where key = property name; value = the error for this property (i.e. it is not valid).
     QHash<QString, QString> m_errors;

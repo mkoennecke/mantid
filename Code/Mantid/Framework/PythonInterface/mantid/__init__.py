@@ -4,22 +4,24 @@ Mantid
 
 http://www.mantidproject.org
 
-The Mantid project provides a platform that supports high-performance computing 
-on neutron and muon data. The framework provides a set of common services, 
+The Mantid project provides a platform that supports high-performance computing
+on neutron and muon data. The framework provides a set of common services,
 algorithms and data objects that are:
 
     - Instrument or technique independent;
     - Supported on multiple target platforms (Windows, Linux, Mac OS X);
     - Easily extensible by Instruments Scientists/Users;
     - Open source and freely redistributable to visiting scientists;
-    - Provides functionalities for Scripting, Visualization, Data transformation, 
-      Implementing Algorithms, Virtual Instrument Geometry. 
+    - Provides functionalities for Scripting, Visualization, Data transformation,
+      Implementing Algorithms, Virtual Instrument Geometry.
 
 """
+from __future__ import absolute_import
+
 ###############################################################################
 # Check the current Python version is correct
 ###############################################################################
-import pyversion
+from . import pyversion
 
 ###############################################################################
 # Define the api version
@@ -33,7 +35,7 @@ def apiVersion():
 ###############################################################################
 # GUI - Do this as early as possible
 ###############################################################################
-# Flag indicating whether the GUI layer is loaded. 
+# Flag indicating whether the GUI layer is loaded.
 try:
     import _qti
     __gui__ = True
@@ -44,7 +46,12 @@ except ImportError:
 # Set deprecation warnings back to default (they are ignored in 2.7)
 ###############################################################################
 import warnings as _warnings
+# Default we see everything
 _warnings.filterwarnings("default",category=DeprecationWarning)
+# We can't do anything about numpy.oldnumeric being deprecated but
+# still used in other libraries, e.g scipy, so just ignore those
+_warnings.filterwarnings("ignore",category=DeprecationWarning,
+                         module="numpy.oldnumeric")
 
 ###############################################################################
 # Try to be smarter when finding Mantid framework libraries
@@ -61,15 +68,15 @@ if _os.path.exists(_os.path.join(_bindir, 'Mantid.properties')):
 ###############################################################################
 # Ensure the sub package C libraries are loaded
 ###############################################################################
-import kernel
-import geometry
-import api 
+import mantid.kernel as kernel
+import mantid.geometry as geometry
+import mantid.api as api
 
 ###############################################################################
-# Make the aliases form each module accessible in a the mantid namspace
+# Make the aliases from each module accessible in a the mantid namspace
 ###############################################################################
-from kernel._aliases import *
-from api._aliases import *
+from mantid.kernel._aliases import *
+from mantid.api._aliases import *
 
 ###############################################################################
 # Make the version string accessible in the standard way
@@ -80,18 +87,17 @@ __version__ = kernel.version_str()
 # Load the Python plugins now everything has started.
 #
 # Before the plugins are loaded the simpleapi module is called to create
-# fake error-raising functions for all of the plugins. After the plugins have been 
+# fake error-raising functions for all of the plugins. After the plugins have been
 # loaded the correction translation is applied to create the "real" simple
 # API functions.
 #
-# Although this seems odd it is necessary so that any PythonAlgorithm 
-# can call any other PythonAlgorithm through the simple API mechanism. If left 
+# Although this seems odd it is necessary so that any PythonAlgorithm
+# can call any other PythonAlgorithm through the simple API mechanism. If left
 # to the simple import mechanism then plugins that are loaded later cannot
-# be seen by the earlier ones (chicken & the egg essentially). 
+# be seen by the earlier ones (chicken & the egg essentially).
 ################################################################################
-import simpleapi as _simpleapi
-from kernel import plugins as _plugins
-
+from . import simpleapi as _simpleapi
+from mantid.kernel import plugins as _plugins
 
 _plugins_key = 'python.plugins.directories'
 _user_key = 'user.%s' % _plugins_key
@@ -116,7 +122,7 @@ _simpleapi._mockup(alg_files)
 plugin_modules = _plugins.load(plugin_files)
 # Create the proper algorithm definitions in the module
 new_attrs = _simpleapi._translate()
-# Finally, overwrite the mocked function definitions in the loaded modules with the real ones 
+# Finally, overwrite the mocked function definitions in the loaded modules with the real ones
 _plugins.sync_attrs(_simpleapi, new_attrs, plugin_modules)
 
 ################################################################################

@@ -1,5 +1,4 @@
 /***************************************************************************
-    File                 : Graph.h
     Project              : QtiPlot
     --------------------------------------------------------------------
     Copyright            : (C) 2006 by Ion Vasilief, Tilman Hoener zu Siederdissen
@@ -53,7 +52,6 @@
 #include "PlotToolInterface.h"
 #include "MultiLayer.h"
 #include "ScaleDraw.h"
-#include "MantidKernel/Logger.h"
 #include "MantidQtAPI/GraphOptions.h"
 #include <boost/shared_ptr.hpp>
 #include <set>
@@ -151,7 +149,7 @@ namespace Mantid
  * [ Framework needs to support plug-ins; assigned to ion ]
  */
 
-class Graph: public QWidget 
+class Graph : public QWidget
 {
   Q_OBJECT
 
@@ -200,9 +198,16 @@ public slots:
   void enablePanningMagnifier(bool on = true);
   bool isFixedAspectRatioEnabled();
   void enableFixedAspectRatio(bool on);
+
+  void noNormalization();
+  void binWidthNormalization();
+
+  bool normalizable() const { return m_normalizable; }
+  void setNormalizable(const bool on) { m_normalizable = on; }
   // Are MantidCurves plotted as distributions in this Graph
-  bool isDistribution()const{return m_isDistribution;}
-	
+  bool isDistribution() const { return m_isDistribution; }
+  void setDistribution(const bool on) { m_isDistribution = on; }
+
 
   //! Accessor method for #d_plot.
   Plot* plotWidget(){return d_plot;};
@@ -252,6 +257,7 @@ public slots:
    */
   void removeCurves(const QString& s);
   void removeCurve(PlotCurve* c);
+  void removeSpectrogram(Spectrogram *sp);
 
   void updateCurvesData(Table* w, const QString& yColName);
 
@@ -312,9 +318,6 @@ public slots:
   //! Provided for convenience in scripts
   void exportToFile(const QString& fileName);
   void exportSVG(const QString& fname);
-#ifdef EMF_OUTPUT
-  void exportEMF(const QString& fname);
-#endif
   void exportVector(const QString& fileName, int res = 0, bool color = true,
                     bool keepAspect = true, QPrinter::PageSize pageSize = QPrinter::Custom);
   void exportImage(const QString& fileName, int quality = 100, bool transparent = false);
@@ -357,7 +360,6 @@ public slots:
   //@}
 
   //! Set axis scale
-  void invertScale(int axis);
   void setScale(int axis, double start, double end, double step = 0.0,
                 int majorTicks = 5, int minorTicks = 5, int type = 0, bool inverted = false,
                 double left_break = -DBL_MAX, double right_break = DBL_MAX, int pos = 50,
@@ -402,28 +404,19 @@ public slots:
   void setAutoScale();
   void updateScale();
 
-  //! \name Saving to File
+  //! \name Project Loading/Saving
   //@{
-  QString saveToString(bool saveAsTemplate = false);
-  QString saveScale();
-  QString saveScaleTitles();
-  QString saveFonts();
-  QString saveMarkers();
+  void loadFromProject(const std::string& lines, ApplicationWindow* app, const int fileVersion);
+  std::string saveToProject();
+
+  std::string saveCurve(int i);
+  std::string saveScale();
+  std::string saveMarkers();
+
+  //Still used by saveCurve. Needs a clean-up.
   QString saveCurveLayout(int index);
-  QString saveAxesTitleColors();
-  QString saveAxesColors();
-  QString saveEnabledAxes();
-  QString saveCanvas();
-  QString saveTitle();
-  QString saveAxesTitleAlignement();
-  QString saveEnabledTickLabels();
-  QString saveTicksType();
-  QString saveCurves();
-  QString saveLabelsFormat();
-  QString saveLabelsRotation();
-  QString saveAxesLabelsType();
-  QString saveAxesBaseline();
-  QString saveAxesFormulas();
+  //A method to populate the CurveLayout struct on loading a project
+  CurveLayout fillCurveSettings(const QStringList & curve, int fileVersion, unsigned int offset = 0);
   //@}
 
   //! \name Text Markers
@@ -433,12 +426,11 @@ public slots:
   LegendWidget* insertText(LegendWidget*);
 
   //! Used when opening a project file
-  LegendWidget* insertText(const QStringList& list, int fileVersion);
+  LegendWidget* insertText(const std::string& type, const std::string& line);
 
   void addTimeStamp();
   void removeLegend();
   void removeLegendItem(int index);
-  void insertLegend(const QStringList& lst, int fileVersion);
 
   LegendWidget *legend(){return d_legend;};
   LegendWidget* newLegend(const QString& text = QString());
@@ -740,8 +732,6 @@ public slots:
   Spectrogram* plotSpectrogram(Function2D *f,int nrows, int ncols,QwtDoubleRect bRect,double minz,double maxz,CurveType type);//Mantid
   // Spectrogram* plotSpectrogram(UserHelperFunction *f,int nrows, int ncols,QwtDoubleRect bRect,double minz,double maxz,CurveType type);//Mantid
   Spectrogram* plotSpectrogram(Spectrogram *d_spectrogram, CurveType type);//Mantid
-  //! Restores a spectrogram. Used when opening a project file.
-  void restoreSpectrogram(ApplicationWindow *app, const QStringList& lst);
   //! Add a matrix histogram  to the graph
   QwtHistogram* addHistogram(Matrix *m);
   //! Restores a histogram from a project file.
@@ -803,16 +793,24 @@ signals:
   /// sent to indicate that scale type changed to log (bool arg is true) or to linear (boolarg is false)
   /// int argument gives the axis as defined in QwtPlot::Axis
   void axisScaleChanged(int,bool);
+
+  void dragMousePress(QPoint);
+  void dragMouseRelease(QPoint);
+  void dragMouseMove(QPoint);
   
 private slots:
 
+  void slotDragMousePress(QPoint);
+  void slotDragMouseRelease(QPoint);
+  void slotDragMouseMove(QPoint);
+
 private:
-  //! Finds bounding interval of the plot data.
-  QwtDoubleInterval axisBoundingInterval(int axis);
   void niceLogScales(QwtPlot::Axis axis);
   void deselectCurves();
   void addLegendItem();
-	
+
+  QString yAxisTitleFromFirstCurve();
+  
   Plot *d_plot;
   QwtPlotZoomer *d_zoomer[2];
   TitlePicker *titlePicker;
@@ -854,7 +852,6 @@ private:
   LegendWidget *d_legend;
   // Flag indicating if the axes limits should be changed in order to show all data each time a curva data change occurs
   // Qtiplot variable that we don't use (use qwtplot axis behaviour directly): bool d_auto_scale;
-  static Mantid::Kernel::Logger &g_log;
   QString mCurrentColorMap;
   QwtPlotMagnifier *d_magnifier;
   QwtPlotPanner *d_panner;
@@ -874,8 +871,10 @@ private:
   bool d_synchronize_scales;
   int d_waterfall_offset_x, d_waterfall_offset_y;
 
-  // True if MantidCurves are plotted as distributions
+  // True if MantidCurves are plotted as distribution
   bool m_isDistribution;
+  // True, if the graph can be plotted as distribution
+  bool m_normalizable;
   // x and y units of MantidCurves
   boost::shared_ptr<Mantid::Kernel::Unit> m_xUnits;
   boost::shared_ptr<Mantid::Kernel::Unit> m_yUnits;

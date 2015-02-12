@@ -25,6 +25,7 @@
 #include <boost/random/uniform_int.hpp>
 #include <boost/random/uniform_real.hpp>
 #include <boost/random/variate_generator.hpp>
+#include <cmath>
 #include <cxxtest/TestSuite.h>
 #include <iomanip>
 #include <map>
@@ -1047,7 +1048,6 @@ public:
   void test_splitAllIfNeeded_usingThreadPool()
   {
     typedef MDGridBox<MDLeanEvent<2>,2> gbox_t;
-    typedef MDBox<MDLeanEvent<2>,2> box_t;
     typedef MDBoxBase<MDLeanEvent<2>,2> ibox_t;
 
     gbox_t * b = MDEventsTestHelper::makeMDGridBox<2>();
@@ -1136,8 +1136,6 @@ public:
   void test_centerpointBin()
   {
     typedef MDGridBox<MDLeanEvent<2>,2> gbox_t;
-    typedef MDBox<MDLeanEvent<2>,2> box_t;
-    typedef MDBoxBase<MDLeanEvent<2>,2> ibox_t;
 
     // 10x10 bins, 2 events per bin, each weight of 1.0
     gbox_t * b = MDEventsTestHelper::makeMDGridBox<2>();
@@ -1673,7 +1671,7 @@ public:
   void test_sphereIntegrate_inTheMiddle()
   {
     coord_t center[3] = {2.5, 2.5, 2.5};
-    do_test_sphereIntegrate(center, 1.0, (1e6/125)*(4.0*3.14159/3.0), 2000.0);
+    do_test_sphereIntegrate(center, 1.0, (1e6/125)*(4.0*M_PI/3.0), 2000.0);
   }
 
   /** Huge sphere containing all within */
@@ -1736,7 +1734,7 @@ public:
   void test_sphereCentroid_inTheMiddle()
   {
     coord_t center[3] = {2.5, 2.5, 2.5};
-    do_test_sphereCentroid(center, 1.0, (1e6/125)*(4.0*3.14159/3.0), 2000);
+    do_test_sphereCentroid(center, 1.0, (1e6/125)*(4.0*M_PI/3.0), 2000);
   }
 
   /** Huge sphere containing all within */

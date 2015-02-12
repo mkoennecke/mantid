@@ -50,7 +50,9 @@ public:
   }
 
   ~IntegrationTest()
-  {}
+  {
+    AnalysisDataService::Instance().clear();
+  }
 
   void testInit()
   {
@@ -352,6 +354,192 @@ public:
   {
     const double truth[] = {4.0, 1.4288690166235205};
     doTestRebinned("-1.5", "1.75", 0, 3, true, 4, truth);
+  }
+
+  void makeRealBinBoundariesWorkspace(const std::string inWsName)
+  {
+    const unsigned int lenX = 11, lenY = 10, lenE = lenY;
+
+    Workspace_sptr wsAsWs = WorkspaceFactory::Instance().create("Workspace2D", 1, lenX, lenY);
+    Workspace2D_sptr ws = boost::dynamic_pointer_cast<Workspace2D>(wsAsWs);
+
+    double x[lenX] = {-1, -0.8, -0.6, -0.4, -0.2, -2.22045e-16, 0.2, 0.4, 0.6, 0.8, 1};
+    for (unsigned int i = 0; i < lenX; i++)
+    {
+      ws->dataX(0)[i] = x[i];
+      // Generate some rounding errors. Note: if you increase errors by making this more complicated,
+      // you'll eventually make Integration "fail".
+      // Q is: how much tolerance should it have to inprecise numbers? For example, replace the 13.3
+      // multiplier/divisor by 13, and you'll get a -0.199999... sufficiently different from the
+      // initial -0.2 that Integration will fail to catch one bin and because of that some tests will fail.
+      ws->dataX(0)[i] /= 2.5671;
+      ws->dataX(0)[i] *= 13.3;
+      ws->dataX(0)[i] /= 13.3;
+      ws->dataX(0)[i] *= 2.5671;
+    }
+    double y[lenY] = {0, 0, 0, 2, 2, 2, 2, 0 , 0, 0};
+    for (unsigned int i = 0; i < lenY; i++)
+    {
+      ws->dataY(0)[i] = y[i];
+    }
+    double e[lenE] = {0, 0, 0, 0, 0, 0, 0, 0 , 0, 0};
+    for (unsigned int i = 0; i < lenE; i++)
+    {
+      ws->dataE(0)[i] = e[i];
+    }
+    AnalysisDataService::Instance().add(inWsName, ws);
+  }
+
+  void doTestRealBinBoundaries(const std::string inWsName,
+                               const std::string rangeLower,
+                               const std::string rangeUpper,
+                               const double expectedVal,
+                               const bool checkRanges = false,
+                               const bool IncPartialBins = false)
+  {
+    Workspace_sptr auxWs;
+    TS_ASSERT_THROWS_NOTHING(auxWs = AnalysisDataService::Instance().retrieve(inWsName));
+    Workspace2D_sptr inWs =  boost::dynamic_pointer_cast<Workspace2D>(auxWs);
+
+    std::string outWsName = "out_real_boundaries_ws";
+
+    Integration integ;
+    integ.initialize();
+    integ.setPropertyValue("InputWorkspace", inWs->getName());
+    integ.setPropertyValue("OutputWorkspace", outWsName);
+    integ.setPropertyValue("RangeLower", rangeLower);
+    integ.setPropertyValue("RangeUpper", rangeUpper);
+    integ.setProperty("IncludePartialBins", IncPartialBins);
+    integ.execute();
+
+    // should have created output work space
+    TS_ASSERT_THROWS_NOTHING(auxWs = AnalysisDataService::Instance().retrieve(outWsName));
+    Workspace2D_sptr outWs = boost::dynamic_pointer_cast<Workspace2D>(auxWs);
+    TS_ASSERT_EQUALS(inWs->getNumberHistograms(), outWs->getNumberHistograms());
+
+    if (checkRanges)
+    {
+      TS_ASSERT_LESS_THAN_EQUALS(atof(rangeLower.c_str()), outWs->dataX(0).front());
+      TS_ASSERT_LESS_THAN_EQUALS(outWs->dataX(0).back(), atof(rangeUpper.c_str()));
+    }
+    // At last, check numerical results
+    TS_ASSERT_DELTA(outWs->dataY(0)[0], expectedVal, 1e-8 );
+  }
+
+  void testProperHandlingOfIntegrationBoundaries()
+  {
+    std::string inWsName = "in_real_boundaries_ws";
+    makeRealBinBoundariesWorkspace(inWsName);
+
+    doTestRealBinBoundaries(inWsName, "-0.4", "-0.2", 2, true);
+    doTestRealBinBoundaries(inWsName, "-0.2", "-0.0", 2, true);
+    doTestRealBinBoundaries(inWsName, "-0.2", "0.2", 4, true);
+    doTestRealBinBoundaries(inWsName, "-0.2", "0.4", 6, true);
+    doTestRealBinBoundaries(inWsName, "-0.4", "0.2", 6, true);
+    doTestRealBinBoundaries(inWsName, "-0.4", "0.4", 8, true);
+    doTestRealBinBoundaries(inWsName, "-1", "1", 8, true);
+    doTestRealBinBoundaries(inWsName, "-1.8", "1.2", 8, true);
+
+    doTestRealBinBoundaries(inWsName, "-0.4", "-0.200001", 0, true);
+    doTestRealBinBoundaries(inWsName, "-0.399999", "-0.2", 0, true);
+    doTestRealBinBoundaries(inWsName, "-0.399999", "-0.200001", 0, true);
+    doTestRealBinBoundaries(inWsName, "-0.3999", "-0.2", 0, true);
+
+    doTestRealBinBoundaries(inWsName, "0.6", "6.5", 0, true);
+    doTestRealBinBoundaries(inWsName, "-1", "-0.8", 0, true);
+    doTestRealBinBoundaries(inWsName, "2.2", "3.03", 0);
+    doTestRealBinBoundaries(inWsName, "-42.2", "-3.03", 0);
+
+  }
+
+  void test_point_data_linear_x()
+  {
+    // Set up a small workspace for testing
+    const size_t nspec = 5;
+    Workspace_sptr space = WorkspaceFactory::Instance().create("Workspace2D",nspec,5,5);
+    Workspace2D_sptr space2D = boost::dynamic_pointer_cast<Workspace2D>(space);
+
+    for (int j = 0; j < 5; ++j) {
+      for (int k = 0; k < 5; ++k) {
+        space2D->dataX(j)[k] = 0.9*k;
+        space2D->dataY(j)[k] = 2*k + double(j);
+        space2D->dataE(j)[k] = 1.0;
+      }
+    }
+
+    const std::string outWsName = "IntegrationTest_PointData";
+    Integration alg;
+    alg.setRethrows(true);
+    alg.initialize();
+    alg.setProperty("InputWorkspace", space2D);
+    alg.setPropertyValue("OutputWorkspace", outWsName);
+    TS_ASSERT_THROWS_NOTHING( alg.execute() );
+    TS_ASSERT( alg.isExecuted() );
+
+    MatrixWorkspace_sptr output;
+    TS_ASSERT_THROWS_NOTHING(output = AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(outWsName) );
+    TS_ASSERT( output );
+    if ( !output ) return;
+
+    TS_ASSERT_EQUALS( output->getNumberHistograms(), 5 );
+    TS_ASSERT_EQUALS( output->blocksize(), 1 );
+    TS_ASSERT( output->isHistogramData() );
+
+    TS_ASSERT_DELTA( output->readX(0).front(), -0.5 * 0.9, 1e-14 );
+    TS_ASSERT_DELTA( output->readX(0).back(),   4.5 * 0.9, 1e-14 );
+
+    TS_ASSERT_DELTA( output->readY(0)[0], 20 * 0.9, 1e-14 );
+    TS_ASSERT_DELTA( output->readY(1)[0], 25 * 0.9, 1e-14 );
+    TS_ASSERT_DELTA( output->readY(2)[0], 30 * 0.9, 1e-14 );
+    TS_ASSERT_DELTA( output->readY(3)[0], 35 * 0.9, 1e-14 );
+    TS_ASSERT_DELTA( output->readY(4)[0], 40 * 0.9, 1e-14 );
+
+    AnalysisDataService::Instance().remove( outWsName );
+  }
+
+  void test_point_data_non_linear_x()
+  {
+    // Set up a small workspace for testing
+    const size_t nspec = 5;
+    Workspace_sptr space = WorkspaceFactory::Instance().create("Workspace2D",nspec,5,5);
+    Workspace2D_sptr space2D = boost::dynamic_pointer_cast<Workspace2D>(space);
+
+    for (int j = 0; j < 5; ++j) {
+      for (int k = 0; k < 5; ++k) {
+        space2D->dataX(j)[k] = k * (1.0 + 1.0 * k);
+        space2D->dataY(j)[k] = 2*k + double(j);
+        space2D->dataE(j)[k] = 1.0;
+      }
+    }
+
+    const std::string outWsName = "IntegrationTest_PointData";
+    Integration alg;
+    alg.setRethrows(true);
+    alg.initialize();
+    alg.setProperty("InputWorkspace", space2D);
+    alg.setPropertyValue("OutputWorkspace", outWsName);
+    TS_ASSERT_THROWS_NOTHING( alg.execute() );
+    TS_ASSERT( alg.isExecuted() );
+
+    MatrixWorkspace_sptr output;
+    TS_ASSERT_THROWS_NOTHING(output = AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(outWsName) );
+    TS_ASSERT( output );
+    if ( !output ) return;
+
+    TS_ASSERT_EQUALS( output->getNumberHistograms(), 5 );
+    TS_ASSERT_EQUALS( output->blocksize(), 1 );
+    TS_ASSERT( output->isHistogramData() );
+
+    TS_ASSERT_EQUALS( output->readX(0).front(), -1.0 );
+    TS_ASSERT_EQUALS( output->readX(0).back(), 24.0 );
+
+    TS_ASSERT_EQUALS( output->readY(0)[0], 132.0 );
+    TS_ASSERT_EQUALS( output->readY(1)[0], 157.0 );
+    TS_ASSERT_EQUALS( output->readY(2)[0], 182.0 );
+    TS_ASSERT_EQUALS( output->readY(3)[0], 207.0 );
+    TS_ASSERT_EQUALS( output->readY(4)[0], 232.0 );
+
+    AnalysisDataService::Instance().remove( outWsName );
   }
 
 private:

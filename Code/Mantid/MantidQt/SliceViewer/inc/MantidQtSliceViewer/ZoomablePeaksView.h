@@ -15,7 +15,7 @@ namespace MantidQt
     
     @date 2013-01-08
 
-    Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+    Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
     This file is part of Mantid.
 
@@ -42,6 +42,8 @@ namespace MantidQt
       virtual void zoomToRectangle(const PeakBoundingBox&) = 0;
       /// Zoom out
       virtual void resetView() = 0;
+      /// Detach
+      virtual void detach() = 0;
       /// Destructor
       virtual ~ZoomablePeaksView(){ }
     };

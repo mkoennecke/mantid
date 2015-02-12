@@ -1,5 +1,7 @@
 #include "MantidQtSliceViewer/PhysicalCrossPeak.h"
 
+using namespace Mantid::API;
+
 namespace MantidQt
 {
   namespace SliceViewer
@@ -19,7 +21,8 @@ namespace MantidQt
     m_opacityMin(0.0),
     m_opacityGradient((m_opacityMin - m_opacityMax)/m_effectiveRadius),
     m_crossViewFraction(0.015),
-    m_opacityAtDistance(0.0)
+    m_opacityAtDistance(0.0),
+    m_slicePoint(0.0)
   {
   }
 

@@ -1,13 +1,6 @@
-"""*WIKI*
-== DESCRIPTION ==
-
-LoadSINQFile is a wrapper algorithm around LoadFlexiNexus. It locates a suitable dictionary file for the instrument in question and then goes away to call LoadFlexiNexus with the right arguments. It also performs any other magic which might be required to get the data in the right shape for further processing in Mantid. 
-
-*WIKI*"""
-
 #--------------------------------------------------------------
-# Algorithm which loads a SINQ file. It matches the instrument 
-# and the right dictionary file and then goes away and calls 
+# Algorithm which loads a SINQ file. It matches the instrument
+# and the right dictionary file and then goes away and calls
 # LoadFlexiNexus and others to load the file.
 #
 # Mark Koennecke, November 2012
@@ -18,12 +11,16 @@ from mantid.kernel import Direction, StringListValidator, ConfigServiceImpl
 import mantid.simpleapi
 from mantid import config
 import os.path
+import numpy as np
 
 dictsearch= ''
 
 class LoadSINQFile(PythonAlgorithm):
     def category(self):
         return "DataHandling;PythonAlgorithms"
+
+    def summary(self):
+        return "Load a SINQ file with the right dictionary."
 
     def PyInit(self):
         global dictsearch
@@ -41,7 +38,7 @@ class LoadSINQFile(PythonAlgorithm):
 
     def PyExec(self):
         inst=self.getProperty('Instrument').value
- 
+
         if inst =="AMOR":
             self.doAmor()
         if inst =="AMORS1":

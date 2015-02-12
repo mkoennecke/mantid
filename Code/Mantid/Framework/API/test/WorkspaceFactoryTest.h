@@ -41,13 +41,6 @@ class WorkspaceFactoryTest : public CxxTest::TestSuite
     std::vector<size_t> size;
   };
 
-  class ManagedWorkspace2DTest: public Workspace2DTest
-  {
-  public:
-    const std::string id() const {return "ManagedWorkspace2DTest";}
-    size_t getNumberHistograms() const { return 2;}
-  };
-
   class NotInFactory : public WorkspaceTester
   {
   public:
@@ -60,15 +53,6 @@ public:
   {
     WorkspaceFactory::Instance().subscribe<Workspace1DTest>("Workspace1DTest");
     WorkspaceFactory::Instance().subscribe<Workspace2DTest>("Workspace2DTest");
-    try
-    {
-      WorkspaceFactory::Instance().subscribe<ManagedWorkspace2DTest>("ManagedWorkspace2DTest");
-    }
-    catch (std::runtime_error&)
-    {
-      // In theory, we shouldn't have the 'real' ManagedWorkspace2D when running this test, but
-      // in reality we do so need catch the error from trying to subscribe again
-    }
   }
 
   void testReturnType()
@@ -76,7 +60,16 @@ public:
     WorkspaceFactory::Instance().subscribe<WorkspaceTester>("work");
     MatrixWorkspace_sptr space;
     TS_ASSERT_THROWS_NOTHING( space = WorkspaceFactory::Instance().create("work",1,1,1) );
-    TS_ASSERT_THROWS_NOTHING( dynamic_cast<WorkspaceTester*>(space.get()) );
+    // AppleClang gives warning if the result is unused.
+#if __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-value"
+#endif
+      TS_ASSERT_THROWS_NOTHING(dynamic_cast<WorkspaceTester*>(space.get()) );
+#if __clang__
+#pragma clang diagnostic pop
+#endif
+  
   }
 
   /** Make a parent, have the child be created with the same sizes */
@@ -90,6 +83,8 @@ public:
 
     ws_child->mutableRun().addProperty("Ei", 12.0);
     ws_child->mutableSample().setName("MySample");
+
+    ws_child->setMonitorWorkspace(boost::make_shared<Workspace1DTest>());
 
     MatrixWorkspace_sptr child;
     TS_ASSERT_THROWS_NOTHING( child = WorkspaceFactory::Instance().create(ws_child) );
@@ -118,7 +113,9 @@ public:
     TS_ASSERT_EQUALS("MySample", ws_child->sample().getName());
     TS_ASSERT_EQUALS("MySampleChild", child->sample().getName());
    
-                             
+    // Monitor workspace
+    TSM_ASSERT( "The workspace factory should not propagate a monitor workspace", ! child->monitorWorkspace() );
+
     MatrixWorkspace_sptr ws2D(new Workspace2DTest);
     ws2D->initialize(3,1,1);
     MatrixWorkspace_sptr child2;

@@ -46,7 +46,7 @@ namespace MantidQt
       }
     }
 
-    boost::shared_ptr<PeakOverlayView> PeakOverlayMultiSphereFactory::createView(PeakTransform_const_sptr transform) const
+    boost::shared_ptr<PeakOverlayView> PeakOverlayMultiSphereFactory::createView(Mantid::API::PeakTransform_const_sptr transform) const
     {
       // Construct all physical peaks
       VecPhysicalSphericalPeak physicalPeaks(m_peaksWS->rowCount());
@@ -67,7 +67,12 @@ namespace MantidQt
 
     int PeakOverlayMultiSphereFactory::FOM() const
     {
-      return m_FOM;
+        return m_FOM;
+    }
+
+    void PeakOverlayMultiSphereFactory::swapPeaksWorkspace(boost::shared_ptr<IPeaksWorkspace> &peaksWS)
+    {
+        m_peaksWS = peaksWS;
     }
 
   }

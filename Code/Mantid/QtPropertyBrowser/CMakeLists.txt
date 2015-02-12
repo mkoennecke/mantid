@@ -20,9 +20,8 @@ set( QTPROPERTYBROWSER_SRCS
 	src/qtbuttonpropertybrowser.cpp
 	src/qtgroupboxpropertybrowser.cpp
 	src/qtpropertybrowserutils.cpp
-        src/DoubleEditorFactory.cpp
-        src/StringDialogEditorFactory.cpp
-        src/StringEditorFactory.cpp
+	src/DoubleEditorFactory.cpp
+	src/ParameterPropertyManager.cpp
 )
 
 # moc'd files will end up in build directory, so add to include path
@@ -41,7 +40,7 @@ qt4_generate_moc (
   ${CMAKE_CURRENT_BINARY_DIR}/moc_qtpropertymanager.cpp
 )
 qt4_generate_moc (
-  src/qteditorfactory.h
+  src/qteditorfactory.h 
   ${CMAKE_CURRENT_BINARY_DIR}/moc_qteditorfactory.cpp
 )
 qt4_generate_moc (
@@ -104,8 +103,8 @@ set (
 )
 
 qt4_wrap_cpp ( EXTRA_MOCS src/DoubleEditorFactory.h 
-                          src/StringDialogEditorFactory.h
-                          src/StringEditorFactory.h
+                          src/ButtonEditorFactory.h
+                          src/ParameterPropertyManager.h
 )
 
 set (
@@ -127,6 +126,10 @@ set ( SRCS
 )
 
 add_library ( ${PROJECT_NAME} SHARED ${SRCS} )
+
+if (OSX_VERSION VERSION_GREATER 10.8)
+  set_target_properties ( ${PROJECT_NAME} PROPERTIES INSTALL_RPATH "@loader_path/../MacOS")
+endif ()
 
 target_link_libraries ( ${PROJECT_NAME} ${QT_LIBRARIES} )
 

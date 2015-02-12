@@ -13,7 +13,8 @@ const QString SmoothNeighboursDialog::RECTANGULAR_GROUP = "Rectangular Detectors
 const QString SmoothNeighboursDialog::INPUT_WORKSPACE = "InputWorkspace";
 
 SmoothNeighboursDialog::SmoothNeighboursDialog(QWidget* parent) 
-  : AlgorithmDialog(parent)
+  : AlgorithmDialog(parent),
+  m_propertiesWidget(NULL), m_dialogLayout(NULL)
 {
 }
  
@@ -103,5 +104,5 @@ void SmoothNeighboursDialog::accept()
 
   // If got there, there were errors
   for(auto it = m_errors.begin(); it != m_errors.end(); it++)
-    m_propertiesWidget->m_propWidgets[it.key()]->setError(it.value());
+    m_propertiesWidget->m_propWidgets[it.key()]->updateIconVisibility(it.value());
 }

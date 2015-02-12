@@ -18,6 +18,8 @@
 #include "MantidAPI/AnalysisDataService.h"
 #include "MantidAPI/FrameworkManager.h"
 #include "MantidAPI/IAlgorithm.h"
+#include "MantidAPI/WorkspaceFactory.h"
+#include "MantidAPI/WorkspaceValidators.h"
 
 #include <boost/math/special_functions/fpclassify.hpp>
 #include <boost/algorithm/string.hpp>
@@ -46,7 +48,9 @@ struct Sqrt
 double InstrumentActor::m_tolerance = 0.00001;
 
 /**
- * Constructor
+ * Constructor. Creates a tree of GLActors. Each actor is responsible for displaying insrument components in 3D.
+ * Some of the components have "pick ID" assigned to them. Pick IDs can be uniquely converted to a RGB colour value
+ * which in turn can be used for picking the component from the screen.
  * @param wsName :: Workspace name
  * @param autoscaling :: True to start with autoscaling option on. If on the min and max of
  *   the colormap scale are defined by the min and max of the data.
@@ -55,10 +59,11 @@ double InstrumentActor::m_tolerance = 0.00001;
  */
 InstrumentActor::InstrumentActor(const QString &wsName, bool autoscaling, double scaleMin, double scaleMax):
 m_workspace(AnalysisDataService::Instance().retrieveWS<MatrixWorkspace>(wsName.toStdString())),
+m_ragged(true),
 m_autoscaling(autoscaling),
+m_defaultPos(),
 m_maskedColor(100,100,100),
-m_failedColor(200,200,200),
-m_sampleActor(NULL)
+m_failedColor(200,200,200)
 {
   // settings
   loadSettings();
@@ -77,9 +82,6 @@ m_sampleActor(NULL)
   // set up data ranges and colours
   setUpWorkspace(sharedWorkspace, scaleMin, scaleMax);
 
-  /// Keep the pointer to the detid2index map
-  m_detid2index_map = sharedWorkspace->getDetectorIDToWorkspaceIndexMap();
-
   Instrument_const_sptr instrument = getInstrument();
 
   // If the instrument is empty, maybe only having the sample and source
@@ -94,13 +96,8 @@ m_sampleActor(NULL)
 
   // this adds actors for all instrument components to the scene and fills in m_detIDs
   m_scene.addActor(new CompAssemblyActor(*this,instrument->getComponentID()));
+  setupPickColors();
 
-  FindComponentVisitor findVisitor(instrument->getSample()->getComponentID());
-  accept(findVisitor,GLActor::Finish);
-  const ObjComponentActor* samplePosActor = dynamic_cast<const ObjComponentActor*>(findVisitor.getActor());
-
-  m_sampleActor = new SampleActor(*this,sharedWorkspace->sample(),samplePosActor);
-  m_scene.addActor(m_sampleActor);
   if ( !m_showGuides )
   {
     // hide guide and other components
@@ -172,6 +169,13 @@ void InstrumentActor::setUpWorkspace(boost::shared_ptr<const Mantid::API::Matrix
   setDataIntegrationRange(m_WkspBinMinValue,m_WkspBinMaxValue);
   resetColors();
 
+  // set the ragged flag using a workspace validator
+  auto wsValidator = Mantid::API::CommonBinsValidator();
+  m_ragged = ! wsValidator.isValid(sharedWorkspace).empty();
+
+  /// Keep the pointer to the detid2index map
+  m_detid2index_map = sharedWorkspace->getDetectorIDToWorkspaceIndexMap();
+
 }
 
 /** Used to set visibility of an actor corresponding to a particular component
@@ -184,11 +188,6 @@ bool InstrumentActor::accept(GLActorVisitor& visitor, VisitorAcceptRule rule)
 {
   bool ok = m_scene.accept(visitor, rule);
   visitor.visit(this);
-  SetVisibilityVisitor* vv = dynamic_cast<SetVisibilityVisitor*>(&visitor);
-  if (vv && m_sampleActor)
-  {
-    m_sampleActor->setVisibility(m_sampleActor->getSamplePosActor()->isVisible());
-  }
   invalidateDisplayLists();
   return ok;
 }
@@ -351,6 +350,33 @@ IDetector_const_sptr InstrumentActor::getDetector(size_t i) const
   return IDetector_const_sptr();
 }
 
+Mantid::detid_t InstrumentActor::getDetID(size_t pickID)const
+{
+  if ( pickID < m_detIDs.size() )
+  {
+    return m_detIDs[pickID];
+  }
+  return -1;
+}
+
+/**
+ * Get a component id of a picked component.
+ */
+Mantid::Geometry::ComponentID InstrumentActor::getComponentID(size_t pickID) const
+{
+  size_t ndet = m_detIDs.size();
+  if ( pickID < ndet )
+  {
+    auto det = getDetector( m_detIDs[pickID] );
+    return det->getComponentID();
+  }
+  else if (pickID < ndet + m_nonDetIDs.size())
+  {
+    return m_nonDetIDs[pickID - ndet];
+  }
+  return Mantid::Geometry::ComponentID();
+}
+
 /** Retrieve the workspace index corresponding to a particular detector
  *  @param id The detector id
  *  @returns  The workspace index containing data for this detector
@@ -396,16 +422,44 @@ double InstrumentActor::getIntegratedCounts(Mantid::detid_t id)const
 }
 
 /**
- * Sum counts in detectors for purposes of rough plotting against time of flight.
- * Silently assumes that all spectra share the x vector.
+ * Sum counts in detectors for purposes of rough plotting against the units on the x-axis.
+ * Checks (approximately) if the workspace is ragged or not and uses the appropriate summation
+ * method.
  *
  * @param dets :: A list of detector IDs to sum.
  * @param x :: (output) Time of flight values (or whatever values the x axis has) to plot against.
  * @param y :: (output) The sums of the counts for each bin.
- * @param err :: (optional output) Pointer to a buffer to receive the errors of the summed spectra.
- *               If NULL the errors are not returned.
+ * @param size :: (optional input) Size of the output vectors. If not given it will be determined automatically.
  */
-void InstrumentActor::sumDetectors(QList<int> &dets, std::vector<double> &x, std::vector<double> &y, std::vector<double> *err) const
+void InstrumentActor::sumDetectors(QList<int> &dets, std::vector<double> &x, std::vector<double> &y, size_t size) const
+{
+  Mantid::API::MatrixWorkspace_const_sptr ws = getWorkspace();
+  if ( size > ws->blocksize() || size == 0 )
+  {
+    size = ws->blocksize();
+  }
+
+  if ( m_ragged )
+  {
+    // could be slower than uniform
+    sumDetectorsRagged( dets, x, y, size );
+  }
+  else
+  {
+    // should be faster than ragged
+    sumDetectorsUniform( dets, x, y );
+  }
+}
+
+/**
+ * Sum counts in detectors for purposes of rough plotting against the units on the x-axis.
+ * Assumes that all spectra share the x vector.
+ *
+ * @param dets :: A list of detector IDs to sum.
+ * @param x :: (output) Time of flight values (or whatever values the x axis has) to plot against.
+ * @param y :: (output) The sums of the counts for each bin.
+ */
+void InstrumentActor::sumDetectorsUniform(QList<int>& dets, std::vector<double>&x, std::vector<double>&y) const
 {
 
     size_t wi;
@@ -424,10 +478,6 @@ void InstrumentActor::sumDetectors(QList<int> &dets, std::vector<double> &x, std
     {
         x.clear();
         y.clear();
-        if ( err )
-        {
-            err->clear();
-        }
         return;
     }
 
@@ -445,34 +495,120 @@ void InstrumentActor::sumDetectors(QList<int> &dets, std::vector<double> &x, std
       std::transform(x.begin(),x.end(),x.begin(),std::bind2nd(std::divides<double>(),2.0));
     }
     y.resize(x.size(),0);
-    if (err)
-    {
-      err->resize(x.size(),0);
-    }
-
+    // sum the spectra
     foreach(int id, dets)
     {
         try {
           size_t index = getWorkspaceIndex( id );
           const Mantid::MantidVec& Y = ws->readY(index);
           std::transform(y.begin(),y.end(),Y.begin() + imin,y.begin(),std::plus<double>());
-          if (err)
-          {
-            const Mantid::MantidVec& E = ws->readE(index);
-            std::vector<double> tmp;
-            tmp.assign(E.begin() + imin,E.begin() + imax);
-            std::transform(tmp.begin(),tmp.end(),tmp.begin(),tmp.begin(),std::multiplies<double>());
-            std::transform(err->begin(),err->end(),tmp.begin(),err->begin(),std::plus<double>());
-          }
         } catch (Mantid::Kernel::Exception::NotFoundError &) {
           continue; // Detector doesn't have a workspace index relating to it
         }
     }
+}
 
-    if (err)
+/**
+ * Sum counts in detectors for purposes of rough plotting against the units on the x-axis.
+ * Assumes that all spectra have different x vectors.
+ *
+ * @param dets :: A list of detector IDs to sum.
+ * @param x :: (output) Time of flight values (or whatever values the x axis has) to plot against.
+ * @param y :: (output) The sums of the counts for each bin.
+ * @param size :: (input) Size of the output vectors.
+ */
+void InstrumentActor::sumDetectorsRagged(QList<int> &dets, std::vector<double> &x, std::vector<double> &y, size_t size) const
+{
+  if ( dets.isEmpty() || size == 0 )
+  {
+      x.clear();
+      y.clear();
+      return;
+  }
+
+  Mantid::API::MatrixWorkspace_const_sptr ws = getWorkspace();
+  //  create a workspace to hold the data from the selected detectors
+  Mantid::API::MatrixWorkspace_sptr dws = Mantid::API::WorkspaceFactory::Instance().create(ws,dets.size());
+
+  // x-axis limits
+  double xStart = maxBinValue();
+  double xEnd = minBinValue();
+
+  size_t nSpec = 0; // number of actual spectra to add
+  // fill in the temp workspace with the data from the detectors
+  foreach(int id, dets)
+  {
+      try {
+        size_t index = getWorkspaceIndex( id );
+        dws->dataX(nSpec) = ws->readX(index);
+        dws->dataY(nSpec) = ws->readY(index);
+        dws->dataE(nSpec) = ws->readE(index);
+        double xmin = dws->readX(nSpec).front();
+        double xmax = dws->readX(nSpec).back();
+        if ( xmin < xStart )
+        {
+          xStart = xmin;
+        }
+        if ( xmax > xEnd )
+        {
+          xEnd = xmax;
+        }
+        ++nSpec;
+      } catch (Mantid::Kernel::Exception::NotFoundError &) {
+        continue; // Detector doesn't have a workspace index relating to it
+      }
+  }
+
+  if ( nSpec == 0 )
+  {
+      x.clear();
+      y.clear();
+      return;
+  }
+
+  // limits should exceed the integration range
+  if ( xStart < minBinValue() )
+  {
+    xStart = minBinValue();
+  }
+
+  if ( xEnd > maxBinValue() )
+  {
+    xEnd = maxBinValue();
+  }
+
+  double dx = (xEnd - xStart) / static_cast<double>(size - 1);
+  std::string params = QString("%1,%2,%3").arg(xStart).arg(dx).arg(xEnd).toStdString();
+  std::string outName = "_TMP_sumDetectorsRagged";
+
+  try
+  {
+    // rebin all spectra to the same binning
+    Mantid::API::IAlgorithm * alg = Mantid::API::FrameworkManager::Instance().createAlgorithm("Rebin",-1);
+    alg->setProperty( "InputWorkspace", dws );
+    alg->setPropertyValue( "OutputWorkspace", outName );
+    alg->setPropertyValue( "Params", params );
+    alg->execute();
+
+    ws = boost::dynamic_pointer_cast<Mantid::API::MatrixWorkspace>(Mantid::API::AnalysisDataService::Instance().retrieve(outName));
+    Mantid::API::AnalysisDataService::Instance().remove( outName );
+
+    x = ws->readX(0);
+    y = ws->readY(0);
+    // add the spectra
+    for(size_t i = 0; i < nSpec; ++i)
     {
-      std::transform(err->begin(),err->end(),err->begin(),Sqrt());
+      const Mantid::MantidVec& Y = ws->readY(i);
+      std::transform( y.begin(), y.end(), Y.begin(), y.begin(), std::plus<double>() );
     }
+  }
+  catch(std::invalid_argument&)
+  {
+    // wrong Params for any reason
+    x.resize(size,(xEnd + xStart)/2);
+    y.resize(size,0.0);
+  }
+
 }
 
 /**
@@ -586,12 +722,38 @@ void InstrumentActor::loadColorMap(const QString& fname,bool reset_colors)
  * @param id :: detector ID to add.
  * @return pick ID of the added detector
  */
-size_t InstrumentActor::push_back_detid(Mantid::detid_t id)const
+size_t InstrumentActor::pushBackDetid(Mantid::detid_t id)const
 {
   m_detIDs.push_back(id);
   return m_detIDs.size() - 1;
 }
 
+//------------------------------------------------------------------------------
+/** Add a non-detector component ID to the pick list (m_nonDetIDs)
+ *
+ * @param actor :: ObjComponentActor for the component added.
+ * @param compID :: component ID to add.
+ */
+void InstrumentActor::pushBackNonDetid(ObjComponentActor* actor, Mantid::Geometry::ComponentID compID)const
+{
+  m_nonDetActorsTemp.push_back(actor);
+  m_nonDetIDs.push_back(compID);
+}
+
+//------------------------------------------------------------------------------
+/**
+ * Set pick colors to non-detectors strored by calls to pushBackNonDetid().
+ */
+void InstrumentActor::setupPickColors()
+{
+  assert( m_nonDetActorsTemp.size() == m_nonDetIDs.size() );
+  auto nDets = m_detIDs.size();
+  for(size_t i = 0; i < m_nonDetActorsTemp.size(); ++i)
+  {
+    m_nonDetActorsTemp[i]->setPickColor( makePickColor(nDets + i) );
+  }
+  m_nonDetActorsTemp.clear();
+}
 
 //------------------------------------------------------------------------------
 /** If needed, cache the detector positions for all detectors.
@@ -620,7 +782,11 @@ void InstrumentActor::cacheDetPos() const
  */
 const Mantid::Kernel::V3D & InstrumentActor::getDetPos(size_t pickID)const
 {
-  return m_detPos.at(pickID);
+  if ( pickID < m_detPos.size() )
+  {
+    return m_detPos.at(pickID);
+  }
+  return m_defaultPos;
 }
 
 /**
@@ -970,39 +1136,65 @@ void InstrumentActor::setDataMinMaxRange(double vmin, double vmax)
 
 void InstrumentActor::setDataIntegrationRange(const double& xmin,const double& xmax)
 {
-  if (!getWorkspace()) return;
-
   m_BinMinValue = xmin;
   m_BinMaxValue = xmax;
 
+  auto workspace = getWorkspace();
   //Use the workspace function to get the integrated spectra
-  getWorkspace()->getIntegratedSpectra(m_specIntegrs, m_BinMinValue, m_BinMaxValue, wholeRange());
+  workspace->getIntegratedSpectra(m_specIntegrs, m_BinMinValue, m_BinMaxValue, wholeRange());
 
-  m_DataMinValue = DBL_MAX;
-  m_DataMaxValue = -DBL_MAX;
-  
-  //Now we need to convert to a vector where each entry is the sum for the detector ID at that spot (in integrated_values).
-  for (size_t i=0; i < m_specIntegrs.size(); i++)
+  // get the workspace indices of monitors in order to exclude them from finding of the max value
+  auto monitorIDs = getInstrument()->getMonitors();
+  std::vector<size_t> monitorIndices;
+  workspace->getIndicesFromDetectorIDs( monitorIDs, monitorIndices );
+
+  // check that there is at least 1 non-monitor spectrum
+  if ( monitorIndices.size() == m_specIntegrs.size() )
   {
-    double sum = m_specIntegrs[i];
-    if( boost::math::isinf(sum) || boost::math::isnan(sum) )
-    {
-      throw std::runtime_error("The workspace contains values that cannot be displayed (infinite or NaN).\n"
-                               "Please run ReplaceSpecialValues algorithm for correction.");
-    }
-    //integrated_values[i] = sum;
-    if( sum < m_DataMinValue )
-    {
-      m_DataMinValue = sum;
-    }
-    if( sum > m_DataMaxValue )
-    {
-      m_DataMaxValue = sum;
-    }
-    if (sum > 0 && sum < m_DataPositiveMinValue)
-    {
-      m_DataPositiveMinValue = sum;
-    }
+      // there are only monitors - cannot skip them
+      monitorIndices.clear();
+  }
+
+  if ( m_specIntegrs.empty() )
+  {
+      // in case there are no spectra set some arbitrary values
+      m_DataMinValue = 1.0;
+      m_DataMaxValue = 10.0;
+      m_DataPositiveMinValue = 1.0;
+  }
+  else
+  {
+      m_DataMinValue = DBL_MAX;
+      m_DataMaxValue = -DBL_MAX;
+
+      //Now we need to convert to a vector where each entry is the sum for the detector ID at that spot (in integrated_values).
+      for (size_t i=0; i < m_specIntegrs.size(); i++)
+      {
+        // skip the monitors
+        if ( std::find( monitorIndices.begin(), monitorIndices.end(), i ) != monitorIndices.end() )
+        {
+          continue;
+        }
+        double sum = m_specIntegrs[i];
+        if( boost::math::isinf(sum) || boost::math::isnan(sum) )
+        {
+          throw std::runtime_error("The workspace contains values that cannot be displayed (infinite or NaN).\n"
+                                   "Please run ReplaceSpecialValues algorithm for correction.");
+        }
+        //integrated_values[i] = sum;
+        if( sum < m_DataMinValue )
+        {
+          m_DataMinValue = sum;
+        }
+        if( sum > m_DataMaxValue )
+        {
+          m_DataMaxValue = sum;
+        }
+        if (sum > 0 && sum < m_DataPositiveMinValue)
+        {
+          m_DataPositiveMinValue = sum;
+        }
+      }
   }
 
   if (m_autoscaling)

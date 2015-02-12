@@ -5,42 +5,35 @@ api
 Defines Python objects that wrap the C++ API namespace.
 
 """
+from __future__ import absolute_import
 
 ###############################################################################
-# The _api C extension depends on exports defined in the _kernel extension
+# Load the C++ library
 ###############################################################################
-# The fully-qualified package path allows it to be found without path manipulation
-from mantid.kernel import dlopen as _pydlopen
-import os as _os
-clib = _os.path.join(_os.path.dirname(__file__), '_api.so')
-flags = _pydlopen.setup_dlopen(clib, ['libMantidKernel', 'libMantidGeometry', 'libMantidAPI']) # Ensure the library is open with the correct flags
-from mantid.kernel import _kernel
-import _api
-from _api import *
-_pydlopen.restore_flags(flags)
-###############################################################################
+from . import _api
+from ._api import *
 
 ###############################################################################
 # Start the framework (if not embedded in other application)
 ###############################################################################
 FrameworkManagerImpl.Instance()
 # Declare any additional C++ algorithms defined in this package
-_api._declareCPPAlgorithms() 
+_api._declareCPPAlgorithms()
 
 ###############################################################################
 # Make aliases accessible in this namespace
 ###############################################################################
-from _aliases import * 
+from ._aliases import *
 
 ###############################################################################
-# Add importAll member to ADS 
+# Add importAll member to ADS
 ###############################################################################
-import _adsimports
+from . import _adsimports
 
 ###############################################################################
 # Attach additional operators to workspaces
 ###############################################################################
-import _workspaceops
+from . import _workspaceops
 _workspaceops.attach_binary_operators_to_workspace()
 _workspaceops.attach_unary_operators_to_workspace()
 _workspaceops.attach_tableworkspaceiterator()
