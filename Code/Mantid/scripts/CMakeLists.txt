@@ -1,13 +1,17 @@
 
 set ( TEST_PY_FILES 
       test/ConvertToWavelengthTest.py
-      test/ReducerTest.py
-      test/SettingsTest.py
-      test/DgreduceTest.py
+      test/DirectReductionHelpersTest.py 
+      test/DirectPropertyManagerTest.py     
       test/DirectEnergyConversionTest.py
+      test/IndirectApplyCorrectionsTest.py
+      test/IndirectCommonTests.py
+      test/ReductionWrapperTest.py      
       test/ReflectometryQuickAuxiliaryTest.py 
-      test/ExtendedUnitCellTest.py
+      test/RunDescriptorTest.py
       test/SansIsisGuiSettings.py
+      test/SettingsTest.py      
+      test/ReductionSettingsTest.py
       )
 
 # python unit tests

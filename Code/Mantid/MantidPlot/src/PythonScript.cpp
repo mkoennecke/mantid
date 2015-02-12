@@ -59,7 +59,9 @@ namespace
     Q_UNUSED(arg);
     int retcode(0);
     if(event != PyTrace_LINE) return retcode;
-    PyObject_CallMethod(scriptObj, "lineNumberChanged", "O i", frame->f_code->co_filename, frame->f_lineno);
+      std::string str1 = "lineNumberChanged";
+      std::string str2 = "O i";
+    PyObject_CallMethod(scriptObj,&str1[0],&str2[0], frame->f_code->co_filename, frame->f_lineno);
     return retcode;
   }
 
@@ -237,8 +239,10 @@ void PythonScript::emit_error()
 
   // return early if nothing happened
   if (!PyErr_Occurred())
+  {
+    emit finished(MSG_FINISHED);
     return;
-
+  }
   // get the error information out
   PyObject *exception(NULL), *value(NULL), *traceback(NULL);
   PyErr_Fetch(&exception, &value, &traceback);
@@ -418,6 +422,29 @@ void PythonScript::setContext(QObject *context)
 }
 
 /**
+ * Clears the current set of local variables, if they exist, and resets
+ * the dictionary context back to the default set
+ */
+void PythonScript::clearLocals()
+{
+  GlobalInterpreterLock pythonLock;
+
+  PyObject *mainModule = PyImport_AddModule("__main__");
+  PyObject *cleanLocals = PyDict_Copy(PyModule_GetDict(mainModule));
+
+  if(localDict)
+  {
+    // Pull out variables that are not user-related
+    PyObject * value = PyDict_GetItemString(localDict, "__file__");
+    if(value) PyDict_SetItemString(cleanLocals, "__file__", value);
+    // reset locals
+    Py_DECREF(localDict);
+    localDict = NULL;
+  }
+  localDict = cleanLocals;
+}
+
+/**
  * Sets the context for the script and if name points to a file then
  * sets the __file__ variable
  * @param name A string identifier for the script
@@ -425,9 +452,9 @@ void PythonScript::setContext(QObject *context)
  */
 void PythonScript::initialize(const QString & name, QObject *context)
 {
+  clearLocals(); // holds and releases GIL
+
   GlobalInterpreterLock pythonlock;
-  PyObject *pymodule = PyImport_AddModule("__main__");
-  localDict = PyDict_Copy(PyModule_GetDict(pymodule));
   PythonScript::setIdentifier(name);
   setContext(context);
 }

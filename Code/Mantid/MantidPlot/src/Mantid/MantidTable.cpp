@@ -1,11 +1,14 @@
 #include "MantidTable.h"
 #include "../ApplicationWindow.h"
+#include "../Mantid/MantidUI.h"
 #include "MantidAPI/Column.h"
 #include "MantidAPI/AlgorithmManager.h"
 #include "MantidAPI/Algorithm.h"
 
 #include <QApplication>
 #include <QMessageBox>
+#include <QHash>
+
 #include <iostream>
 #include <qfontmetrics.h>
 
@@ -32,14 +35,6 @@ m_wsName(ws->getName()),
 m_transposed(transpose)
 {
   d_table->blockResizing(true);
-  // if plot types is set in ws then update Table with that information
-  for ( size_t i = 0; i < ws->columnCount(); i++ )
-  {
-    int pt = ws->getColumn(i)->getPlotType();
-    if ( pt != -1000 )
-      setColPlotDesignation(static_cast<int>(i), pt);
-  }
-  setHeaderColType();
 
   // Filling can take a while, so process any pending events and set appropriate cursor
   QApplication::processEvents();
@@ -98,6 +93,9 @@ void MantidTable::fillTable()
   // temporarily allow resizing
   d_table->blockResizing(false);
 
+  setNumRows(0);
+  setNumCols(0);
+
   // Resize to fit the new workspace
   setNumRows(static_cast<int>(m_ws->rowCount()));
   setNumCols(static_cast<int>(m_ws->columnCount()));
@@ -110,12 +108,23 @@ void MantidTable::fillTable()
     setColName(i,colName);
     // Make columns of ITableWorkspaces read only, if specified
     setReadOnlyColumn(i, c->getReadOnly() );
+
+    // If plot type is set in ws then update Table with that information
+    int plotType = m_ws->getColumn(i)->getPlotType();
+
+    if ( plotType != -1000 )
+    {
+      setColPlotDesignation(i, plotType);
+    }
+
     // Special for errors?
     if (colName.endsWith("_err",Qt::CaseInsensitive) ||
         colName.endsWith("_error",Qt::CaseInsensitive))
     {
       setColPlotDesignation(i,Table::yErr);
     }
+
+    setHeaderColType();
 
     // Track the column width. All text should fit in.
     int maxWidth = 60;
@@ -158,13 +167,19 @@ void MantidTable::fillTable()
 }
 
 /**
- * Make the trasposed table.
+ * Make the transposed table.
  */
 void MantidTable::fillTableTransposed()
 {
 
   int ncols = static_cast<int>(m_ws->rowCount() + 1);
   int nrows = static_cast<int>(m_ws->columnCount());
+
+  // temporarily allow resizing
+  d_table->blockResizing(false);
+
+  setNumRows(0);
+  setNumCols(0);
 
   setNumCols(ncols);
   setNumRows(nrows);
@@ -224,6 +239,8 @@ void MantidTable::fillTableTransposed()
       setColName(j,QString::number(j-1));
     }
   }
+
+  d_table->blockResizing(true);
 
 }
 
@@ -311,6 +328,36 @@ void MantidTable::deleteRows(int startRow, int endRow)
 }
 
 //------------------------------------------------------------------------------------------------
+/**\brief Returns true if the selected column is editable
+ * \returns true if the table is editable
+ */
+bool MantidTable::isEditable() 
+{
+  bool retval = true;
+  if ((this->selectedColumn() == -1) || this->table()->isColumnReadOnly(this->selectedColumn()))
+  {
+    retval = false;
+  }
+  return retval;
+}
+
+//------------------------------------------------------------------------------------------------
+/**\brief Returns true if the table is sortable
+ * \returns true if the table is sortable
+ */
+bool MantidTable::isSortable() 
+{
+  bool retval = false;
+  if (!m_ws) return retval;
+  if (m_ws->customSort())
+  {
+    // Currently only table workspaces that have a custom sort are sortable
+    retval = true;
+  }
+  return retval;
+}
+
+//------------------------------------------------------------------------------------------------
 /**\brief Sort the specified column.
  * @param col :: the column to be sorted
  * @param order :: 0 means ascending, anything else means descending
@@ -366,4 +413,11 @@ void MantidTable::sortColumns(const QStringList&s, int type, int order, const QS
     // Fall-back to the default sorting of the table
     Table::sortColumns(s, type, order, leadCol);
   }
+}
+
+void MantidTable::sortTableDialog()
+{
+  QHash<QString, QString> paramList;
+  paramList["InputWorkspace"] = QString::fromStdString(m_wsName);
+  applicationWindow()->mantidUI->showAlgorithmDialog("SortTableWorkspace",paramList);
 }

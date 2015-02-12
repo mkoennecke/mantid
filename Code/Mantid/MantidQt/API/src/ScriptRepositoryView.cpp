@@ -18,10 +18,13 @@ namespace MantidQt
 {
 namespace API
 {
-//Initialize the logger
-Mantid::Kernel::Logger & ScriptRepositoryView::g_log = Mantid::Kernel::Logger::get("ScriptRepositoryView");
+  namespace
+  {
+    /// static logger
+    Mantid::Kernel::Logger g_log("ScriptRepositoryView");
+  }
 
-  const QString install_mantid_label = "<html><head/><body><p>New in this release, the <span style=\" font-weight:600;\">"
+  const QString install_mantid_label = "<html><head/><body><p>The <span style=\" font-weight:600;\">"
     "Script Repository</span> allows you to:</p>"
     "<p>  * Share your scripts and reduction algorithms;</p>"
     "<p>  * Get <span style=\" font-weight:600;\">Mantid</span> Scripts from the mantid developers and the community. </p>"
@@ -41,6 +44,14 @@ Mantid::Kernel::Logger & ScriptRepositoryView::g_log = Mantid::Kernel::Logger::g
   const QString installation_failed = "<html><head/><body><p>The installation of Script Repository "
     "<span style=\" font-weight:600;\">Failed</span>!</p>"
     "<p>Please, check the Result Log to see why the installation failed. </p></body></html>";
+
+  const QString dir_not_empty_label = "<html><head/><body><p>The directory/folder that you have selected is not empty</p>"
+    "<p>Are you sure that you want to install the script repository here? All the files and directories found in "
+    "the selected directory/folder could be shared in the repository by mistake.</p>"
+    "<p>If you are not sure, please choose 'no' and then select an empty (or newly created) directory/folder.</p>"
+    "<p>If this is your home directory, desktop or similar you should definitely choose 'no'.</p>"
+    "<p>If you are sure of what you are doing, please choose 'yes'. The installation may take a couple of minutes.</p>"
+    "</body></html>";
 
   //----------------------------------------------------------------------------------------------
   /** Creates the widget for the ScriptRepositoryView
@@ -81,15 +92,40 @@ Mantid::Kernel::Logger & ScriptRepositoryView::g_log = Mantid::Kernel::Logger::g
       // get the directory to install the script repository
       ConfigServiceImpl & config = ConfigService::Instance();
       QString loc = QString::fromStdString(config.getString("ScriptLocalRepository")); 
-      QString dir = QFileDialog::getExistingDirectory(this, tr("Where do you want to install Script Repository?"),
-                                                      loc,
-                                                      QFileDialog::ShowDirsOnly
-                                                      | QFileDialog::DontResolveSymlinks);
 
-      //configuring
-      if (dir.isEmpty())
+      bool sureAboutDir = false;
+
+      QString dir;
+      while (!sureAboutDir)
       {
-        throw NODIRECTORY;
+        dir = QFileDialog::getExistingDirectory(this, tr("Where do you want to install Script Repository?"),
+                                                loc,
+                                                QFileDialog::ShowDirsOnly
+                                                | QFileDialog::DontResolveSymlinks);
+
+        // configuring
+        if (dir.isEmpty())
+        {
+          throw NODIRECTORY;
+        }
+
+        // warn if dir is not empty
+        if (0 == QDir(dir).entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot).count())
+        {
+          // empty dir, just go ahead
+          sureAboutDir = true;
+        }
+        else
+        {
+          // warn user in case the repo is being installed in its home, etc. directory
+          QMessageBox::StandardButton sel =
+            QMessageBox::question(this,
+                                  "Are you sure you want to install the Script Repository here?",
+                                  dir_not_empty_label,
+                                  QMessageBox::Yes|QMessageBox::No);
+          if (QMessageBox::Yes == sel)
+            sureAboutDir = true;
+        }
       }
 
       // attempt to install 
@@ -148,7 +184,7 @@ Mantid::Kernel::Logger & ScriptRepositoryView::g_log = Mantid::Kernel::Logger::g
 
     ConfigServiceImpl & config = ConfigService::Instance();
     QString loc = QString::fromStdString(config.getString("ScriptLocalRepository"));
-    QString loc_info = "<html><head/><body><p><a href=\"file://%1\"><span style=\" text-decoration: underline; color:#0000ff;\">%2</span></a></p></body></html>";
+    QString loc_info = "<html><head/><body><p><a href=\"%1\"><span style=\" text-decoration: underline; color:#0000ff;\">%2</span></a></p></body></html>";
     QString path_label; 
     if (loc.size()<50)
       path_label = loc; 
@@ -517,8 +553,26 @@ bool  ScriptRepositoryView::RemoveEntryDelegate::editorEvent(QEvent *event,
   }   
 }
 
+/**
+ * Attempt to open the given folder link using an appropriate application.
+ *
+ * @param link :: the folder link to open.
+ */
 void ScriptRepositoryView::openFolderLink(QString link){
-  QDesktopServices::openUrl(QUrl(link));
+  const std::string error_msg = "Unable to open \"" + link.toStdString() + "\".  Reason: ";
+
+  // QUrl::fromLocalFile seems to be the most robust way of constructing QUrls on
+  // the local file system for all platforms.
+  const QUrl url = QUrl::fromLocalFile(link);
+  if( !url.isValid() )
+  {
+    g_log.error() << error_msg << "Invalid (malformed) URL." << std::endl;
+    return;
+  }
+
+  const bool openSuccessful = QDesktopServices::openUrl(url);
+  if( !openSuccessful )
+    g_log.error() << error_msg << "Could not find directory." << std::endl;
 }
 
 } // namespace API

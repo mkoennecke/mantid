@@ -2,7 +2,6 @@
 #define MANTID_MANTIDWIDGETS_MUONSEQUENTIALFITDIALOG_H_
 
 #include "MantidKernel/System.h"
-#include "MantidKernel/Logger.h"
 
 #include "ui_MuonSequentialFitDialog.h"
 
@@ -19,7 +18,7 @@ namespace MantidWidgets
 
   /** MuonSequentialFitDialog : TODO: DESCRIPTION
     
-    Copyright &copy; 2013 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+    Copyright &copy; 2013 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
     This file is part of Mantid.
 
@@ -105,9 +104,6 @@ namespace MantidWidgets
 
     /// Returns displayable title for the given workspace
     static std::string getRunTitle(Workspace_const_sptr ws);
-
-    /// Instance used to print log messages
-    static Mantid::Kernel::Logger& g_log;
 
   private slots:
     /// Updates visibility/tooltip of label error asterisk

@@ -1,36 +1,3 @@
-/*WIKI* 
-
-The format of the saved ascii CSV file for a 1D worksspace consists of three
-columns where the numbers of each row are seperated by the Seperator and each 
-line by the LineSeperator.
-
-The format of the saved CSV file for a 2D workspace is as follows:
-
-    A      0, 200, 400, 600, ..., 50000 <BR>
-    0     10,   4, 234,  35, ...,    32 <BR>
-    1      4, 234,   4,   9, ...,    12 <BR>
-    A      0, 100, 200, 300, ..., 25000 <BR>
-    2     34,   0,   0,   0, ...,    23
-
-    ERRORS<BR>
-    0    0.1, 3.4, 2.4, 3.5, ...,     2 <BR>
-    1    3.1, 3.3, 2.5, 3.5, ...,     2 <BR>
-    2    1.1, 3.3, 2.4,   5, ...,   2.4
-
-where for the matrix above the ERRORS line the first column 
-shows the content of the numbers on the of the same line; i.e.
-'A' is followed by x-axis values (e.g. TOF values) and any number
-(e.g. '2') followed by y-axis values (e.g. neutron counts). Multiple
-'A' may be present to allow for the a-axis to change. So in
-the example above the saved 2D workspace consists of three histograms
-(y-axes) where the first two have the same x-axis but the third
-histogram has a different x-axis. 
-
-The matrix following the ERRORS line lists the errors as recorded
-for each histogram.  
-
-
-*WIKI*/
 /*
  Copyright &copy; 2007 STFC Rutherford Appleton Laboratories
 
@@ -59,8 +26,8 @@ for each histogram.
 #include "MantidDataObjects/Workspace2D.h"
 #include "MantidAPI/FileProperty.h"
 
-#include <fstream>  // used to get ofstream
-#include <iomanip>  // setw() used below
+#include <fstream> // used to get ofstream
+#include <iomanip> // setw() used below
 
 /* @class SaveCSV
 
@@ -68,21 +35,11 @@ for each histogram.
  @date 15/10/2007
  */
 
-namespace Mantid
-{
-namespace DataHandling
-{
+namespace Mantid {
+namespace DataHandling {
 
 // Register the class into the algorithm factory
 DECLARE_ALGORITHM(SaveCSV)
-
-/// Sets documentation strings for this algorithm
-void SaveCSV::initDocs()
-{
-  this->setWikiSummary("Saves a 1D or 2D [[workspace]] to a CSV file. ");
-  this->setOptionalMessage("Saves a 1D or 2D workspace to a CSV file.");
-}
-
 
 using namespace Kernel;
 using namespace API;
@@ -93,37 +50,37 @@ using DataObjects::Workspace2D;
 using DataObjects::Workspace2D_sptr;
 
 /// Empty default constructor
-SaveCSV::SaveCSV()
-{
-}
+SaveCSV::SaveCSV() {}
 
 /** Initialisation method. Does nothing at present.
  *
  */
-void SaveCSV::init()
-{
+void SaveCSV::init() {
+  declareProperty(new WorkspaceProperty<MatrixWorkspace>("InputWorkspace", "",
+                                                         Direction::Input),
+                  "The filename of the output CSV file");
   declareProperty(
-    new WorkspaceProperty<MatrixWorkspace>("InputWorkspace","",Direction::Input),
-    "The filename of the output CSV file" );
-  declareProperty(new FileProperty("Filename", "",FileProperty::Save, ".csv"),
-    "The name of the workspace containing the data you want to save to\n"
-    "a CSV file" );
-  declareProperty("Separator", ",",
-    "The separator that will go between the numbers on a line in the\n"
-    "output file (default ',')" );
+      new FileProperty("Filename", "", FileProperty::Save, ".csv"),
+      "The name of the workspace containing the data you want to save to\n"
+      "a CSV file");
+  declareProperty(
+      "Separator", ",",
+      "The separator that will go between the numbers on a line in the\n"
+      "output file (default ',')");
   declareProperty("LineSeparator", "\n",
-    "The string to place at the end of lines (default new line\n"
-    "character)" );
+                  "The string to place at the end of lines (default new line\n"
+                  "character)");
 }
 
 /** Executes the algorithm. Retrieve the Filename, separator and Lineseparator
  *  properties and save workspace to Filename.
  *
- *  @throw NotImplementedError Thrown if workspace to save is not a 1D or 2D workspace
- *  @throw Mantid::Kernel::Exception::FileError  Thrown if errors with file opening and existence
+ *  @throw NotImplementedError Thrown if workspace to save is not a 1D or 2D
+ *workspace
+ *  @throw Mantid::Kernel::Exception::FileError  Thrown if errors with file
+ *opening and existence
  */
-void SaveCSV::exec()
-{
+void SaveCSV::exec() {
   // Gets the name of the file to save the workspace to; and the
   // separator and Lineseparator properties if they are provided by the user.
 
@@ -133,18 +90,17 @@ void SaveCSV::exec()
   // Get the values of the optional parameters
   m_separator = getPropertyValue("Separator");
   m_lineSeparator = getPropertyValue("LineSeparator");
-  g_log.debug() << "Parameters: Filename='" << m_filename << "' " <<
-    "Seperator='" << m_separator << "' " <<
-    "LineSeparator='" << m_lineSeparator << "' " << std::endl;
+  g_log.debug() << "Parameters: Filename='" << m_filename << "' "
+                << "Seperator='" << m_separator << "' "
+                << "LineSeparator='" << m_lineSeparator << "' " << std::endl;
 
   // prepare to save to file
 
   std::ofstream outCSV_File(m_filename.c_str());
 
-  if (!outCSV_File)
-  {
+  if (!outCSV_File) {
     g_log.error("Failed to open file:" + m_filename);
-    throw Exception::FileError("Failed to open file:" , m_filename);
+    throw Exception::FileError("Failed to open file:", m_filename);
   }
 
   // Get the input workspace
@@ -155,43 +111,38 @@ void SaveCSV::exec()
   const std::string workspaceID = inputWorkspace->id();
   // seperating out code depending on the workspace ID
 
-  if ( workspaceID.find("Workspace2D") != std::string::npos )
-  {
-    const Workspace2D_sptr localworkspace = boost::dynamic_pointer_cast<Workspace2D>(inputWorkspace);
+  if (workspaceID.find("Workspace2D") != std::string::npos) {
+    const Workspace2D_sptr localworkspace =
+        boost::dynamic_pointer_cast<Workspace2D>(inputWorkspace);
 
     // Get info from 2D workspace
     const size_t numberOfHist = localworkspace->getNumberHistograms();
-    
+
     // Add first x-axis line to output file
     {
-      const MantidVec& xValue = localworkspace->readX(0);
+      const MantidVec &xValue = localworkspace->readX(0);
 
       outCSV_File << "A";
 
-      for (int j = 0; j < (int)xValue.size(); j++)
-      {
+      for (int j = 0; j < (int)xValue.size(); j++) {
         outCSV_File << std::setw(15) << xValue[j] << m_separator;
       }
 
       outCSV_File << m_lineSeparator;
-	  progress(0.2);
+      progress(0.2);
     }
-    Progress p(this,0.2,1.0,2*numberOfHist);
-    for (size_t i = 0; i < numberOfHist; i++)
-    {
+    Progress p(this, 0.2, 1.0, 2 * numberOfHist);
+    for (size_t i = 0; i < numberOfHist; i++) {
       // check if x-axis has changed. If yes print out new x-axis line
 
-      if (i > 0)
-      {
-        const MantidVec& xValue = localworkspace->readX(i);
-        const MantidVec& xValuePrevious = localworkspace->readX(i-1);
+      if (i > 0) {
+        const MantidVec &xValue = localworkspace->readX(i);
+        const MantidVec &xValuePrevious = localworkspace->readX(i - 1);
 
-        if (xValue != xValuePrevious)
-        {
+        if (xValue != xValuePrevious) {
           outCSV_File << "A";
 
-          for (int j = 0; j < (int)xValue.size(); j++)
-          {
+          for (int j = 0; j < (int)xValue.size(); j++) {
             outCSV_File << std::setw(15) << xValue[j] << m_separator;
           }
 
@@ -201,44 +152,40 @@ void SaveCSV::exec()
 
       // add y-axis line for histogram (detector) i
 
-      const MantidVec& yValue = localworkspace->dataY(i);
+      const MantidVec &yValue = localworkspace->dataY(i);
 
       outCSV_File << i;
 
-      for (int j = 0; j < (int)yValue.size(); j++)
-      {
+      for (int j = 0; j < (int)yValue.size(); j++) {
         outCSV_File << std::setw(15) << yValue[j] << m_separator;
       }
 
       outCSV_File << m_lineSeparator;
-	  p.report();
+      p.report();
     }
     // print out errors
 
     outCSV_File << "\nERRORS\n";
 
-    for (size_t i = 0; i < numberOfHist; i++)
-    {
-      const MantidVec& eValue = localworkspace->dataE(i);
+    for (size_t i = 0; i < numberOfHist; i++) {
+      const MantidVec &eValue = localworkspace->dataE(i);
 
       outCSV_File << i;
 
-      for (int j = 0; j < (int)eValue.size(); j++)
-      {
+      for (int j = 0; j < (int)eValue.size(); j++) {
         outCSV_File << std::setw(15) << eValue[j] << m_separator;
       }
       outCSV_File << m_lineSeparator;
-	   p.report();
+      p.report();
     }
 
-  }
-  else
-  {
+  } else {
     outCSV_File.close(); // and should probably delete file from disk as well
-    throw Exception::NotImplementedError("SaveCSV currently only works for 2D workspaces.");
+    throw Exception::NotImplementedError(
+        "SaveCSV currently only works for 2D workspaces.");
   }
   outCSV_File.close();
-  //only gets here if everything happened normally
+  // only gets here if everything happened normally
   return;
 }
 

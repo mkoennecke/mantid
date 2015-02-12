@@ -6,16 +6,17 @@
 #include "DllOption.h"
 #include "MantidAPI/IMDIterator.h"
 #include "MantidAPI/IMDWorkspace.h"
+#include "MantidAPI/PeakTransformSelector.h"
 #include "MantidGeometry/MDGeometry/MDHistoDimension.h"
+#include "MantidKernel/Logger.h"
 #include "MantidKernel/VMD.h"
 #include "MantidQtAPI/MantidColorMap.h"
 #include "MantidQtMantidWidgets/SafeQwtPlot.h"
 #include "MantidQtAPI/SyncedCheckboxes.h"
 #include "MantidQtSliceViewer/LineOverlay.h"
-#include "MantidQtSliceViewer/PeakTransformSelector.h"
 #include "MantidQtSliceViewer/PeaksPresenter.h"
 #include "MantidQtSliceViewer/ZoomablePeaksView.h"
-#include "QwtRasterDataMD.h"
+#include "MantidQtAPI/QwtRasterDataMD.h"
 #include "ui_SliceViewer.h"
 #include <QtCore/QtCore>
 #include <QtGui/qdialog.h>
@@ -26,10 +27,20 @@
 #include <qwt_raster_data.h>
 #include <qwt_scale_widget.h>
 #include <vector>
-#include <Poco/NObserver.h>
 #include "MantidAPI/Algorithm.h"
 #include "MantidQtAPI/AlgorithmRunner.h"
+#include <boost/shared_ptr.hpp>
 
+class QDragEnterEvent;
+class QDropEvent;
+
+namespace Mantid
+{
+namespace API
+{
+ class IPeaksWorkspace;
+}
+}
 namespace MantidQt
 {
 namespace SliceViewer
@@ -105,6 +116,10 @@ public:
   /* -- Methods from implementation of ZoomablePeaksView. --*/
   virtual void zoomToRectangle(const PeakBoundingBox& box);
   virtual void resetView();
+  virtual void detach();
+
+  /* Methods associated with workspace observers. Driven by SliceViewerWindow */
+  void peakWorkspaceChanged(const std::string& wsName, boost::shared_ptr<Mantid::API::IPeaksWorkspace>& changedPeaksWS);
 
 signals:
   /// Signal emitted when the X/Y index of the shown dimensions is changed
@@ -165,9 +180,13 @@ public slots:
   // Dynamic rebinning
   void rebinParamsChanged();
   void dynamicRebinComplete(bool error);
-
   // Peaks overlay
-  void peakOverlay_toggled(bool);
+  void peakOverlay_clicked();
+
+protected:
+
+  void dragEnterEvent(QDragEnterEvent *e);
+  void dropEvent(QDropEvent *e);
 
 private:
   void loadSettings();
@@ -177,9 +196,7 @@ private:
 
   void updateDisplay(bool resetAxes = false);
   void updateDimensionSliceWidgets();
-  void resetAxis(int axis, Mantid::Geometry::IMDDimension_const_sptr dim);
-  QwtDoubleInterval getRange(Mantid::API::IMDIterator * it);
-  QwtDoubleInterval getRange(std::vector<Mantid::API::IMDIterator *> iterators);
+  void resetAxis(int axis, const Mantid::Geometry::IMDDimension_const_sptr & dim);
 
   void findRangeFull();
   void findRangeSlice();
@@ -194,6 +211,8 @@ private:
   bool isAutoRebinSet() const;
   void autoRebinIfRequired();
 
+  // helper for saveImage
+  QString ensurePngExtension(const QString& fname) const;
 
 private:
 
@@ -246,7 +265,7 @@ private:
   std::vector<Mantid::Geometry::MDHistoDimension_sptr> m_dimensions;
 
   /// Data presenter
-  QwtRasterDataMD * m_data;
+  API::QwtRasterDataMD * m_data;
 
   /// The X and Y dimensions being plotted
   Mantid::Geometry::IMDDimension_const_sptr m_X;
@@ -280,7 +299,7 @@ private:
 
   /// Synced menu/buttons
   MantidQt::API::SyncedCheckboxes *m_syncLineMode, *m_syncSnapToGrid,
-    *m_syncRebinMode, *m_syncRebinLock, *m_syncPeakOverlay, *m_syncAutoRebin;
+    *m_syncRebinMode, *m_syncRebinLock, *m_syncAutoRebin;
 
   /// Cached double for infinity
   double m_inf;
@@ -300,6 +319,9 @@ private:
   /// If true, the rebinned overlayWS is locked until refreshed.
   bool m_rebinLocked;
 
+  /// Logger
+  Mantid::Kernel::Logger m_logger;
+
   // -------------------------- Controllers ------------------------
   boost::shared_ptr<CompositePeaksPresenter>  m_peaksPresenter;
 
@@ -309,7 +331,8 @@ private:
   DimensionSliceWidget* m_peaksSliderWidget;
 
   /// Object for choosing a PeakTransformFactory based on the workspace type.
-  PeakTransformSelector m_peakTransformSelector;
+  Mantid::API::PeakTransformSelector m_peakTransformSelector;
+
 };
 
 } // namespace SliceViewer

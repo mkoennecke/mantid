@@ -1,8 +1,3 @@
-/*WIKI*
-
-Rename a specified sample log of type TimeSeriesProperty in a given Workspace.
-
-*WIKI*/
 #include "MantidDataHandling/RenameLog.h"
 #include "MantidKernel/MandatoryValidator.h"
 #include "MantidKernel/TimeSeriesProperty.h"
@@ -10,76 +5,65 @@ Rename a specified sample log of type TimeSeriesProperty in a given Workspace.
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
 
-namespace Mantid
-{
-namespace DataHandling
-{
+namespace Mantid {
+namespace DataHandling {
 
-  DECLARE_ALGORITHM(RenameLog)
+DECLARE_ALGORITHM(RenameLog)
 
+//----------------------------------------------------------------------------------------------
+/** Constructor
+ */
+RenameLog::RenameLog() {}
 
-  //----------------------------------------------------------------------------------------------
-  /** Constructor
-   */
-  RenameLog::RenameLog()
-  {
-  }
-    
-  //----------------------------------------------------------------------------------------------
-  /** Destructor
-   */
-  RenameLog::~RenameLog()
-  {
-  }
-  
-  void RenameLog::initDocs(){
+//----------------------------------------------------------------------------------------------
+/** Destructor
+ */
+RenameLog::~RenameLog() {}
 
-    this->setWikiSummary("Rename a TimeSeries log in a given Workspace.");
-    this->setOptionalMessage("Rename a TimeSeries log in a given Workspace.");
+void RenameLog::init() {
 
-    return;
-  }
+  declareProperty(new API::WorkspaceProperty<API::MatrixWorkspace>(
+                      "Workspace", "Anonymous", Direction::InOut),
+                  "Workspace to have logs merged");
+  declareProperty("OriginalLogName", "",
+                  boost::make_shared<MandatoryValidator<std::string>>(),
+                  "Log's original name.");
+  declareProperty("NewLogName", "",
+                  boost::make_shared<MandatoryValidator<std::string>>(),
+                  "Log's new name.");
 
-  void RenameLog::init(){
+  return;
+}
 
-    declareProperty(new API::WorkspaceProperty<API::MatrixWorkspace>("Workspace", "Anonymous", Direction::InOut),
-        "Workspace to have logs merged");
-    declareProperty("OriginalLogName", "", boost::make_shared<MandatoryValidator<std::string> >(), "Log's original name.");
-    declareProperty("NewLogName", "", boost::make_shared<MandatoryValidator<std::string> >(), "Log's new name.");
+void RenameLog::exec() {
 
-    return;
-  }
+  // 1. Get value
+  matrixWS = this->getProperty("Workspace");
+  std::string origlogname = this->getProperty("OriginalLogName");
+  std::string newlogname = this->getProperty("NewLogName");
 
-  void RenameLog::exec(){
+  Kernel::Property *property = matrixWS->run().getLogData(origlogname);
+  Kernel::TimeSeriesProperty<double> *timeprop =
+      dynamic_cast<Kernel::TimeSeriesProperty<double> *>(property);
 
-    // 1. Get value
-    matrixWS = this->getProperty("Workspace");
-    std::string origlogname = this->getProperty("OriginalLogName");
-    std::string newlogname = this->getProperty("NewLogName");
-
-    Kernel::Property* property = matrixWS->run().getLogData(origlogname);
-    Kernel::TimeSeriesProperty<double> *timeprop = dynamic_cast<Kernel::TimeSeriesProperty<double>* >(property);
-
-    if (!timeprop){
-      //g_log.error() << "After Log data is removed, TimeSeriesProperty " << origlogname << " is deleted from memory" << std::endl;
-      throw std::runtime_error("Not a TimeSeriesProperty!");
-    }
-
-    // std::cout << "Remove log" << origlogname << std::endl;
-    matrixWS->mutableRun().removeLogData(origlogname, false);
-
-    // std::cout << "Change log name" << std::endl;
-    timeprop->setName(newlogname);
-    // std::cout << "Add log" << timeprop->name() << std::endl;
-    // std::vector<Kernel::DateAndTime> newtimes = timeprop->timesAsVector();
-    // std::cout << "Entries = " << newtimes.size() << std::endl;
-    matrixWS->mutableRun().addProperty(timeprop);
-
-    return;
+  if (!timeprop) {
+    // g_log.error() << "After Log data is removed, TimeSeriesProperty " <<
+    // origlogname << " is deleted from memory" << std::endl;
+    throw std::runtime_error("Not a TimeSeriesProperty!");
   }
 
+  // std::cout << "Remove log" << origlogname << std::endl;
+  matrixWS->mutableRun().removeLogData(origlogname, false);
 
+  // std::cout << "Change log name" << std::endl;
+  timeprop->setName(newlogname);
+  // std::cout << "Add log" << timeprop->name() << std::endl;
+  // std::vector<Kernel::DateAndTime> newtimes = timeprop->timesAsVector();
+  // std::cout << "Entries = " << newtimes.size() << std::endl;
+  matrixWS->mutableRun().addProperty(timeprop);
 
+  return;
+}
 
 } // namespace Mantid
 } // namespace DataHandling

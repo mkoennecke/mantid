@@ -1,14 +1,5 @@
-"""*WIKI*
-== Description ==
-
-LoadSINQ loads SINQ NeXus files. The algorithm calculates the file name from the instrument,  year and numor and tries to locate the file. Both at SINQ standard paths as well as the data directories configured for Mantid. Then it calls LoadSINQFile for the located data file. 
-
-The Mantid standard Load algorithm selects based on file extensions. The file extensions used at SINQ, mainly .hdf and .h5, were already taken. Thus the need for a separate loader.
-
-
-*WIKI*"""
 #--------------------------------------------------------------
-# Algorithm which loads a SINQ file. 
+# Algorithm which loads a SINQ file.
 # This algorithm calculates the filename from instrument
 # year and filenumber and then goes away to call
 # LoadSINQFile
@@ -30,6 +21,9 @@ class LoadSINQ(PythonAlgorithm):
     def category(self):
         return "DataHandling;PythonAlgorithms"
 
+    def summary(self):
+        return "SINQ data file loader"
+
     def PyInit(self):
         instruments=["AMOR","AMORS1","AMORS2","BOA","DMC","FOCUS","HRPT","MARSI","MARSE","POLDI",
                      "RITA-2","SANS","SANS2","TRICS"]
@@ -39,8 +33,8 @@ class LoadSINQ(PythonAlgorithm):
         now = datetime.datetime.now()
         self.declareProperty("Year",now.year,"Choose year",direction=Direction.Input)
         self.declareProperty('Numor',0,'Choose file number',direction=Direction.Input)
-        self.declareProperty("OutputWorkspace","nexus")
         self.setWikiSummary("SINQ data file loader")
+        self.declareProperty(WorkspaceProperty("OutputWorkspace","",direction=Direction.Output))
 
     def PyExec(self):
         inst=self.getProperty('Instrument').value
@@ -68,6 +62,11 @@ class LoadSINQ(PythonAlgorithm):
         hun=math.floor(num/1000.)
         filename= '%03d/%s%04dn%06d.hdf' % (hun,instmap[inst],year,num)
         fullpath= '%s/%04d/%s/%s' % (datapath,year,instmap[inst],filename)
+<<<<<<< HEAD
+=======
+        wname = "__tmp" #hidden
+        ws = None # Holds the workspace later
+>>>>>>> ca6beab6e5ed39ba73afb104e05c5614b9860afb
         if os.path.exists(fullpath):
             mantid.simpleapi.LoadSINQFile(fullpath,inst,out)
         else:
@@ -76,9 +75,18 @@ class LoadSINQ(PythonAlgorithm):
             for entry in searchDirs:
                 fullpath = '%s/%s' % (entry, filename)
                 if os.path.exists(fullpath):
+<<<<<<< HEAD
                     mantid.simpleapi.LoadSINQFile(fullpath,inst,out)
                     return
             raise Exception('File %s NOT found!' % filename)
+=======
+                    ws = mantid.simpleapi.LoadSINQFile(fullpath,inst,OutputWorkspace=wname)
+                    break
+
+            # If ws is still "None" at this point, the file was not found.
+            if ws is None:
+                raise Exception('File %s NOT found!' % filename)
+>>>>>>> ca6beab6e5ed39ba73afb104e05c5614b9860afb
 
 
 #---------- register with Mantid

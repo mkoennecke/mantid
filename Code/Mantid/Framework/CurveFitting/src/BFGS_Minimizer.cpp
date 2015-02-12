@@ -8,19 +8,18 @@
 
 #include "MantidKernel/Logger.h"
 
-namespace Mantid
-{
-namespace CurveFitting
-{
-DECLARE_FUNCMINIMIZER(BFGS_Minimizer,BFGS)
+namespace Mantid {
+namespace CurveFitting {
+namespace {
+/// static logger object
+Kernel::Logger g_log("BFGS_Minimizer");
+}
 
-// Get a reference to the logger
-Kernel::Logger& BFGS_Minimizer::g_log = Kernel::Logger::get("BFGS_Minimizer");
+DECLARE_FUNCMINIMIZER(BFGS_Minimizer, BFGS)
 
-
-/// Return a concrete type to initialize m_gslSolver gsl_multimin_fdfminimizer_vector_bfgs2
-const gsl_multimin_fdfminimizer_type* BFGS_Minimizer::getGSLMinimizerType()
-{
+/// Return a concrete type to initialize m_gslSolver
+/// gsl_multimin_fdfminimizer_vector_bfgs2
+const gsl_multimin_fdfminimizer_type *BFGS_Minimizer::getGSLMinimizerType() {
   return gsl_multimin_fdfminimizer_vector_bfgs2;
 }
 

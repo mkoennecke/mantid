@@ -1388,7 +1388,7 @@ p, li { white-space: pre-wrap; }
           </sizepolicy>
          </property>
         </widget>
-       </item>
+        </item>
       </layout>
      </widget>
      <widget class="QWidget" name="ResultsTable">

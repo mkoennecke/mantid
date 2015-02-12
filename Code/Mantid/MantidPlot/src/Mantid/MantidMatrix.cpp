@@ -1,3 +1,4 @@
+#include "MantidKernel/Logger.h"
 #include "MantidMatrix.h"
 #include "MantidMatrixFunction.h"
 #include "MantidKernel/Timer.h"
@@ -9,8 +10,15 @@
 #include "Preferences.h"
 #include "../pixmaps.h"
 
+#include "TSVSerialiser.h"
+
+#include "MantidAPI/NumericAxis.h"
+#include "MantidAPI/RefAxis.h"
+#include "MantidAPI/SpectraAxis.h"
 #include "MantidAPI/TextAxis.h"
 #include "MantidKernel/ReadLock.h"
+
+#include "MantidQtAPI/PlotAxis.h"
 
 #include <QtGlobal>
 #include <QTextStream>
@@ -49,6 +57,11 @@ using namespace Mantid::API;
 using namespace Mantid::Kernel;
 using namespace MantidQt::API;
 using namespace Mantid::Geometry;
+
+namespace
+{
+  Logger g_log("MantidMatrix");
+}
 
 MantidMatrix::MantidMatrix(Mantid::API::MatrixWorkspace_const_sptr ws, ApplicationWindow* parent, const QString& label, const QString& name, int start, int end)
   : MdiSubWindow(parent, label, name, 0),
@@ -231,7 +244,9 @@ double MantidMatrix::cell(int row, int col)
 
 QString MantidMatrix::text(int row, int col)
 {
-  return QString::number(activeModel()->data(row, col));
+  const int precision = 15;
+  const char format = 'g';
+  return QString::number(activeModel()->data(row, col),format,precision);
 }
 
 /** Sets new column width in a table view(s).
@@ -625,28 +640,10 @@ Graph3D * MantidMatrix::plotGraph3D(int style)
     MantidMatrixFunction *fun = new MantidMatrixFunction(*this);
     plot->addFunction(fun, xStart(), xEnd(), yStart(), yEnd(), zMin, zMax, numCols(), numRows() );
 
-    const Mantid::API::Axis* ax = m_workspace->getAxis(0);
-    std::string s;
-    if ( ax->unit() ) s = ax->unit()->caption() + " / " + ax->unit()->label();
-    else
-      s = "X Axis";
-    plot->setXAxisLabel(tr(s.c_str()));
-
-    if ( m_workspace->axes() > 1 )
-    {
-      ax = m_workspace->getAxis(1);
-      if (ax->isNumeric())
-      {
-        if ( ax->unit() ) s = ax->unit()->caption() + " / " + ax->unit()->label();
-        else
-          s = "Y Axis";
-        plot->setYAxisLabel(tr(s.c_str()));
-      }
-      else
-        plot->setYAxisLabel(tr("Spectrum"));
-    }
-
-    plot->setZAxisLabel(tr(m_workspace->YUnitLabel().c_str()));
+    using MantidQt::API::PlotAxis;
+    plot->setXAxisLabel(PlotAxis(*m_workspace, 0).title());
+    plot->setYAxisLabel(PlotAxis(*m_workspace, 1).title());
+    plot->setZAxisLabel(PlotAxis(false, *m_workspace).title());
 
     a->initPlot3D(plot);
     //plot->confirmClose(false);
@@ -694,26 +691,10 @@ Spectrogram* MantidMatrix::plotSpectrogram(Graph* plot, ApplicationWindow* app, 
   app->setPreferences(plot);
 
   plot->setTitle(tr("Workspace ") + name());
-  const Mantid::API::Axis* ax;
-  ax = m_workspace->getAxis(0);
-  std::string s;
-  if (ax->unit().get()) s = ax->unit()->caption() + " / " + ax->unit()->label();
-  else
-    s = "X Axis";
-  plot->setXAxisTitle(tr(s.c_str()));
-  if ( m_workspace->axes() > 1 )
-  {
-    ax = m_workspace->getAxis(1);
-    if (ax->isNumeric())
-    {
-      if ( ax->unit() ) s = ax->unit()->caption() + " / " + ax->unit()->label();
-      else
-        s = "Y Axis";
-      plot->setYAxisTitle(tr(s.c_str()));
-    }
-    else
-      plot->setYAxisTitle(tr("Spectrum"));
-  }
+
+  using MantidQt::API::PlotAxis;
+  plot->setXAxisTitle(PlotAxis(*m_workspace, 0).title());
+  plot->setYAxisTitle(PlotAxis(*m_workspace, 1).title());
 
   // Set the range on the third, colour axis
   double minz, maxz;
@@ -748,18 +729,6 @@ Spectrogram* MantidMatrix::plotSpectrogram(Graph* plot, ApplicationWindow* app, 
   }
   plot->setAutoScale();
   return spgrm;
-}
-void MantidMatrix::setSpectrumGraph(MultiLayer *ml, Table* t)
-{
-  MantidUI::setUpSpectrumGraph(ml,name());
-  connect(ml, SIGNAL(closedWindow(MdiSubWindow*)), this, SLOT(dependantClosed(MdiSubWindow*)));
-  if (t)
-  {
-    m_plots1D[ml] = t;
-    connect(t, SIGNAL(closedWindow(MdiSubWindow*)), this, SLOT(dependantClosed(MdiSubWindow*)));
-  }
-  else
-    m_plots2D<<ml;
 }
 
 void MantidMatrix::setBinGraph(MultiLayer *ml, Table* t)
@@ -937,9 +906,17 @@ void MantidMatrix::afterReplaceHandle(const std::string& wsName,const boost::sha
   }
 
   Mantid::API::MatrixWorkspace_sptr new_workspace = boost::dynamic_pointer_cast<MatrixWorkspace>(Mantid::API::AnalysisDataService::Instance().retrieve(m_strName));
-  emit needWorkspaceChange( new_workspace ); 
 
-
+  //If the cast failed (e.g. Matrix2D became a GroupWorkspace) do not try to change the matrix, just close it
+  if(new_workspace)
+  {
+    emit needWorkspaceChange( new_workspace );
+  }
+  else
+  {
+    g_log.warning("Workspace type changed. Closing matrix window.");
+    emit needToClose();
+  }
 }
 
 void MantidMatrix::changeWorkspace(Mantid::API::MatrixWorkspace_sptr ws)
@@ -1115,16 +1092,6 @@ void MantidMatrix::goToTab(const QString & name)
   }
   else return;
 }
-QString MantidMatrix::saveToString(const QString &geometry, bool saveAsTemplate)
-{
-  (void) saveAsTemplate; //Avoid unused warning
-
-  QString s="<mantidmatrix>\n";
-  s+="WorkspaceName\t"+QString::fromStdString(m_strName)+"\n";
-  s+=geometry;
-  s+="</mantidmatrix>\n";
-  return s;
-}
 
 /**  returns the workspace name
 */
@@ -1194,7 +1161,7 @@ double MantidMatrixModel::data(int row, int col) const
 
 QVariant MantidMatrixModel::headerData(int section, Qt::Orientation orientation, int role ) const
 {
-  if (role != Qt::DisplayRole) return QVariant();
+  if (!(role == Qt::DisplayRole || role == Qt::ToolTipRole)) return QVariant();
   if (orientation == Qt::Vertical && m_workspace->axes() > 1)
   {
     Mantid::API::TextAxis* xAxis = dynamic_cast<Mantid::API::TextAxis*>(m_workspace->getAxis(1));
@@ -1203,7 +1170,132 @@ QVariant MantidMatrixModel::headerData(int section, Qt::Orientation orientation,
       return QString::fromStdString(xAxis->label(section));
     }
   }
+
+  //initialise with horizontal values
+  int axisIndex = 0;
+  QString toolTipSeperator = "\n";
+  QString headerSeperator = "\n";
+  if (orientation == Qt::Vertical) 
+  {
+    axisIndex = 1;
+    toolTipSeperator = "\n";
+    headerSeperator = " ";
+  }
+
+  if (m_workspace->axes() > axisIndex) //if the axis exists
+  {
+    Mantid::API::Axis* axis = m_workspace->getAxis(axisIndex);
+    Mantid::API::TextAxis* textAxis = dynamic_cast<Mantid::API::TextAxis*>(axis);
+    if (textAxis) //just return the text label
+    {
+      return QString::fromStdString(textAxis->label(section));
+    }
+
+    Mantid::API::SpectraAxis* spAxis = dynamic_cast<Mantid::API::SpectraAxis*>(axis);
+    if (spAxis)
+    {
+      if (role == Qt::ToolTipRole) 
+      {
+        return QString("index %1%2spectra no %3").arg(QString::number(section), toolTipSeperator, 
+          QString::number(m_workspace->getSpectrum(section)->getSpectrumNo()));          
+      }
+      else
+      {
+        return QString("%1%2sp-%3").arg(QString::number(section), headerSeperator,
+          QString::number(m_workspace->getSpectrum(section)->getSpectrumNo()));
+      }
+    }
+
+    
+    QString unit = QString::fromStdWString( axis->unit()->label().utf8());
+
+    Mantid::API::RefAxis* refAxis = dynamic_cast<Mantid::API::RefAxis*>(axis);
+    if (refAxis)
+    {
+      //still need to protect from ragged workspaces
+      if (m_type==X)
+      {
+        if (role == Qt::ToolTipRole) 
+        {
+          return QString("index %1").arg(QString::number(section));
+        }
+        else
+        {
+          return section;
+        }
+      }
+
+      if (!m_workspace->isCommonBins())
+      {
+        if (role == Qt::ToolTipRole) 
+        {
+          return QString("index %1%2bin centre value varies%3Rebin to set common bins").arg(QString::number(section),toolTipSeperator,toolTipSeperator);
+        }
+        else
+        {
+          return QString("%1%2bins vary").arg(QString::number(section),headerSeperator);
+        }
+      }
+
+      //get bin centre value
+      double binCentreValue;
+      const Mantid::MantidVec xVec = m_workspace->readX(0);
+      if (m_workspace->isHistogramData())
+      {
+        if ((section+1) >= static_cast<int>(xVec.size())) return section;
+        binCentreValue= (xVec[section] + xVec[section+1])/2.0;
+      }
+      else
+      {
+        if (section >= static_cast<int>(xVec.size())) return section;
+        binCentreValue = xVec[section];
+      }
+
+      if (role == Qt::ToolTipRole) 
+      {
+        return QString("index %1%2%3 %4%5 (bin centre)").arg(QString::number(section), toolTipSeperator,
+          QString::fromStdString(axis->unit()->caption()),
+          QString::number(binCentreValue), unit);
+      }
+      else
+      {
+        return QString("%1%2%3%4").arg(QString::number(section), headerSeperator,
+          QString::number(binCentreValue), unit);
+      }
+    }
+
+    Mantid::API::NumericAxis* numAxis = dynamic_cast<Mantid::API::NumericAxis*>(axis);
+    if (numAxis)
+    {
+      QString valueString;
+      try
+      {
+        valueString = QString::number(numAxis->getValue(section));          
+      }
+      catch (Mantid::Kernel::Exception::IndexError&)
+      {
+        valueString="";
+      }
+
+      if (role == Qt::ToolTipRole) 
+      {
+        return QString("index %1%2%3 %4%5").arg(QString::number(section), toolTipSeperator, 
+            QString::fromStdString(axis->unit()->caption()),
+            valueString, unit);          
+      }
+      else
+      {
+        if (headerSeperator == " ") headerSeperator = "   ";
+        return QString("%1%2%3%4").arg(QString::number(section), headerSeperator, 
+          valueString, unit);
+      }
+    }
+
+  }
+  // fall through value, just return the section value
   return section;
+
+
 }
 
 Qt::ItemFlags MantidMatrixModel::flags(const QModelIndex & index ) const
@@ -1216,13 +1308,13 @@ Qt::ItemFlags MantidMatrixModel::flags(const QModelIndex & index ) const
 }
 
 /**
-@param f :: Number format:  'f' - fixed, 'e' - scientific.
+@param f :: Number format:  'f' - fixed, 'e' - scientific, 'g' - shorter of the earlier two.
 @param prec :: New precision (number of digits after the decimal point) with which the data will
 be shown in MantidMatrix.
 */
 void MantidMatrixModel::setFormat(const QChar& f,int prec)
 {
-  QString formats = " ef";
+  QString formats = " efg";
   if ( formats.indexOf(f) > 0 )
   {
     m_format = f.toAscii();
@@ -1265,7 +1357,7 @@ QVariant MantidMatrixModel::data(const QModelIndex &index, int role) const
 bool MantidMatrixModel::checkMonitorCache(int row) const
 {
   row += m_startRow; //correctly offset the row
-  if (m_workspace->getAxis(1)->isSpectra())
+  if (m_workspace->axes() > 1 && m_workspace->getAxis(1)->isSpectra())
   {
     bool isMon = false;
     if (m_monCache.contains(row))
@@ -1354,8 +1446,28 @@ void findYRange(MatrixWorkspace_const_sptr ws, double &miny, double &maxy)
 
   if (maxy == miny)
   {
-      if ( maxy == 0.0 ) maxy += 1.0;
-      else
-          maxy += fabs(miny);
+    if ( maxy == 0.0 ) maxy += 1.0;
+    else
+      maxy += fabs(miny);
   }
+}
+
+void MantidMatrix::loadFromProject(const std::string& lines, ApplicationWindow* app, const int fileVersion)
+{
+  Q_UNUSED(lines);
+  Q_UNUSED(app);
+  Q_UNUSED(fileVersion);
+  //We don't actually need to do any loading. It's all taken care of by ApplicationWindow.
+}
+
+std::string MantidMatrix::saveToProject(ApplicationWindow* app)
+{
+  TSVSerialiser tsv;
+
+  tsv.writeRaw("<mantidmatrix>");
+  tsv.writeLine("WorkspaceName") << m_strName;
+  tsv.writeRaw(app->windowGeometryInfo(this));
+  tsv.writeRaw("</mantidmatrix>");
+
+  return tsv.outputLines();
 }

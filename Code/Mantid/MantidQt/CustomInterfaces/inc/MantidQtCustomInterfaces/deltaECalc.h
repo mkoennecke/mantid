@@ -2,7 +2,7 @@
 #define MANTIDQTCUSTOMINTERFACES_DELTAECALC_H_
 
 #include "MantidQtMantidWidgets/pythonCalc.h"
-#include "ui_ConvertToEnergy.h"
+#include "ui_DirectConvertToEnergy.h"
 #include <QFileInfo>
 
 namespace MantidQt
@@ -12,12 +12,12 @@ namespace MantidQt
     class deltaECalc : public MantidWidgets::pythonCalc
     {
     public:
-      deltaECalc(QWidget * const interface, const Ui::ConvertToEnergy &userSettings, const bool removalBg, 
-		 const double TOFWinSt, const double TOFWinEnd);
+      deltaECalc(QWidget * const interface, const Ui::DirectConvertToEnergy &userSettings, const bool removalBg, 
+     const double TOFWinSt, const double TOFWinEnd);
       void setDiagnosedWorkspaceName(const QString &maskWS);
       void createProcessingScript(const QStringList & inFiles, const QString &whiteB,
-				  const QStringList &absInFiles, const QString &absWhiteB,
-				  const QString & saveName);
+          const QStringList &absInFiles, const QString &absWhiteB,
+          const QString & saveName);
  
       /** Removes the path from the filename passed and replaces extensions with .spe
       * @param inputFilename :: name of the file that the .SPE file is based on
@@ -31,13 +31,13 @@ namespace MantidQt
       std::string insertNumber(const std::string &filename, const int number) const;
     private:
       /// the form that ws filled in by the user
-      const Ui::ConvertToEnergy &m_sets;
+      const Ui::DirectConvertToEnergy &m_sets;
       /// whether to the remove background count rate from the data
       const bool m_bgRemove;
-	    /// used in remove background, the start of the background region
-  	  const double m_TOFWinSt;
-	    /// used in remove background, the end of the background region
-	    const double m_TOFWinEnd;
+      /// used in remove background, the start of the background region
+      const double m_TOFWinSt;
+      /// used in remove background, the end of the background region
+      const double m_TOFWinEnd;
 
       QString m_diagnosedWS;
       void addAnalysisOptions(QString & analysisScript);

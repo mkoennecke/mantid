@@ -48,7 +48,7 @@ namespace MantidQt
     //---------------------------------------------------------------------------
 
     /// Default constructor
-    LoadDialog:: LoadDialog(QWidget *parent) 
+    LoadDialog:: LoadDialog(QWidget *parent)
       : API::AlgorithmDialog(parent), m_form(), m_currentFiles(), m_initialHeight(0),
         m_populating(false)
     {
@@ -77,24 +77,28 @@ namespace MantidQt
     {
       const std::string & loaderName = getAlgorithm()->getPropertyValue("LoaderName");
       QString helpPage = (loaderName.empty()) ? QString("Load") : QString::fromStdString(loaderName);
-      MantidQt::API::HelpWindow::Instance().showAlgorithm(helpPage);
+      MantidQt::API::HelpWindow::showAlgorithm(this->nativeParentWidget(), helpPage);
     }
 
     /**
-    * Suggest a workspace name from the file
+    * Use property 'OutputWorkspace' as suggestion if present, otherwise derive a workspace name from 
+    * the file (base) name
     */
     void LoadDialog::suggestWSName()
     {
-      if( !m_form.workspaceEdit->isEnabled() ) return;
-      QString suggestion;
+      if( !m_form.workspaceEdit->isEnabled() )
+        return;
+
+      // suggest ws name based on file name
+      QString fileSuggestion;
       if( m_form.fileWidget->isValid() )
       {
         if( m_form.fileWidget->getFilenames().size() == 1 )
-          suggestion = QFileInfo(m_form.fileWidget->getFirstFilename()).baseName();
+          fileSuggestion = QFileInfo(m_form.fileWidget->getFirstFilename()).completeBaseName();
         else
-          suggestion = "MultiFiles";
+          fileSuggestion = "MultiFiles";
       }
-      m_form.workspaceEdit->setText(suggestion);
+      m_form.workspaceEdit->setText(fileSuggestion);
     }
 
     /**
@@ -156,9 +160,19 @@ namespace MantidQt
       m_form.fileWidget->readSettings("Mantid/Algorithms/Load");
       m_initialHeight = this->height();
 
-      // Guess at an output workspace name but only if the user hasn't changed anything
-      enableNameSuggestion(true);
-      connect(m_form.workspaceEdit, SIGNAL(textEdited(const QString&)), this, SLOT(enableNameSuggestion()));
+      const std::string& outWsName = getAlgorithm()->getPropertyValue("OutputWorkspace");
+      if (!outWsName.empty())
+      {
+        // OutputWorkspace name suggestion received as parameter, just take it and don't change it
+        m_form.workspaceEdit->setText(QString::fromStdString(outWsName));
+      }
+      else
+      {
+        // Guess at an output workspace name but only if the user hasn't changed anything
+        enableNameSuggestion(true);
+        connect(m_form.workspaceEdit, SIGNAL(textEdited(const QString&)), this, SLOT(enableNameSuggestion()));
+      }
+
       // Connect the file finder's file found signal to the dynamic property create method.
       // When the file text is set the Load algorithm finds the concrete loader and then we
       // know what extra properties to create
@@ -174,7 +188,7 @@ namespace MantidQt
       m_form.fileWidget->saveSettings("Mantid/Algorithms/Load");
       AlgorithmDialog::saveInput();
       //Ensure the filename is store as the full file
-      API::AlgorithmInputHistory::Instance().storeNewValue("Load", 
+      API::AlgorithmInputHistory::Instance().storeNewValue("Load",
 							   QPair<QString, QString>("Filename", m_currentFiles));
     }
 
@@ -238,7 +252,7 @@ namespace MantidQt
 
       if( !m_form.fileWidget->isValid() ) return;
       // First step is the get the specific loader that is responsible
-      IAlgorithm *loadAlg = getAlgorithm();
+      auto loadAlg = getAlgorithm();
       const QString filenames = m_form.fileWidget->getUserInput().asString();
       if( filenames == m_currentFiles ) return;
       m_currentFiles = filenames;
@@ -253,7 +267,7 @@ namespace MantidQt
         m_form.propertyLayout->setEnabled(true);
         m_form.propertyLayout->activate();
         this->resize(this->width(), m_initialHeight + 15);
-        
+
         // Reset the algorithm pointer so that the base class re-reads the properties and drops links from
         // old widgets meaning they are safe to remove
         setAlgorithm(loadAlg);
@@ -326,21 +340,21 @@ namespace MantidQt
       else
       {
         QLabel *nameLbl = new QLabel(propName, parent);
-        nameLbl->setToolTip(QString::fromStdString(prop->documentation()));
+        nameLbl->setToolTip(QString::fromStdString(prop->briefDocumentation()));
         if( dynamic_cast<const PropertyWithValue<bool>* >(prop) )
         {
           QCheckBox *checkBox = new QCheckBox(parent);
           inputWidget = checkBox;
           addValidator = false;
-        } 
+        }
         // Options box
         else if( !prop->allowedValues().empty() )
         {
           QComboBox *optionsBox = new QComboBox(parent);
           inputWidget = optionsBox;
-          std::set<std::string> items = prop->allowedValues();
-          std::set<std::string>::const_iterator vend = items.end();
-          for(std::set<std::string>::const_iterator vitr = items.begin(); vitr != vend; 
+          std::vector<std::string> items = prop->allowedValues();
+          std::vector<std::string>::const_iterator vend = items.end();
+          for(std::vector<std::string>::const_iterator vitr = items.begin(); vitr != vend;
             ++vitr)
           {
             optionsBox->addItem(QString::fromStdString(*vitr));

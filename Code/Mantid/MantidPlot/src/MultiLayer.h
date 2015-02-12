@@ -34,6 +34,7 @@
 
 #include "MdiSubWindow.h"
 #include "Graph.h"
+#include "Mantid/IProjectSerialisable.h"
 #include <QPushButton>
 #include <QLayout>
 #include <QPointer>
@@ -46,14 +47,7 @@ class MantidTreeWidget;
 class MantidMDCurve;
 class MantidMatrixCurve;
 class QSize;
-
-namespace Mantid
-{
-  namespace Kernel
-  {
-    class Logger;
-  }
-}
+class WaterfallFillDialog;
 
 /**
  * \brief An MDI window (MdiSubWindow) managing one or more Graph objects.
@@ -72,7 +66,7 @@ namespace Mantid
  * If MultiLayer exposes its parent Project to the widgets it manages, they could handle things like creating
  * tables by calling methods of Project instead of sending signals.
  */
-class MultiLayer: public MdiSubWindow
+class MultiLayer: public MdiSubWindow, public Mantid::IProjectSerialisable
 {
 	Q_OBJECT
 
@@ -103,6 +97,9 @@ public:
   void setCloseOnEmpty(bool yes=true){d_close_on_empty = yes;}
 
   void setWaterfallLayout(bool on = true);
+
+  void loadFromProject(const std::string& lines, ApplicationWindow* app, const int fileVersion);
+  std::string saveToProject(ApplicationWindow* app);
 
 public slots:
 	Graph* addLayer(int x = 0, int y = 0, int width = 0, int height = 0);
@@ -170,9 +167,6 @@ public slots:
 							const QFont& numbersFnt, const QFont& legendFnt);
 
 	void connectLayer(Graph *g);
-
-	QString saveToString(const QString& geometry, bool = false);
-	QString saveAsTemplate(const QString& geometryInfo);
 
   void maybeNeedToClose();
 
@@ -252,9 +246,6 @@ private:
 
   bool d_is_waterfall_plot;
   QColor d_waterfall_fill_color;
-
-  /// Logger object
-  static Mantid::Kernel::Logger & g_log;
 };
 
 //! Button with layer number
@@ -276,5 +267,25 @@ signals:
 };
 
 Q_DECLARE_METATYPE(MultiLayer*);
+
+
+class WaterfallFillDialog : QDialog
+{
+    Q_OBJECT
+
+public:
+    WaterfallFillDialog(MultiLayer *parent, Graph *active_graph);
+
+public slots:    
+  void setFillMode();
+  void enableFill(bool b);
+
+private:
+    Graph *m_active_graph;
+    QRadioButton *m_solidRadioButton;
+    QRadioButton *m_lineRadioButton;
+    ColorButton *m_colourBox;
+};
+
 
 #endif

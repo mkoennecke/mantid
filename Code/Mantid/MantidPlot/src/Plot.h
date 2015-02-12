@@ -101,8 +101,15 @@ public:
 	void updateLayout();
 
     void updateCurveLabels();
+  // pass through method that is public on the base class in later qwt versions
+  void updateAxes() { QwtPlot::updateAxes(); }
 
   void reverseCurveOrder(); // Created in connection with waterfall plots. Called from Graph method of same name.
+
+signals:
+  void dragMousePress(QPoint);
+  void dragMouseRelease(QPoint);
+  void dragMouseMove(QPoint);
 
 protected:
     void showEvent (QShowEvent * event);
@@ -117,6 +124,8 @@ protected:
 	void drawInwardTicks(QPainter *painter, const QRect &rect,
 							const QwtScaleMap&map, int axis, bool min, bool maj) const;
     void drawBreak(QPainter *painter, const QRect &rect, const QwtScaleMap &map, int axis) const;
+
+  bool eventFilter(QObject *obj, QEvent *ev);
 
 	Grid *d_grid;
 	QMap<int, QwtPlotItem*> d_curves;

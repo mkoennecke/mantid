@@ -11,6 +11,7 @@
 #include "MantidCurveFitting/SeqDomain.h"
 #include "MantidCurveFitting/Convolution.h"
 #include "MantidCurveFitting/Gaussian.h"
+#include "MantidCurveFitting/Polynomial.h"
 
 #include "MantidAPI/CompositeFunction.h"
 #include "MantidAPI/FrameworkManager.h"
@@ -18,6 +19,7 @@
 #include "MantidAPI/ITableWorkspace.h"
 #include "MantidAPI/FunctionDomain1D.h"
 #include "MantidAPI/WorkspaceProperty.h"
+#include "MantidAPI/AnalysisDataService.h"
 
 #include "MantidKernel/PropertyManager.h"
 #include "MantidGeometry/Instrument.h"
@@ -172,7 +174,7 @@ public:
 
     TS_ASSERT(fit.isExecuted());
 
-    TS_ASSERT_DELTA( fun->getParameter("Height"), 10.0, 1e-3);
+    TS_ASSERT_DELTA( fun->getParameter("Height"), 11.0517, 1e-3);
     TS_ASSERT_DELTA( fun->getParameter("Lifetime"), 0.5, 1e-4);
 
     Fit fit1;
@@ -186,8 +188,153 @@ public:
 
     TS_ASSERT(fit1.isExecuted());
 
-    TS_ASSERT_DELTA( fun->getParameter("Height"), 11.0, 1e-3);
+    TS_ASSERT_DELTA( fun->getParameter("Height"), 11.5639, 1e-3);
     TS_ASSERT_DELTA( fun->getParameter("Lifetime"), 1.0, 1e-4);
+
+  }
+
+  // test that errors of the calculated output are reasonable
+  void test_output_errors()
+  {
+    const bool histogram(true);
+    auto ws2 = createTestWorkspace(histogram);
+
+    API::IFunction_sptr fun(new Polynomial);
+    fun->setAttributeValue("n",5);
+
+    Fit fit;
+    fit.initialize();
+
+    fit.setProperty("Function",fun);
+    fit.setProperty("InputWorkspace",ws2);
+    fit.setProperty("WorkspaceIndex",0);
+    fit.setProperty("Output","out");
+
+    fit.execute();
+
+    TS_ASSERT(fit.isExecuted());
+
+    Mantid::API::MatrixWorkspace_sptr out_ws = Mantid::API::AnalysisDataService::Instance().retrieveWS<Mantid::API::MatrixWorkspace>("out_Workspace");
+    TS_ASSERT(out_ws);
+    TS_ASSERT_EQUALS(out_ws->getNumberHistograms(), 3);
+    auto &e = out_ws->readE(1);
+    for(size_t i = 0; i < e.size(); ++i)
+    {
+      TS_ASSERT( e[i] < 1.0 );
+    }
+
+    Mantid::API::AnalysisDataService::Instance().clear();
+
+  }
+
+  void test_all_output()
+  {
+    auto ws2 = createTestWorkspace(true);
+
+    API::IFunction_sptr fun(new Polynomial);
+    fun->setAttributeValue("n",1);
+
+    Fit fit;
+    fit.initialize();
+
+    fit.setProperty("Function",fun);
+    fit.setProperty("InputWorkspace",ws2);
+    fit.setProperty("WorkspaceIndex",0);
+    fit.setProperty("Output","out");
+
+    fit.execute();
+
+    TS_ASSERT(fit.isExecuted());
+
+    TS_ASSERT( Mantid::API::AnalysisDataService::Instance().doesExist( "out_Workspace" ) );
+    TS_ASSERT( Mantid::API::AnalysisDataService::Instance().doesExist( "out_Parameters" ) );
+
+    Mantid::API::AnalysisDataService::Instance().clear();
+
+  }
+
+  void test_output_parameters_only()
+  {
+    auto ws2 = createTestWorkspace(true);
+
+    API::IFunction_sptr fun(new Polynomial);
+    fun->setAttributeValue("n",1);
+
+    Fit fit;
+    fit.initialize();
+
+    fit.setProperty("Function",fun);
+    fit.setProperty("InputWorkspace",ws2);
+    fit.setProperty("WorkspaceIndex",0);
+    fit.setProperty("Output","out");
+    fit.setProperty("OutputParametersOnly",true);
+
+    fit.execute();
+
+    TS_ASSERT(fit.isExecuted());
+
+    TS_ASSERT( ! Mantid::API::AnalysisDataService::Instance().doesExist( "out_Workspace" ) );
+    TS_ASSERT( Mantid::API::AnalysisDataService::Instance().doesExist( "out_Parameters" ) );
+
+    Mantid::API::AnalysisDataService::Instance().clear();
+
+  }
+
+  void test_createDomain_creates_FunctionDomain1DSpectrum()
+  {
+    MatrixWorkspace_sptr ws2 = createTestWorkspace(true);
+
+    FunctionDomain_sptr domain;
+    FunctionValues_sptr values;
+
+    FitMW fitmw;
+    fitmw.setWorkspace( ws2 );
+    fitmw.setWorkspaceIndex( 1 );
+    fitmw.createDomain( domain, values );
+
+    FunctionDomain1DSpectrum* specDom = dynamic_cast<FunctionDomain1DSpectrum*>(domain.get());
+    TS_ASSERT( specDom );
+    TS_ASSERT_EQUALS(specDom->getWorkspaceIndex(), 1);
+    TS_ASSERT_EQUALS(specDom->size(), ws2->blocksize());
+
+  }
+
+  void test_normalise_data()
+  {
+    MatrixWorkspace_sptr ws = createTestWorkspace(true);
+
+    FunctionDomain_sptr domain;
+    FunctionValues_sptr values;
+
+    { // normalise the data
+      FitMW fitmw;
+      fitmw.setWorkspace( ws );
+      fitmw.setWorkspaceIndex( 1 );
+      fitmw.setNormalise(true);
+      fitmw.createDomain( domain, values );
+
+      auto& y = ws->readY(1);
+
+      for(size_t i = 0; i < values->size(); ++i)
+      {
+        TS_ASSERT_DELTA( (*values).getFitData(i), y[i] / 0.1, 1e-8 );
+      }
+    }
+
+    { // don't normalise the data
+      FitMW fitmw;
+      fitmw.setWorkspace( ws );
+      fitmw.setWorkspaceIndex( 1 );
+      fitmw.setNormalise(false);
+      fitmw.createDomain( domain, values );
+
+      auto& y = ws->readY(1);
+
+      for(size_t i = 0; i < values->size(); ++i)
+      {
+        TS_ASSERT_DELTA( (*values).getFitData(i), y[i], 1e-8 );
+      }
+    }
 
   }
 
@@ -225,7 +372,7 @@ public:
     }
 
     FunctionDomain_sptr domain;
-    IFunctionValues_sptr values;
+    FunctionValues_sptr values;
 
     FitMW fitmw(FitMW::Sequential);
     fitmw.setWorkspace( ws2 );
@@ -239,7 +386,7 @@ public:
     TS_ASSERT_EQUALS(seq->size(), 10);
 
     FunctionDomain_sptr d;
-    IFunctionValues_sptr v;
+    FunctionValues_sptr v;
     seq->getDomainAndValues( 0, d, v );
     TS_ASSERT_EQUALS( d->size(), 3 );
     TS_ASSERT_EQUALS( v->size(), 3 );
@@ -312,7 +459,7 @@ public:
     composite->addFunction(expDecay);
 
     FunctionDomain_sptr domain;
-    IFunctionValues_sptr values;
+    FunctionValues_sptr values;
 
     // Requires a property manager to make a workspce
     auto propManager = boost::make_shared<Mantid::Kernel::PropertyManager>();
@@ -328,7 +475,7 @@ public:
 
     // Create Output
     const std::string baseName("TestOutput_");
-    fitmw.createOutputWorkspace(baseName, composite, domain, values);
+    fitmw.createOutputWorkspace(baseName, composite, domain, values, "OutputWorkspace");
     
     
     MatrixWorkspace_sptr outputWS;
@@ -353,8 +500,8 @@ public:
     TS_ASSERT_EQUALS(axis->label(3), "ExpDecay");
     TS_ASSERT_EQUALS(axis->label(4), "ExpDecay");
 
-    const double eValues[nExpectedHist] = {1.0, 0.01735481, 0.0, 0.0095139661, 0.014514608};
-    const double yValues[nExpectedHist] = {8.1873075308, 3.36127634, 4.826031193, 1.42684414, 1.93443220};
+    const double eValues[nExpectedHist] = {1.0, 0.01703318673, 0.0, 0.0092811, 0.0142825267};
+    const double yValues[nExpectedHist] = {8.1873075308, 3.294074078, 4.893233452, 1.391615229, 1.902458849};
 
     for(size_t i = 0; i < nExpectedHist; ++i)
     {
@@ -376,7 +523,7 @@ public:
       ws->dataE(0)[11] = log(-one);
 
       FunctionDomain_sptr domain;
-      IFunctionValues_sptr values;
+      FunctionValues_sptr values;
 
       // Requires a property manager to make a workspce
       auto propManager = boost::make_shared<Mantid::Kernel::PropertyManager>();
@@ -470,7 +617,7 @@ public:
 
       API::IFunction_sptr expDecay(new ExpDecay);
       FunctionDomain_sptr domain;
-      IFunctionValues_sptr values;
+      FunctionValues_sptr values;
 
       // Requires a property manager to make a workspce
       auto propManager = boost::make_shared<Mantid::Kernel::PropertyManager>();
@@ -519,7 +666,7 @@ public:
       }
 
       FunctionDomain_sptr domain;
-      IFunctionValues_sptr values;
+      FunctionValues_sptr values;
 
       // Requires a property manager to make a workspce
       auto propManager = boost::make_shared<Mantid::Kernel::PropertyManager>();
@@ -551,7 +698,7 @@ public:
 
       // Create Output
       const std::string baseName("TestOutput_");
-      fitmw.createOutputWorkspace(baseName, conv, domain, values);
+      fitmw.createOutputWorkspace(baseName, conv, domain, values, "OutputWorkspace");
 
 
       MatrixWorkspace_sptr outputWS;
@@ -620,7 +767,9 @@ private:
   API::MatrixWorkspace_sptr createTestWorkspace(const bool histogram)
   {
     MatrixWorkspace_sptr ws2(new WorkspaceTester);
-    ws2->initialize(2,20,20);
+    size_t ny = 20;
+    size_t nx = ny + (histogram ? 1 : 0);
+    ws2->initialize(2,nx,ny);
 
     for(size_t is = 0; is < ws2->getNumberHistograms(); ++is)
     {

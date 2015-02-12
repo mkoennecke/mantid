@@ -1,11 +1,3 @@
-"""*WIKI* 
-
-Clones the input [[MatrixWorkspace|Matrix Workspaces]] and orders the x-axis in an ascending fashion. Ensures that the y-axis and error data is sorted in a consistent way with the x-axis.
-All x-values of the input workspace MUST be in either a descending or ascending fashion before passing to this algorithm.
-
-This algorithm is for use with small workspaces loaded. It is particularly suitable for reformatting workspaces loaded via [[LoadASCII]]. Input workspaces must be a distribution.
-
-*WIKI*"""
 import mantid.simpleapi as api
 
 from mantid.api import *
@@ -21,30 +13,40 @@ class SortXAxis(PythonAlgorithm):
     def name(self):
         return "SortXAxis"
 
+    def summary(self):
+        return "Clones the input MatrixWorkspace(s) and orders the x-axis in an ascending fashion."
+
     def PyInit(self):
         self.declareProperty(MatrixWorkspaceProperty("InputWorkspace", defaultValue="",  direction=Direction.Input), doc="Input workspace")
         self.declareProperty(MatrixWorkspaceProperty("OutputWorkspace", defaultValue="", direction=Direction.Output), doc="Sorted Output Workspace")
-        
+
     def PyExec(self):
-        inputws = self.getProperty("InputWorkspace").value
-        specs = inputws.getNumberHistograms()
-        outws = api.CloneWorkspace(InputWorkspace=inputws)
-        for i in range(0, specs):
-            x = inputws.readX(i)
-            y = inputws.readY(i)
-            e = inputws.readE(i)
+        input_ws = self.getProperty('InputWorkspace').value
+        output_ws = self.getPropertyValue('OutputWorkspace')
+
+        num_specs = input_ws.getNumberHistograms()
+        api.CloneWorkspace(InputWorkspace=input_ws, OutputWorkspace=output_ws)
+
+        for i in range(0, num_specs):
+            x = input_ws.readX(i)
+            y = input_ws.readY(i)
+            e = input_ws.readE(i)
+
             indexes =  x.argsort()
-            xordered = x[indexes]
-            if inputws.isHistogramData():
+
+            x_ordered = x[indexes]
+            if input_ws.isHistogramData():
                max_index = np.argmax(indexes)
                indexes = np.delete(indexes, max_index)
-            yordered = y[indexes]
-            eordered = e[indexes]
-            
-            outws.setX(i, xordered)
-            outws.setY(i, yordered)
-            outws.setE(i, eordered)
-        self.setProperty('OutputWorkspace', outws)
+
+            y_ordered = y[indexes]
+            e_ordered = e[indexes]
+
+            mtd[output_ws].setX(i, x_ordered)
+            mtd[output_ws].setY(i, y_ordered)
+            mtd[output_ws].setE(i, e_ordered)
+
+        self.setProperty('OutputWorkspace', output_ws)
 
 #############################################################################################
 

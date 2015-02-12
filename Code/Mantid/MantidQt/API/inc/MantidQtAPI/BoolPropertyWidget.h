@@ -17,7 +17,7 @@ namespace API
     
     @date 2012-02-16
 
-    Copyright &copy; 2012 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+    Copyright &copy; 2012 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
     This file is part of Mantid.
 
@@ -45,7 +45,7 @@ namespace API
     BoolPropertyWidget(Mantid::Kernel::PropertyWithValue<bool> * prop, QWidget * parent = NULL, QGridLayout * layout = NULL, int row=-1);
     virtual ~BoolPropertyWidget();
     QString getValue() const;
-    void setValue(const QString & value);
+    virtual void setValueImpl(const QString & value);
 
     ///@return the main widget of this combo of widgets
     QWidget * getMainWidget() {return m_checkBox; }

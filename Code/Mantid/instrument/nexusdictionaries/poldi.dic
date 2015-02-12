@@ -17,7 +17,7 @@ InstrumentName=/entry1/POLDI/name
 ExperimentName=/entry1/title
 StartTime=/entry1/start_time
 #
-ProtonMonitor=/entry1/proton_monitor/data
+#ProtonMonitor=/entry1/proton_monitor/data
 #
 DetdRes=/entry1/POLDI/detector/d_resolution
 DetRadius=/entry1/POLDI/detector/det_radius
@@ -49,5 +49,15 @@ Diaphragme2plus0=/entry1/POLDI/diaphragm2/zplus_zero
 ChopperName=/entry1/POLDI/chopper/name
 ChopperPhase=/entry1/POLDI/chopper/chopper_phase
 ChopperSpeed=/entry1/POLDI/chopper/rotation_speed
+
+# There seems to be an issue with this field in some data files.
+# Once this is fixed, it can be reactivated.
+#ChopperSpeedTarget=/entry1/POLDI/chopper/rotation_speed_target
 #
 SampleName=/entry1/POLDI/name
+#
+start_time=/entry1/start_time
+#
+TablePositionX=/entry1/sample/sample_x
+TablePositionY=/entry1/sample/sample_y
+TablePositionZ=/entry1/sample/sample_lift

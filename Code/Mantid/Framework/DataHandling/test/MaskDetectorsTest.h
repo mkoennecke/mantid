@@ -72,7 +72,7 @@ public:
         TofEvent event(1.23, int64_t(4.56));
         spaceEvent->getEventList(j).addEventQuickly(event);
         spaceEvent->getEventList(j).setDetectorID(j);
-        spaceEvent->getAxis(1)->setValue(j, j);
+        spaceEvent->getSpectrum(j)->setSpectrumNo(j);
       }
       x.access().push_back(0.0);
       x.access().push_back(10.0);
@@ -130,7 +130,7 @@ public:
 
     TS_ASSERT_EQUALS( props[0]->name(), "Workspace" );
     TS_ASSERT( props[0]->isDefault() );
-    TS_ASSERT( dynamic_cast<WorkspaceProperty<>* >(props[0]) );
+    TS_ASSERT( dynamic_cast<WorkspaceProperty<Workspace>* >(props[0]) );
 
     TS_ASSERT_EQUALS( props[1]->name(), "SpectraList" );
     TS_ASSERT( props[1]->isDefault() );

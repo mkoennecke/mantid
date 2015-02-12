@@ -1,7 +1,7 @@
 #ifndef MANTID_VATES_VTKDATASETTONONORTHOGONALDATASET_H_
 #define MANTID_VATES_VTKDATASETTONONORTHOGONALDATASET_H_
 
-#include "MantidAPI/SpecialCoordinateSystem.h"
+#include "MantidKernel/SpecialCoordinateSystem.h"
 #include "MantidKernel/System.h"
 #include "MantidKernel/cow_ptr.h"
 #include "MantidKernel/Matrix.h"
@@ -30,7 +30,7 @@ namespace VATES
     
     @date 11/03/2013
 
-    Copyright &copy; 2013 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+    Copyright &copy; 2013 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
     This file is part of Mantid.
 
@@ -86,7 +86,7 @@ namespace VATES
     Kernel::V3D m_basisX; ///< The X direction basis vector
     Kernel::V3D m_basisY; ///< The Y direction basis vector
     Kernel::V3D m_basisZ; ///< The Z direction basis vector
-    API::SpecialCoordinateSystem m_coordType; ///< The coordinate system for the workspace
+    Kernel::SpecialCoordinateSystem m_coordType; ///< The coordinate system for the workspace
   };
 
 

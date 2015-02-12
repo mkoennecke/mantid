@@ -19,6 +19,7 @@
 #include "MantidAPI/ExperimentInfo.h"
 #include "MantidKernel/Strings.h"
 
+using namespace Mantid::DataObjects;
 using namespace Mantid::MDEvents;
 using namespace Mantid::Geometry;
 using namespace Mantid::API;
@@ -957,16 +958,16 @@ public:
   void test_getSpecialCoordinateSystem_default()
   {
     MDHistoWorkspace_sptr ws = MDEventsTestHelper::makeFakeMDHistoWorkspace(1, 1);
-    TSM_ASSERT_EQUALS("Should default to no special coordinate system.", Mantid::API::None, ws->getSpecialCoordinateSystem());
+    TSM_ASSERT_EQUALS("Should default to no special coordinate system.", Mantid::Kernel::None, ws->getSpecialCoordinateSystem());
   }
 
   void test_setSpecialCoordinateSystem_default()
   {
     MDHistoWorkspace_sptr ws = MDEventsTestHelper::makeFakeMDHistoWorkspace(1, 1);
-    TS_ASSERT_EQUALS(Mantid::API::None, ws->getSpecialCoordinateSystem());
+    TS_ASSERT_EQUALS(Mantid::Kernel::None, ws->getSpecialCoordinateSystem());
 
-    ws->setCoordinateSystem(Mantid::API::QLab);
-    TS_ASSERT_EQUALS(Mantid::API::QLab, ws->getSpecialCoordinateSystem());
+    ws->setCoordinateSystem(Mantid::Kernel::QLab);
+    TS_ASSERT_EQUALS(Mantid::Kernel::QLab, ws->getSpecialCoordinateSystem());
   }
 
 

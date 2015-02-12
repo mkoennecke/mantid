@@ -16,25 +16,25 @@
 // Forward declaration
 //----------------------------------------------------------------------
 /// @cond Exclude from doxygen documentation
-namespace Poco
-{
-  class FastMutex;
-  class Logger;
-  class NullOutputStream;
+namespace Poco {
+class FastMutex;
+class Logger;
+class NullOutputStream;
 }
 /// @endcond
 
-namespace Mantid
-{
-namespace Kernel
-{
+namespace Mantid {
+namespace Kernel {
 class ThreadSafeLogStream;
 
 /** @class Logger Logger.h Kernel/Logger.h
 
-    The Logger class is in charge of the publishing messages from the framework through
-    various channels. The static methods on the class are responsible for the creation
-    of Logger objects on request. This class currently uses the Logging functionality
+    The Logger class is in charge of the publishing messages from the framework
+   through
+    various channels. The static methods on the class are responsible for the
+   creation
+    of Logger objects on request. This class currently uses the Logging
+   functionality
     provided through the POCO (portable components) library.
 
         Usage example:
@@ -45,7 +45,8 @@ class ThreadSafeLogStream;
     @author Nicholas Draper, Tessella Support Services plc
     @date 12/10/2007
 
-    Copyright &copy; 2007 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+    Copyright &copy; 2007 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge
+   National Laboratory & European Spallation Source
 
     This file is part of Mantid.
 
@@ -65,123 +66,103 @@ class ThreadSafeLogStream;
     File change history is stored at: <https://github.com/mantidproject/mantid>.
     Code Documentation is available at: <http://doxygen.mantidproject.org>
 */
-  class MANTID_KERNEL_DLL Logger
-  {
-  public:
-    // Our logger's priority types are the same as POCO's Message's types.
-    typedef Poco::Message::Priority Priority;
+class MANTID_KERNEL_DLL Logger {
+public:
+  // Our logger's priority types are the same as POCO's Message's types.
+  typedef Poco::Message::Priority Priority;
 
-    /// Sets the Loggername to a new value.
-    void setName(const std::string & newName);
-    /// Logs at Fatal level     
-    void fatal(const std::string& msg);
-    /// Logs at error level
-    void error(const std::string& msg);
-    /// Logs at warning level
-    void warning(const std::string& msg);
-    /// Logs at notice level
-    void notice(const std::string& msg);
-    /// Logs at information level
-    void information(const std::string& msg);
-    /// Logs at debug level
-    void debug(const std::string& msg);
+  /// Constructor giving the logger name
+  Logger(const std::string &name);
+  /// Destructor
+  ~Logger();
+  /// Update the name of the logger
+  void setName(const std::string &name);
 
-    /// Logs at Fatal level
-    std::ostream& fatal();
-    /// Logs at error level
-    std::ostream& error();
-    /// Logs at warning level
-    std::ostream& warning();
-    /// Logs at notice level
-    std::ostream& notice();
-    /// Logs at information level
-    std::ostream& information();
-    /// Logs at debug level
-    std::ostream& debug();
+  /// Logs at Fatal level
+  void fatal(const std::string &msg);
+  /// Logs at error level
+  void error(const std::string &msg);
+  /// Logs at warning level
+  void warning(const std::string &msg);
+  /// Logs at notice level
+  void notice(const std::string &msg);
+  /// Logs at information level
+  void information(const std::string &msg);
+  /// Logs at debug level
+  void debug(const std::string &msg);
 
-    /// Logs the given message at debug level, followed by the data in buffer.
-    void dump(const std::string& msg, const void* buffer, std::size_t length);
+  /// Logs at Fatal level
+  std::ostream &fatal();
+  /// Logs at error level
+  std::ostream &error();
+  /// Logs at warning level
+  std::ostream &warning();
+  /// Logs at notice level
+  std::ostream &notice();
+  /// Logs at information level
+  std::ostream &information();
+  /// Logs at debug level
+  std::ostream &debug();
 
-    /// Sets the Logger's log level.
-    void setLevel(int level);
-           
-    /// Sets the Logger's log offset level.
-    void setLevelOffset(int level);
+  /// Logs the given message at debug level, followed by the data in buffer.
+  void dump(const std::string &msg, const void *buffer, std::size_t length);
 
-    /// Gets the Logger's log offset level.
-    int getLevelOffset();
+  /// Sets the Logger's log level.
+  void setLevel(int level);
 
-    /// Returns the Logger's log level.
-    int getLevel() const;
-                
-    /// Sets the Logger's log level using a symbolic value.
-    void setLevel(const std::string& level);
+  /// Sets the Logger's log offset level.
+  void setLevelOffset(int level);
 
-    ///returns true if the log is enabled
-    bool getEnabled() const;
+  /// Gets the Logger's log offset level.
+  int getLevelOffset() const;
 
-    ///set if the logging is enabled
-    void setEnabled(const bool enabled);
-                
-    /// Returns true if at least the given log level is set.
-    bool is(int level) const;
+  /// Returns the Logger's log level.
+  int getLevel() const;
 
-    /// releases resources and deletes this object
-    void release();
+  /// Sets the Logger's log level using a symbolic value.
+  void setLevel(const std::string &level);
 
-    /// Returns a reference to the Logger with the given name.
-    static Logger& get(const std::string& name);
+  /// returns true if the log is enabled
+  bool getEnabled() const;
 
-    /// Sets the log level for all Loggers created so far, including the root logger.
-    static void setLevelForAll(const int level);
+  /// set if the logging is enabled
+  void setEnabled(const bool enabled);
 
-    ///destroy the given logger and releases resources
-    static void destroy(Logger& logger);
+  /// Returns true if at least the given log level is set.
+  bool is(int level) const;
 
-    /// Shuts down the logging framework and releases all Loggers.
-    static void shutdown();
+  /// Sets the log level for all Loggers created so far, including the root
+  /// logger.
+  static void setLevelForAll(const int level);
 
+  /// Shuts down the logging framework and releases all Loggers.
+  static void shutdown();
 
-  protected:
-    /// Protected constructor called by static get method
-    Logger(const std::string& name);
+private:
+  // Disable default constructor
+  Logger();
+  /// Disable copying
+  Logger(const Logger &);
+  /// Disable assignment
+  Logger &operator=(const Logger &);
 
-    /// Protected destructor - call release instead
-    ~Logger();
-  private:
-    Logger();
+  /// Log a message at a given priority
+  void log(const std::string &message, Logger::Priority priority);
+  /// gets the correct log stream for a priority
+  std::ostream &getLogStream(Logger::Priority priority);
+  /// Return a log stream set with the given priority
+  Priority applyLevelOffset(Priority proposedLevel);
 
-    /// Overload of = operator
-    Logger& operator= (const Logger&);
+  /// Internal handle to third party logging objects
+  Poco::Logger *m_log;
+  /// Allows stream operators for a logger
+  ThreadSafeLogStream *m_logStream;
 
-    /// Log a message at a given priority
-    void log(const std::string & message, Logger::Priority priority);
-
-    /// gets the correct log stream for a priority
-    std::ostream& getLogStream(Logger::Priority priority);
-
-    /// Return a log stream set with the given priority
-    Priority applyLevelOffset(Priority proposedLevel);
-
-    /// Internal handle to third party logging objects
-    Poco::Logger* m_log;
-    /// A Log stream to allow streaming operations.  This pointer is owned by this class, initialized in the constructor and deleted in the destructor
-    ThreadSafeLogStream* m_logStream;
-    /// Name of this logging object
-    std::string m_name;
-    /// The offset of the logger
-    int m_levelOffset;
-    /// The state of this logger, disabled loggers send no messages
-    bool m_enabled;
-    /// Typdef for a container of logger pointers
-    typedef std::set<Logger*> LoggerList;
-    /// The container of logger pointers
-    static LoggerList* m_loggerList;
-    /// The null stream that is used when logging is disabled
-    static Poco::NullOutputStream* m_nullStream;
-    /// Mutex to make changing the static logger list threadsafe.
-    static Poco::FastMutex *mutexLoggerList;
-  };
+  /// The offset of the logger
+  int m_levelOffset;
+  /// The state of this logger, disabled loggers send no messages
+  bool m_enabled;
+};
 
 } // namespace Kernel
 } // namespace Mantid

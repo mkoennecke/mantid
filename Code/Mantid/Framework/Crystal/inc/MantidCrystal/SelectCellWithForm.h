@@ -1,25 +1,21 @@
 #ifndef MANTID_CRYSTAL_SELECT_CELL_WITH_FORM_H_
 #define MANTID_CRYSTAL_SELECT_CELL_WITH_FORM_H_
-    
+
 #include "MantidKernel/System.h"
-#include "MantidAPI/Algorithm.h" 
-#include "MantidKernel/Logger.h"
+#include "MantidAPI/Algorithm.h"
 #include "MantidDataObjects/PeaksWorkspace.h"
 
-
-namespace Mantid
-{
-namespace Crystal
-{
+namespace Mantid {
+namespace Crystal {
 /** ShowPossibleCells : Algorithm to display a list of possible conventional
     cells corresponding to the UB saved in the sample associated
     with the specified PeaksWorkspace, provided the saved UB is for a Niggli
     reduced cell.
-    
+
     @author Dennis Mikkelson
     @date   2012-02-13
 
-    Copyright &copy; 2012 ISIS Rutherford Appleton Laboratory & 
+    Copyright &copy; 2012 ISIS Rutherford Appleton Laboratory &
                      NScD Oak Ridge National Laboratory
 
     This file is part of Mantid.
@@ -37,50 +33,44 @@ namespace Crystal
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-    File change history is stored at: 
+    File change history is stored at:
     <https://github.com/mantidproject/mantid>
     Code Documentation is available at: <http://doxygen.mantidproject.org>
   */
-  class DLLExport SelectCellWithForm : public API::Algorithm
-  {
-  public:
-    SelectCellWithForm();
-    ~SelectCellWithForm();
-    
-    /// Algorithm's name for identification 
-    virtual const std::string name() const 
-            { return "SelectCellWithForm";};
+class DLLExport SelectCellWithForm : public API::Algorithm {
+public:
+  SelectCellWithForm();
+  ~SelectCellWithForm();
 
-    /// Algorithm's version for identification 
-    virtual int version() const 
-            { return 1;};
+  /// Algorithm's name for identification
+  virtual const std::string name() const { return "SelectCellWithForm"; };
 
-    /// Algorithm's category for identification
-    virtual const std::string category() const 
-            { return "Crystal";}
-    
+  /// Algorithm's version for identification
+  virtual int version() const { return 1; };
 
-    static  Kernel::Matrix<double>  DetermineErrors( std::vector<double> &sigabc, const Kernel::Matrix<double> &UB,
-                                               const DataObjects::PeaksWorkspace_sptr &ws, double tolerance);
+  /// Algorithm's category for identification
+  virtual const std::string category() const { return "Crystal"; }
 
+  /// Summary of algorithms purpose
+  virtual const std::string summary() const {
+    return "Select a conventional cell with a specific form number, "
+           "corresponding to the UB stored with the sample for this peaks "
+           "works space.";
+  }
 
-  private:
+  static Kernel::Matrix<double>
+  DetermineErrors(std::vector<double> &sigabc, const Kernel::Matrix<double> &UB,
+                  const DataObjects::PeaksWorkspace_sptr &ws, double tolerance);
 
-    /// Sets documentation strings for this algorithm
-    virtual void initDocs();
+private:
+  /// Initialise the properties
+  void init();
 
-    /// Initialise the properties
-    void init();
-
-    /// Run the algorithm
-    void exec();
-
-    /// Static reference to the logger class
-        static Kernel::Logger& g_log;
-  };
-
+  /// Run the algorithm
+  void exec();
+};
 
 } // namespace Crystal
 } // namespace Mantid
 
-#endif  /* MANTID_CRYSTAL_SELECT_CELL_WITH_FORM_H */
+#endif /* MANTID_CRYSTAL_SELECT_CELL_WITH_FORM_H */

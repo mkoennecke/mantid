@@ -23,6 +23,7 @@
 // Could have forward declared this but it makes it easier to use from
 // inheriting classes if it is included here
 #include "MantidAPI/IAlgorithm.h"
+#include "MantidAPI/AlgorithmObserver.h"
 
 #include <QDialog>
 #include <QString>
@@ -70,7 +71,7 @@ class InterfaceManager;
     @author Martyn Gigg, Tessella Support Services plc
     @date 24/02/2009
 
-    Copyright &copy; 2009 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+    Copyright &copy; 2009 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
     This file is part of Mantid.
 
@@ -129,7 +130,7 @@ protected:
   friend class InterfaceManager;
   
   /// Get the algorithm pointer
-  Mantid::API::IAlgorithm* getAlgorithm() const;
+  Mantid::API::IAlgorithm_sptr getAlgorithm() const;
 
   /// Get a pointer to the named property 
   Mantid::Kernel::Property* getAlgorithmProperty(const QString & propName) const;
@@ -143,6 +144,9 @@ protected:
   
   /// Adds a property (name,value) pair to the stored map
   void storePropertyValue(const QString & name, const QString & value);
+
+  /// Removes a property (name, value) pair from the stored map
+  void removePropertyValue(const QString& name);
 
   /// Set properties on this algorithm by pulling values from the tied widgets
   bool setPropertyValues(const QStringList & skipList = QStringList());
@@ -214,6 +218,11 @@ protected slots:
   /// Help button clicked;
   virtual void helpClicked();
 
+  /// Executes the algorithm in a separate thread
+  virtual void executeAlgorithmAsync();
+  /// Removes the algorithm from the manager.
+  virtual void removeAlgorithmFromManager();
+
 protected:
 
   /// Parse out the input from the dialog
@@ -230,22 +239,26 @@ protected:
 /// The following methods were made public for testing in GenericDialogDemo.cpp
 public:
   /// Set the algorithm associated with this dialog
-  void setAlgorithm(Mantid::API::IAlgorithm*);
+  void setAlgorithm(Mantid::API::IAlgorithm_sptr);
   /// Set a list of suggested values  
   void setPresetValues(const QHash<QString,QString> & presetValues);
   /// Set whether this is intended for use from a script or not
   void isForScript(bool forScript);
+  /// If true then execute the algorithm on acceptance
+  void executeOnAccept(bool on);
   /// Set an optional message to be displayed at the top of the dialog
   void setOptionalMessage(const QString & message);
   /// Set comma-separated-list of enabled parameter names
   void addEnabledAndDisableLists(const QStringList & enabled, const QStringList & disabled);
+  /// Add an AlgorithmObserver to the algorithm
+  void addAlgorithmObserver(Mantid::API::AlgorithmObserver *observer);
 
 protected:
 
   /** @name Member variables. */
   //@{
   /// The algorithm associated with this dialog
-  Mantid::API::IAlgorithm *m_algorithm;
+  Mantid::API::IAlgorithm_sptr m_algorithm;
 
   ///The name of the algorithm
   QString m_algName;
@@ -293,6 +306,9 @@ protected:
 
   /// A map to keep track of replace workspace button presses
   QHash<QPushButton*, int> m_wsbtn_tracker;
+
+  /// A list of AlgorithmObservers to add to the algorithm prior to execution
+  std::vector<Mantid::API::AlgorithmObserver *> m_observers;
   //@}
 };
 

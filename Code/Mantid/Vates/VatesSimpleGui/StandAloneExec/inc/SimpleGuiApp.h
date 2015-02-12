@@ -1,8 +1,6 @@
 #ifndef SIMPLEGUIAPP_H
 #define SIMPLEGUIAPP_H
 
-#include "MantidKernel/Logger.h"
-
 #include <QApplication>
 
 class pqPVApplicationCore;
@@ -14,7 +12,7 @@ class pqPVApplicationCore;
  @author Michael Reuter
  @date 04/08/2011
 
- Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+ Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
  This file is part of Mantid.
 
@@ -52,7 +50,6 @@ public:
    */
   virtual bool notify(QObject *receiver, QEvent *event);
 private:
-  static Mantid::Kernel::Logger& g_log; ///< Static handle to logger
   pqPVApplicationCore *pvApp; ///< ParaView application engine
 
 };

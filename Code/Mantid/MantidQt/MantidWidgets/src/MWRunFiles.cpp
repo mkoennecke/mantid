@@ -12,6 +12,10 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QHash>
+#include <QDropEvent>
+#include <QDragEnterEvent>
+#include <QMimeData>
+#include <QUrl>
 #include <QtConcurrentRun>
 #include <Poco/File.h>
 
@@ -232,10 +236,22 @@ MWRunFiles::MWRunFiles(QWidget *parent)
   setFocusPolicy(Qt::StrongFocus);
   setFocusProxy(m_uiForm.fileEditor);
 
-  // When first used try to starting directory better than the directory MantidPlot
-  // is installed in
-  QStringList datadirs = QString::fromStdString(Mantid::Kernel::ConfigService::Instance().getString("datasearch.directories")).split(";", QString::SkipEmptyParts);
-  if ( ! datadirs.isEmpty() ) m_lastDir = datadirs[0];
+  // When first used try to starting directory better than the directory MantidPlot is installed in
+  // First try default save directory
+  m_lastDir = QString::fromStdString(Mantid::Kernel::ConfigService::Instance().getString("defaultsave.directory"));
+
+  // If that fails pick the first data search directory
+  if(m_lastDir.isEmpty())
+  {
+    QStringList dataDirs = QString::fromStdString(Mantid::Kernel::ConfigService::Instance().getString("datasearch.directories")).split(";", QString::SkipEmptyParts);
+
+    if(!dataDirs.isEmpty())
+      m_lastDir = dataDirs[0];
+  }
+
+  //this for accepts drops, but the underlying text input does not.
+  this->setAcceptDrops(true);
+  m_uiForm.fileEditor->setAcceptDrops(false);
 }
 
 MWRunFiles::~MWRunFiles() 
@@ -925,7 +941,7 @@ QStringList MWRunFiles::getFileExtensionsFromAlgorithm(const QString & algName, 
   FileProperty *fileProp = dynamic_cast<FileProperty*>(prop);
   MultipleFileProperty *multiFileProp = dynamic_cast<MultipleFileProperty*>(prop);
 
-  std::set<std::string> allowed;
+  std::vector<std::string> allowed;
   QString preferredExt;
 
   if( fileProp )
@@ -943,9 +959,9 @@ QStringList MWRunFiles::getFileExtensionsFromAlgorithm(const QString & algName, 
     return fileExts;
   }
 
-  std::set<std::string>::const_iterator iend = allowed.end();
+  std::vector<std::string>::const_iterator iend = allowed.end();
   int index(0);
-  for(std::set<std::string>::const_iterator it = allowed.begin(); it != iend; ++it)
+  for(std::vector<std::string>::const_iterator it = allowed.begin(); it != iend; ++it)
   {
     if ( ! it->empty() )
     {
@@ -1063,4 +1079,48 @@ void MWRunFiles::checkEntry()
   }
 
   setEntryNumProblem("");
+}
+
+/**
+  * Called when an item is dropped
+  * @param de :: the drop event data package
+  */
+void MWRunFiles::dropEvent(QDropEvent *de)
+{
+  const QMimeData *mimeData = de->mimeData(); 
+  if (mimeData->hasUrls()){
+    auto url_list = mimeData->urls(); 
+    m_uiForm.fileEditor->setText(url_list[0].toLocalFile());
+    de->acceptProposedAction();
+  }else if (mimeData->hasText()){
+    QString text = mimeData->text();
+    m_uiForm.fileEditor->setText(text); 
+    de->acceptProposedAction();
+  }
+  
+}
+
+/**
+  * Called when an item is dragged onto a control
+  * @param de :: the drag event data package
+  */
+void MWRunFiles::dragEnterEvent(QDragEnterEvent *de)
+{
+  const QMimeData *mimeData = de->mimeData();  
+  if (mimeData->hasUrls()){
+    auto listurl = mimeData->urls(); 
+    if (listurl.empty())
+      return;
+    if (!listurl[0].isLocalFile())
+      return;
+    de->acceptProposedAction();
+  }
+  else if(mimeData->hasText()) 
+  {
+    QString text = mimeData->text();
+    if (text.contains(" = mtd[\""))
+      de->setDropAction(Qt::IgnoreAction);
+    else
+      de->acceptProposedAction();
+  }
 }

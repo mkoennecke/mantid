@@ -95,13 +95,25 @@ private:
   AlgorithmDialog();
 };
 
+class UserSubWindow : QMainWindow
+{
+%TypeHeaderCode
+#include "MantidQtAPI/UserSubWindow.h"
+%End
+private:
+  UserSubWindow();
+};
+
 class InterfaceManager
 {
 %TypeHeaderCode
 #include "MantidQtAPI/InterfaceManager.h"
 %End
 public:
-MantidQt::API::AlgorithmDialog * createDialogFromName(const QString& algorithmName,  bool forScript, QWidget* parent=0);
+  MantidQt::API::AlgorithmDialog* createDialogFromName(const QString&, const int = -1,
+                                                       QWidget* = 0, bool = false);
+  MantidQt::API::UserSubWindow* createSubWindow(const QString& interface_name, QWidget* parent = 0);
+
 };
 
 };

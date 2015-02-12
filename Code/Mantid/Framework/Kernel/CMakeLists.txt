@@ -5,12 +5,14 @@ set ( SRC_FILES
 	src/ArrayProperty.cpp
 	src/Atom.cpp
 	src/BinFinder.cpp
-	src/CatalogInfo.cpp
 	src/CPUTimer.cpp
+	src/CatalogInfo.cpp
 	src/CompositeValidator.cpp
 	src/ConfigService.cpp
+	src/ChecksumHelper.cpp
 	src/DataItem.cpp
 	src/DateAndTime.cpp
+	src/DateTimeValidator.cpp 
 	src/DateValidator.cpp
 	src/DeltaEMode.cpp
 	src/DirectoryValidator.cpp
@@ -31,6 +33,7 @@ set ( SRC_FILES
 	src/IPropertyManager.cpp
 	src/ISaveable.cpp
 	src/InstrumentInfo.cpp
+	src/InternetHelper.cpp
 	src/Interpolation.cpp
 	src/LibraryManager.cpp
 	src/LibraryWrapper.cpp
@@ -64,6 +67,7 @@ set ( SRC_FILES
 	src/PropertyManager.cpp
 	src/PropertyManagerOwner.cpp
 	src/PropertyWithValue.cpp
+	src/ProxyInfo.cpp
 	src/PseudoRandomNumberGenerator.cpp
 	src/Quat.cpp
 	src/ReadLock.cpp
@@ -86,6 +90,8 @@ set ( SRC_FILES
 	src/Unit.cpp
 	src/UnitConversion.cpp
 	src/UnitFactory.cpp
+	src/UnitLabel.cpp
+	src/UnitLabelTypes.cpp
 	src/UserStringParser.cpp
 	src/Utils.cpp
 	src/V2D.cpp
@@ -103,7 +109,7 @@ set ( SRC_UNITY_IGNORE_FILES src/Atom.cpp
         src/FileValidator.cpp
         src/DirectoryValidator.cpp
         src/PropertyManager.cpp
-        src/Unit.cpp 
+        src/Unit.cpp
         src/System.cpp
         )
 
@@ -118,14 +124,16 @@ set ( INC_FILES
 	inc/MantidKernel/BinFinder.h
 	inc/MantidKernel/BinaryFile.h
 	inc/MantidKernel/BoundedValidator.h
-	inc/MantidKernel/CatalogInfo.h
 	inc/MantidKernel/CPUTimer.h
 	inc/MantidKernel/Cache.h
+	inc/MantidKernel/CatalogInfo.h
 	inc/MantidKernel/CompositeValidator.h
 	inc/MantidKernel/ConfigService.h
+	inc/MantidKernel/ChecksumHelper.h
 	inc/MantidKernel/DataItem.h
 	inc/MantidKernel/DataService.h
 	inc/MantidKernel/DateAndTime.h
+	inc/MantidKernel/DateTimeValidator.h
 	inc/MantidKernel/DateValidator.h
 	inc/MantidKernel/DeltaEMode.h
 	inc/MantidKernel/DirectoryValidator.h
@@ -155,6 +163,7 @@ set ( INC_FILES
 	inc/MantidKernel/IValidator.h
 	inc/MantidKernel/Instantiator.h
 	inc/MantidKernel/InstrumentInfo.h
+	inc/MantidKernel/InternetHelper.h
 	inc/MantidKernel/Interpolation.h
 	inc/MantidKernel/LibraryManager.h
 	inc/MantidKernel/LibraryWrapper.h
@@ -181,6 +190,7 @@ set ( INC_FILES
 	inc/MantidKernel/MultiThreaded.h
 	inc/MantidKernel/NDPseudoRandomNumberGenerator.h
 	inc/MantidKernel/NDRandomNumberGenerator.h
+	inc/MantidKernel/NetworkProxy.h
 	inc/MantidKernel/NeutronAtom.h
 	inc/MantidKernel/NexusDescriptor.h
 	inc/MantidKernel/NullValidator.h
@@ -193,6 +203,7 @@ set ( INC_FILES
 	inc/MantidKernel/PropertyManager.h
 	inc/MantidKernel/PropertyManagerOwner.h
 	inc/MantidKernel/PropertyWithValue.h
+	inc/MantidKernel/ProxyInfo.h
 	inc/MantidKernel/PseudoRandomNumberGenerator.h
 	inc/MantidKernel/QuasiRandomNumberSequence.h
 	inc/MantidKernel/Quat.h
@@ -203,6 +214,7 @@ set ( INC_FILES
 	inc/MantidKernel/RemoteJobManager.h
 	inc/MantidKernel/SingletonHolder.h
 	inc/MantidKernel/SobolSequence.h
+        inc/MantidKernel/SpecialCoordinateSystem.h
 	inc/MantidKernel/StartsWithValidator.h
 	inc/MantidKernel/Statistics.h
 	inc/MantidKernel/StdoutChannel.h
@@ -223,6 +235,8 @@ set ( INC_FILES
 	inc/MantidKernel/Unit.h
 	inc/MantidKernel/UnitConversion.h
 	inc/MantidKernel/UnitFactory.h
+	inc/MantidKernel/UnitLabel.h
+	inc/MantidKernel/UnitLabelTypes.h
 	inc/MantidKernel/UserStringParser.h
 	inc/MantidKernel/Utils.h
 	inc/MantidKernel/V2D.h
@@ -250,8 +264,10 @@ set ( TEST_FILES
 	CatalogInfoTest.h
 	CompositeValidatorTest.h
 	ConfigServiceTest.h
+	ChecksumHelperTest.h
 	DataServiceTest.h
 	DateAndTimeTest.h
+	DateTimeValidatorTest.h
 	DateValidatorTest.h
 	DeltaEModeTest.h
 	DirectoryValidatorTest.h
@@ -274,6 +290,7 @@ set ( TEST_FILES
 	ISaveableTest.h
 	IValidatorTest.h
 	InstrumentInfoTest.h
+	InternetHelperTest.h
 	InterpolationTest.h
 	ListValidatorTest.h
 	LogFilterTest.h
@@ -303,6 +320,7 @@ set ( TEST_FILES
 	PropertyManagerTest.h
 	PropertyTest.h
 	PropertyWithValueTest.h
+	ProxyInfoTest.h
 	QuatTest.h
 	ReadLockTest.h
 	RebinHistogramTest.h
@@ -310,7 +328,8 @@ set ( TEST_FILES
 	RegexStringsTest.h
 	SLSQPMinimizerTest.h
 	SobolSequenceTest.h
-	StartsWithValidatorTest.h
+	SpecialCoordinateSystemTest.h
+        StartsWithValidatorTest.h
 	StatisticsTest.h
 	StdoutChannelTest.h
 	StringsTest.h
@@ -325,6 +344,7 @@ set ( TEST_FILES
 	TypedValidatorTest.h
 	UnitConversionTest.h
 	UnitFactoryTest.h
+	UnitLabelTest.h
 	UnitTest.h
 	UserStringParserTest.h
 	UtilsTest.h
@@ -335,6 +355,16 @@ set ( TEST_FILES
 	VisibleWhenPropertyTest.h
 	WriteLockTest.h
 )
+
+if ( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+    LIST( APPEND SRC_FILES src/NetworkProxyOSX.cpp )
+    SET( NETWORK_LIBRARIES "-framework SystemConfiguration" "-framework CoreFoundation"  "-framework CoreServices")
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+    LIST( APPEND SRC_FILES src/NetworkProxyWin.cpp )
+    SET( NETWORK_LIBRARIES Winhttp )
+else()
+    LIST( APPEND SRC_FILES src/NetworkProxyLinux.cpp )
+endif()
 
 if(UNITY_BUILD)
   include(UnityBuild)
@@ -348,13 +378,23 @@ enable_precompiled_headers ( inc/MantidKernel/PrecompiledHeader.h SRC_FILES )
 # Add the target for this directory
 add_library ( Kernel ${SRC_FILES} ${INC_FILES} )
 # Set the name of the generated library
-set_target_properties ( Kernel PROPERTIES OUTPUT_NAME MantidKernel 
+set_target_properties ( Kernel PROPERTIES OUTPUT_NAME MantidKernel
                                           COMPILE_DEFINITIONS "IN_MANTID_KERNEL;PSAPI_VERSION=1" )
-                                          
+
+if (OSX_VERSION VERSION_GREATER 10.8)
+  set_target_properties ( Kernel PROPERTIES INSTALL_RPATH "@loader_path/../MacOS")
+endif ()
+
 # Add to the 'Framework' group in VS
 set_property ( TARGET Kernel PROPERTY FOLDER "MantidFramework" )
 
-target_link_libraries ( Kernel ${MANTIDLIBS} ${GSL_LIBRARIES} ${NEXUS_LIBRARIES} )
+# For older gcc versions (<4.5) if we do not put stdc++ first then things crash when an exceptions are
+# thrown in Python.
+if ( GCC_COMPILER_VERSION AND GCC_COMPILER_VERSION VERSION_LESS "4.5" )
+ target_link_libraries ( Kernel stdc++ )
+endif()
+target_link_libraries ( Kernel ${NEXUS_LIBRARIES} ${MANTIDLIBS} ${GSL_LIBRARIES} 
+                        ${NETWORK_LIBRARIES} ${JSONCPP_LIBRARIES} )
 if ( WIN32 )
   target_link_libraries ( Kernel Psapi.lib ) # For memory usage queries
 endif()
@@ -367,7 +407,7 @@ add_subdirectory ( test )
 ###########################################################################
 
 # DON'T try to update the MantidVersion source file if we were not able to
-# determine it from git and the file already exists. This makes sure the 
+# determine it from git and the file already exists. This makes sure the
 # version number is correct when building off the source tarball
 
 if ( NOT NOT_GIT_REPO OR NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/MantidVersion.cpp )
@@ -380,7 +420,7 @@ endif ()
 # This section deals with creating the ParaViewVersion implementation
 ###########################################################################
 configure_file ( ${CMAKE_CURRENT_SOURCE_DIR}/src/ParaViewVersion.cpp.in
-                 ${CMAKE_CURRENT_SOURCE_DIR}/src/ParaViewVersion.cpp 
+                 ${CMAKE_CURRENT_SOURCE_DIR}/src/ParaViewVersion.cpp
 )
 
 ###########################################################################
@@ -399,17 +439,20 @@ set ( PLUGINS "." )
 set ( PV_PLUGINS "./pvplugins" )
 set ( IGNORE_PARAVIEW "0" )
 set ( QTPLUGINS "." )
+set ( UPDATE_INSTRUMENT_DEFINTITIONS "0" )
+set ( ENABLE_USAGE_REPORTS "0" )
 set ( PYTHONPLUGIN_DIRS "${MANTID_ROOT}/Framework/PythonInterface/plugins" )
-set ( DATADIRS ${MANTID_ROOT}/../../Test/AutoTestData;${MANTID_ROOT}/instrument )
+set ( DATADIRS ${ExternalData_BINARY_ROOT}/Testing/Data/UnitTest;${ExternalData_BINARY_ROOT}/Testing/Data/DocTest;${MANTID_ROOT}/instrument )
 set ( COLORMAPS_FOLDER ${MANTID_ROOT}/Installers/colormaps/ )
-SET ( MANTIDPUBLISHER "http://upload.mantidproject.org/scriptrepository/payload/publish_debug" )
+set ( MANTIDPUBLISHER "http://upload.mantidproject.org/scriptrepository/payload/publish_debug" )
+set ( HTML_ROOT ${DOCS_BUILDDIR}/html )
 
 # Construct script paths.
 set ( MANTID_SCRIPTS ${MANTID_ROOT}/scripts )
 # First the required scripts variable...
 # Omitting the following (as of now) empty directories as CMake doesn't copy them on install and you then end up with a warning message....
 # @MANTID_ROOT@/scripts/Crystallography;@MANTID_ROOT@/scripts/DisorderedMaterials;@MANTID_ROOT@/scripts/Engineering;@MANTID_ROOT@/scripts/Muons;@MANTID_ROOT@/scripts/Neutrinos
-set ( REQUIREDSCRIPT_SUBDIRS Inelastic Reflectometry SANS)
+set ( REQUIREDSCRIPT_SUBDIRS Engineering Inelastic Reflectometry SANS)
 
 set ( REQUIREDSCRIPT_DIRS ${MANTID_ROOT}/scripts )
 foreach ( SUBDIR ${REQUIREDSCRIPT_SUBDIRS} )
@@ -453,7 +496,7 @@ configure_file ( ../Properties/Mantid.properties.template
 
 # Then, at build time, copy into appropriate place
 add_custom_command ( TARGET Kernel POST_BUILD
-                     COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different 
+                     COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different
                        ${CMAKE_CURRENT_BINARY_DIR}/Mantid.properties
                        ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}
 )
@@ -474,8 +517,11 @@ endif ()
 
 set ( PLUGINS ${MANTID_ROOT}/plugins )
 set ( PYTHONPLUGIN_DIRS "${PLUGINS}/python" )
+set ( UPDATE_INSTRUMENT_DEFINTITIONS "1" )
+set ( ENABLE_USAGE_REPORTS "1" )
 set ( DATADIRS "" )
-SET ( MANTIDPUBLISHER "http://upload.mantidproject.org/scriptrepository/payload/publish" )
+set ( MANTIDPUBLISHER "http://upload.mantidproject.org/scriptrepository/payload/publish" )
+set ( HTML_ROOT ../share/doc/html )
 
 # Construct script paths by replacing the old MANTID_ROOT with the new one.
 # Unfortunately string (REGEX REPLACE ... )removes the semi-colons so we have to do this in a loop.
@@ -520,6 +566,6 @@ endif ()
 configure_file ( ../Properties/Mantid.properties.template
                  ${CMAKE_CURRENT_BINARY_DIR}/Mantid.properties.install
 )
-install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/Mantid.properties.install 
+install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/Mantid.properties.install
           DESTINATION ${BIN_DIR} RENAME Mantid.properties
 )

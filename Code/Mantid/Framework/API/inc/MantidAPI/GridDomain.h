@@ -4,24 +4,22 @@
 //----------------------------------------------------------------------
 // Includes
 //----------------------------------------------------------------------
-#include <boost/shared_ptr.hpp>
 #include <vector>
 
 #include "MantidAPI/DllConfig.h"
 #include "MantidAPI/FunctionDomain.h"
-#include "MantidKernel/Logger.h"
 
-namespace Mantid
-{
-namespace API
-{
-/*Base class that represents the grid domain from which a function may take its arguments.
+namespace Mantid {
+namespace API {
+/*Base class that represents the grid domain from which a function may take its
+  arguments.
   Grids are multidimensional objects, grids are a composition of grids.
 
   @author Jose Borreguero
   @date Aug/28/2012
 
-  Copyright &copy; 2009 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+  Copyright &copy; 2009 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge
+  National Laboratory & European Spallation Source
 
   This file is part of Mantid.
 
@@ -42,11 +40,10 @@ namespace API
   Code Documentation is available at: <http://doxygen.mantidproject.org>.
 */
 
-class MANTID_API_DLL GridDomain: public API::FunctionDomain
-{
+class MANTID_API_DLL GridDomain : public API::FunctionDomain {
 public:
-  GridDomain() {};
-  virtual ~GridDomain() {};
+  GridDomain(){};
+  virtual ~GridDomain(){};
   /// number of grid points
   size_t size() const;
   /// number of dimensions in the grid
@@ -54,14 +51,11 @@ public:
   /// get the grid at specified index
   boost::shared_ptr<GridDomain> getGrid(size_t index);
   /// re-scale all grids
-  void reScale( const std::string &scaling);
-
-protected:
-  static Kernel::Logger& g_log;
+  void reScale(const std::string &scaling);
 
 private:
   /// composition of grids
-  std::vector< boost::shared_ptr<GridDomain> > m_grids;
+  std::vector<boost::shared_ptr<GridDomain>> m_grids;
 
 }; // class IGridDomain
 

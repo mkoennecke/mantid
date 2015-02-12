@@ -5,11 +5,7 @@
 #include <QStyledItemDelegate>
 #include "ui_ScriptRepositoryView.h"
 #include "DllOption.h"
-namespace Mantid{
-  namespace Kernel{
-    class Logger;
-  }
-}
+
 namespace MantidQt
 {
 namespace API
@@ -21,7 +17,7 @@ namespace API
       the ScriptRepository. Inside this class, there are two nested classes that will implement 
       delegates to the columns of Status and AutoUpdate in order to improve the User Experience. 
     
-    Copyright &copy; 2013 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+    Copyright &copy; 2013 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
     This file is part of Mantid.
 
@@ -105,8 +101,6 @@ namespace API
   private:
     Ui::ScriptRepositoryView * ui; 
     RepoModel * model;
-    // A static reference to the Logger
-    static Mantid::Kernel::Logger & g_log; 
   };
 
 

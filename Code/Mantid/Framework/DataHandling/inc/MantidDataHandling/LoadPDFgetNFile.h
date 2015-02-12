@@ -5,89 +5,90 @@
 #include "MantidAPI/IFileLoader.h"
 #include "MantidDataObjects/Workspace2D.h"
 
-namespace Mantid
-{
-namespace DataHandling
-{
+namespace Mantid {
+namespace DataHandling {
 
-  /** LoadPDFgetNFile : TODO: DESCRIPTION
-    
-    Copyright &copy; 2012 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+/** LoadPDFgetNFile : TODO: DESCRIPTION
 
-    This file is part of Mantid.
+  Copyright &copy; 2012 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge
+  National Laboratory & European Spallation Source
 
-    Mantid is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 3 of the License, or
-    (at your option) any later version.
+  This file is part of Mantid.
 
-    Mantid is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+  Mantid is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 3 of the License, or
+  (at your option) any later version.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  Mantid is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
-    File change history is stored at: <https://github.com/mantidproject/mantid>
-    Code Documentation is available at: <http://doxygen.mantidproject.org>
-  */
-  class DLLExport LoadPDFgetNFile : public API::IFileLoader<Kernel::FileDescriptor>
-  {
-  public:
-    LoadPDFgetNFile();
-    virtual ~LoadPDFgetNFile();
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-    /// Algorithm's name for identification overriding a virtual method
-    virtual const std::string name() const { return "LoadPDFgetNFile";}
+  File change history is stored at: <https://github.com/mantidproject/mantid>
+  Code Documentation is available at: <http://doxygen.mantidproject.org>
+*/
+class DLLExport LoadPDFgetNFile
+    : public API::IFileLoader<Kernel::FileDescriptor> {
+public:
+  LoadPDFgetNFile();
+  virtual ~LoadPDFgetNFile();
 
-    /// Algorithm's version for identification overriding a virtual method
-    virtual int version() const { return 1;}
+  /// Algorithm's name for identification overriding a virtual method
+  virtual const std::string name() const { return "LoadPDFgetNFile"; }
+  /// Summary of algorithms purpose
+  virtual const std::string summary() const {
+    return "Types of PDFgetN data files include .sqa, .sq, .gr, and etc.";
+  }
 
-    /// Algorithm's category for identification overriding a virtual method
-    virtual const std::string category() const { return "Diffraction;DataHandling\\Text";}
+  /// Algorithm's version for identification overriding a virtual method
+  virtual int version() const { return 1; }
 
-  private:
-    /// Sets documentation strings for this algorithm
-    virtual void initDocs();
-    /// Implement abstract Algorithm methods
-    void init();
-    /// Implement abstract Algorithm methods
-    void exec();
-    /// Returns a confidence value that this algorithm can load a file
-    virtual int confidence(Kernel::FileDescriptor & descriptor) const;
+  /// Algorithm's category for identification overriding a virtual method
+  virtual const std::string category() const {
+    return "Diffraction;DataHandling\\Text";
+  }
 
-    /// Parse PDFgetN data file
-    void parseDataFile(std::string filename);
+private:
+  /// Implement abstract Algorithm methods
+  void init();
+  /// Implement abstract Algorithm methods
+  void exec();
+  /// Returns a confidence value that this algorithm can load a file
+  virtual int confidence(Kernel::FileDescriptor &descriptor) const;
 
-    /// Check whether a string starts from a specified sub-string
-    bool startsWith(const std::string &s, const std::string & header) const;
+  /// Parse PDFgetN data file
+  void parseDataFile(std::string filename);
 
-    /// Parse column name line staring with \#L
-    void parseColumnNameLine(std::string line);
+  /// Check whether a string starts from a specified sub-string
+  bool startsWith(const std::string &s, const std::string &header) const;
 
-    /// Parse data line
-    void parseDataLine(std::string line);
+  /// Parse column name line staring with \#L
+  void parseColumnNameLine(std::string line);
 
-    /// Output data workspace
-    DataObjects::Workspace2D_sptr outWS;
+  /// Parse data line
+  void parseDataLine(std::string line);
 
-    /// Data structure to hold input:  Size = Number of columns in input file
-    std::vector<std::vector<double> > mData;
+  /// Output data workspace
+  DataObjects::Workspace2D_sptr outWS;
 
-    /// Names of the columns of the data
-    std::vector<std::string> mColumnNames;
+  /// Data structure to hold input:  Size = Number of columns in input file
+  std::vector<std::vector<double>> mData;
 
-    /// Generate output workspace
-    void generateDataWorkspace();
+  /// Names of the columns of the data
+  std::vector<std::string> mColumnNames;
 
-    /// Set X and Y axis unit and lebel
-    void setUnit(DataObjects::Workspace2D_sptr ws);
-    
-  };
+  /// Generate output workspace
+  void generateDataWorkspace();
 
+  /// Set X and Y axis unit and lebel
+  void setUnit(DataObjects::Workspace2D_sptr ws);
+};
 
 } // namespace DataHandling
 } // namespace Mantid
 
-#endif  /* MANTID_DATAHANDLING_LOADPDFGETNFILE_H_ */
+#endif /* MANTID_DATAHANDLING_LOADPDFGETNFILE_H_ */

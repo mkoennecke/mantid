@@ -16,7 +16,10 @@
 #include "MantidAPI/IPeaksWorkspace.h"
 #include "MantidAPI/MatrixWorkspace.h"
 #include "MantidAPI/Workspace.h"
+
 #include "MantidQtAPI/AlgorithmDialog.h"
+#include "MantidQtAPI/QwtWorkspaceSpectrumData.h"
+
 #include <Poco/NObserver.h>
 
 #include <QDockWidget>
@@ -46,8 +49,15 @@ namespace MantidQt
   {
     class FitPropertyBrowser;
   }
+  namespace SliceViewer
+  {
+    class SliceViewerWindow;
+  }
+  namespace SpectrumView
+  {
+    class SpectrumView;
+  }
 }
-
 namespace Ui
 {
   class SequentialFitDialog;
@@ -67,7 +77,7 @@ MantidUI is the extension of QtiPlot's ApplicationWindow which deals with Mantid
 @author Roman Tolchenov, Tessella Support Services plc
 @date 02/07/2008
 
-Copyright &copy; 2008 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+Copyright &copy; 2008 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
 This file is part of Mantid.
 
@@ -141,7 +151,7 @@ public:
   Mantid::API::Workspace_const_sptr getWorkspace(const QString& workspaceName);
 
   // Deletes workspace from QtiPlot
-  bool deleteWorkspace(const QString& workspaceName);
+  void deleteWorkspace(const QString& workspaceName);
 
   // Returns the name of selected workspace in exploreMantid window
   QString getSelectedWorkspaceName();
@@ -158,6 +168,8 @@ public:
   // Prepares the contex menu for MantidMatrix
   void showContextMenu(QMenu& cm, MdiSubWindow* w);
 
+  // Check if drop event can be accepted
+  bool canAcceptDrop(QDragEnterEvent *e);
   // Handles workspace drop operation to QtiPlot (imports the workspace to MantidMatrix)
   bool drop(QDropEvent* e);
 
@@ -179,7 +191,11 @@ public:
   MultiLayer* createGraphFromTable(Table* t, int type = 0);
 
   // Shows 1D graphs of the spectra (rows) selected in a MantidMatrix
-  MultiLayer* plotSelectedRows(const MantidMatrix * const m, bool errs = true, bool distr = false);
+  MultiLayer* plotSelectedRows(const MantidMatrix * const m,
+                               MantidQt::DistributionFlag distr = MantidQt::DistributionDefault,
+                               bool errs = true);
+  // Shows 1D graphs of the columns (bins) selected in a MantidMatrix
+  MultiLayer* plotSelectedColumns(const MantidMatrix * const m, bool errs = true);
 
   AlgorithmMonitor* getAlgMonitor(){return m_algMonitor;}
   /// updates the algorithms tree
@@ -193,29 +209,37 @@ public:
     bool clearWindow = false);
 
   public slots:
-    // Create a 1d graph form specified spectra in a MatrixWorkspace
-  MultiLayer* plotSpectraList(const QStringList& wsnames, const QList<int>& spec_list, bool errs=true,
-    Graph::CurveType style = Graph::Unspecified, MultiLayer* plotWindow = NULL, bool clearWindow = false);
+    // Create a 1d graph form specified MatrixWorkspace and index
+  MultiLayer* plot1D(const QStringList& wsnames, const QList<int>& indexList, bool spectrumPlot,
+                     bool errs=true, Graph::CurveType style = Graph::Unspecified,
+                     MultiLayer* plotWindow = NULL, bool clearWindow = false);
 
-  MultiLayer* plotSpectraList(const QString& wsName, const std::set<int>& indexList, bool errs=false, 
-    bool distr=false, MultiLayer* plotWindow = NULL, bool clearWindow = false);
+  MultiLayer* plot1D(const QString& wsName, const std::set<int>& indexList, bool spectrumPlot,
+                     MantidQt::DistributionFlag distr = MantidQt::DistributionDefault,
+                     bool errs=false,
+                     MultiLayer* plotWindow = NULL, bool clearWindow = false);
 
-  MultiLayer* plotSpectraList(const QMultiMap<QString,int>& toPlot, bool errs=false, bool distr=false, 
-    Graph::CurveType style = Graph::Unspecified, MultiLayer* plotWindow = NULL, bool clearWindow = false);
+  MultiLayer* plot1D(const QMultiMap<QString,int>& toPlot, bool spectrumPlot,
+                     MantidQt::DistributionFlag distr = MantidQt::DistributionDefault,
+                     bool errs=false,
+                     Graph::CurveType style = Graph::Unspecified,
+                     MultiLayer* plotWindow = NULL, bool clearWindow = false);
 
-  MultiLayer* plotSpectraList(const QMultiMap<QString,std::set<int> >& toPlot, bool errs=false, bool distr=false,
-    MultiLayer* plotWindow = NULL, bool clearWindow = false);
-
+  MultiLayer* plot1D(const QMultiMap<QString,std::set<int> >& toPlot, bool spectrumPlot,
+                     MantidQt::DistributionFlag distr = MantidQt::DistributionDefault,
+                     bool errs=false,
+                     MultiLayer* plotWindow = NULL, bool clearWindow = false);
+  
     /// Draw a color fill plot for each of the listed workspaces
     void drawColorFillPlots(const QStringList & wsNames, Graph::CurveType curveType = Graph::ColorMap);
     /// Draw a color fill plot for the named workspace
-    MultiLayer* drawSingleColorFillPlot(const QString & wsName, Graph::CurveType curveType = Graph::ColorMap);
+    MultiLayer* drawSingleColorFillPlot(const QString & wsName, Graph::CurveType curveType = Graph::ColorMap,
+                                        MultiLayer* window = NULL);
 
     // Create a 1d graph form specified spectra in a MatrixWorkspace
-    MultiLayer* plotSpectraRange(const QString& wsName, int i0, int i1, bool errs=true, bool distr=false);
-
-    // Set properties of a 1d graph which plots data from a workspace
-    static void setUpSpectrumGraph(MultiLayer* ml, const QString& wsName);
+    MultiLayer* plotSpectraRange(const QString& wsName, int i0, int i1, 
+                                 MantidQt::DistributionFlag distr = MantidQt::DistributionDefault,
+                                 bool errs=true);
 
     // Set properties of a 1d graph which plots data from a workspace
     static void setUpBinGraph(MultiLayer* ml, const QString& wsName, Mantid::API::MatrixWorkspace_const_sptr workspace);
@@ -225,10 +249,6 @@ public:
 
     // Copies selected columns (time bins) in a MantidMatrix to a Table
     Table* createTableFromSelectedColumns(MantidMatrix *m, bool errs);
-
-
-    // Shows 1D graphs of selected time bins (columns) in a MantidMatrix
-    MultiLayer* createGraphFromSelectedColumns(MantidMatrix *m, bool errs = true, bool tableVisible = false);
 
     // Creates and shows a Table with detector ids for the workspace in the MantidMatrix
     Table* createTableDetectors(MantidMatrix *m);
@@ -240,7 +260,8 @@ public:
       const std::vector<int>& indices, bool include_data = false);
     /// Create a table of detectors from a PeaksWorkspace
     Table* createDetectorTable(const QString & wsName, const Mantid::API::IPeaksWorkspace_sptr & ws);
-
+    /// Triggers a workspace delete check
+    void deletePressEvent();
 
     // Determine whether the workspace has a UB matrix
     bool hasUB(const QString& wsName);
@@ -263,13 +284,11 @@ public:
 
   MultiLayer* mergePlots(MultiLayer* g1, MultiLayer* g2);
   MantidMatrix* getMantidMatrix(const QString& wsName);
-  MantidMatrix* newMantidMatrix(const QString& name, int start=-1, int end=-1);
 
-  MultiLayer* plotBin(const QString& wsName, const QList<int> & bins, bool errors = false, 
-    Graph::CurveType style = Graph::Line, MultiLayer* plotWindow = NULL, bool clearWindow = false);
   void setIsRunning(bool running);
-  bool createPropertyInputDialog(const QString & alg_name, const QString & preset_values,
-    const QString & optional_msg,  const QStringList & enabled, const QStringList & disabled);
+  bool createScriptInputDialog(const QString & alg_name, const QString & preset_values,
+                               const QString & optional_msg,  const QStringList & enabled,
+                               const QStringList & disabled);
   /// Group selected workspaces
   void groupWorkspaces();
   /// UnGroup selected groupworkspace
@@ -279,21 +298,13 @@ public:
   */
   void savedatainNexusFormat(const std::string& fileName,const std::string & wsName);
 
-  /** load data from nexus file.This method is useful 
-  when a project is opened  from mantidplot
-  */
-  void loaddataFromNexusFile(const std::string& wsname,const std::string& fileName,bool project=false);
-  void loadadataFromRawFile(const std::string& wsname,const std::string& fileName,bool project=false);
+  void loadWSFromFile(const std::string& wsname,const std::string& fileName);
 
-  MantidMatrix* openMatrixWorkspace(ApplicationWindow* parent,const QString& wsName,int lower,int upper);
+  MantidMatrix* openMatrixWorkspace(const std::string& wsName, int lower, int upper);
 
   void saveProject(bool save);
   void enableSaveNexus(const QString & wsName);
-
-  /// Verifies if the Catalog login was a success.
-  bool isValidCatalogLogin();
-  /// Create a publishing dialog.
-  void catalogPublishDialog();
+  void disableSaveNexus();
 
 signals:
   //A signal to indicate that we want a script to produce a dialog
@@ -379,15 +390,14 @@ signals:
     void convertToWaterfall(MultiLayer* ml);
 
     // Execute algorithm given name and version
-    bool executeAlgorithm(const QString & algName, int version = -1);
-    //Execute an algorithm with the given parameter list
-    void executeAlgorithm(const QString & algName, const QString & paramList,Mantid::API::AlgorithmObserver* obs = NULL);
-    //Execute an algorithm with the given parameter list
-    void executeAlgorithm(QString algName, QMap<QString,QString> paramList,Mantid::API::AlgorithmObserver* obs = NULL);
-    //Execute an algorithm with the given parameter list
-    void executeAlgorithmDlg(QString algName, QMap<QString,QString> paramList,Mantid::API::AlgorithmObserver* obs = NULL);
+    void showAlgorithmDialog(const QString & algName, int version = -1);
+    // Execute an algorithm with the given parameter list
+    void showAlgorithmDialog(QString algName, QHash<QString, QString> paramList, Mantid::API::AlgorithmObserver *obs = NULL, int version = -1);
     // Execute an algorithm
     void executeAlgorithm(Mantid::API::IAlgorithm_sptr alg);
+    // Execute a named algorithm using the given parameters
+    void executeAlgorithm(const QString & algName, const QString & paramList, Mantid::API::AlgorithmObserver* obs);
+
     // Find the name of the first input workspace for an algorithm
     QString findInputWorkspaceProperty(Mantid::API::IAlgorithm_sptr algorithm) const;
     // Show Qt critical error message box
@@ -398,8 +408,6 @@ signals:
     void mantidMenuAboutToShow();
 
     void manageMantidWorkspaces();
-
-
 
     //Python related functions
     InstrumentWindow* getInstrumentView(const QString & wsName, int tab = -1);
@@ -414,6 +422,9 @@ signals:
 
     // Show log files for selected workspace
     void showLogFileWindow();
+
+    // Show sample material window for selected workspace
+    void showSampleMaterialWindow();
 
     void insertMenu();
 
@@ -446,6 +457,10 @@ public:
   void memoryImage2();
 #endif
 
+private slots:
+
+  // slot for file open dialogs created from the main app menu, or the workspaces dock window
+  void loadFileDialogAccept();
 
 private:
 
@@ -487,7 +502,7 @@ private:
 
   //#678
   //for savenexus algorithm
-  void executeSaveNexus(QString algName,int version);
+  void executeSaveNexus();
 
   void copyWorkspacestoVector(const QList<QTreeWidgetItem*> &list,std::vector<std::string> &inputWS);
   void PopulateData(Mantid::API::Workspace_sptr ws_ptr,QTreeWidgetItem*  wsid_item);
@@ -496,13 +511,14 @@ private:
   MantidQt::API::AlgorithmDialog * createAlgorithmDialog(Mantid::API::IAlgorithm_sptr alg);
 
   /// This method accepts user inputs and executes loadraw/load nexus algorithm
-  void executeAlgorithm(MantidQt::API::AlgorithmDialog* dlg,Mantid::API::IAlgorithm_sptr alg);
-
-  /// This method accepts user inputs and executes loadraw/load nexus algorithm
   std::string extractLogTime(Mantid::Kernel::DateAndTime value,bool useAbsoluteDate, Mantid::Kernel::DateAndTime start);
 
   ///extracts the files from a mimedata object that have a .py extension
   QStringList extractPyFiles(const QList<QUrl>& urlList) const;
+
+  // Whether new plots shoul re-use the same plot instance (for every different type of plot).
+  // The name comes from: these plots are normally opened from the context menu of the workspaces dock window
+  bool workspacesDockPlot1To1();
 
   // Private variables
 
@@ -533,6 +549,14 @@ private:
   QMenu *menuMantidMatrix;             //  MantidMatrix specific menu
   AlgorithmMonitor *m_algMonitor;      //  Class for monitoring running algorithms
 
+  // keep track of the last shown, which will be refreshed or killed/rebuilt if showing only one inst. window
+  // QPointer handles when events, etc. destroy these windows
+  QPointer<InstrumentWindow> m_lastShownInstrumentWin;
+  QPointer<MantidQt::SliceViewer::SliceViewerWindow> m_lastShownSliceViewWin;
+  QPointer<MantidQt::SpectrumView::SpectrumView> m_lastShownSpectrumViewerWin;
+  QPointer<MultiLayer> m_lastShownColorFillWin;
+  QPointer<MultiLayer> m_lastShown1DPlotWin;
+
   // Map of <workspace_name,update_interval> pairs. Positive update_intervals mean
   // UpdateDAE must be launched after LoadDAE for this workspace
   QMap<std::string,int> m_DAE_map;
@@ -544,9 +568,6 @@ private:
 
   //prevents some repeated code realtating to log names
   void formatLogName(QString &label, const QString &wsName);
-
-  /// Logger
-  static Mantid::Kernel::Logger & g_log;
 };
 
 

@@ -10,11 +10,15 @@ set ( SRC_FILES
 	src/AnalysisDataService.cpp
 	src/ArchiveSearchFactory.cpp
 	src/Axis.cpp
+	src/BinEdgeAxis.cpp
 	src/BoxController.cpp
 	src/CatalogFactory.cpp
+	src/CatalogManager.cpp
+	src/CatalogSession.cpp
 	src/ChopperModel.cpp
 	src/Column.cpp
 	src/ColumnFactory.cpp
+	src/CompositeCatalog.cpp
 	src/CompositeDomainMD.cpp
 	src/CompositeFunction.cpp
 	src/ConstraintFactory.cpp
@@ -39,12 +43,15 @@ set ( SRC_FILES
 	src/FunctionValues.cpp
 	src/GridDomain.cpp
 	src/GridDomain1D.cpp
+	src/HistoryItem.cpp
+	src/HistoryView.cpp
 	src/IDomainCreator.cpp
 	src/IEventList.cpp
 	src/IEventWorkspace.cpp
 	src/IFuncMinimizer.cpp
 	src/IFunction.cpp
 	src/IFunction1D.cpp
+	src/IFunction1DSpectrum.cpp
 	src/IFunctionMD.cpp
 	src/IFunctionMW.cpp
 	src/ILiveListener.cpp
@@ -59,18 +66,15 @@ set ( SRC_FILES
 	src/ISpectrum.cpp
 	src/ISplittersWorkspace.cpp
 	src/ITableWorkspace.cpp
-	src/ITransformScale.cpp
 	src/IkedaCarpenterModerator.cpp
 	src/ImmutableCompositeFunction.cpp
+	src/ImplicitFunctionFactory.cpp
 	src/ImplicitFunctionParameterParserFactory.cpp
 	src/ImplicitFunctionParserFactory.cpp
-	src/ImplictFunctionFactory.cpp
 	src/InstrumentDataService.cpp
 	src/JointDomain.cpp
 	src/LinearScale.cpp
 	src/LiveListenerFactory.cpp
-	src/LocatedDataRef.cpp
-	src/LocatedDataValue.cpp
 	src/LogManager.cpp
 	src/LogarithmScale.cpp
 	src/MDGeometry.cpp
@@ -81,6 +85,7 @@ set ( SRC_FILES
 	src/ModeratorModel.cpp
 	src/MultiDomainFunction.cpp
 	src/MultiPeriodGroupAlgorithm.cpp
+	src/MultiPeriodGroupWorker.cpp
 	src/MultipleExperimentInfos.cpp
 	src/MultipleFileProperty.cpp
 	src/NullCoordTransform.cpp
@@ -88,6 +93,11 @@ set ( SRC_FILES
 	src/ParamFunction.cpp
 	src/ParameterReference.cpp
 	src/ParameterTie.cpp
+	src/PeakTransform.cpp
+	src/PeakTransformHKL.cpp
+	src/PeakTransformQLab.cpp
+	src/PeakTransformQSample.cpp
+	src/PeakTransformSelector.cpp
 	src/Progress.cpp
 	src/PropertyManagerDataService.cpp
 	src/PropertyNexus.cpp
@@ -95,7 +105,9 @@ set ( SRC_FILES
 	src/Run.cpp
 	src/Sample.cpp
 	src/SampleEnvironment.cpp
+	src/SampleShapeValidator.cpp
 	src/ScopedWorkspace.cpp
+	src/ScriptBuilder.cpp
 	src/ScriptRepository.cpp
 	src/ScriptRepositoryFactory.cpp
 	src/SpectraAxis.cpp
@@ -133,14 +145,19 @@ set ( INC_FILES
 	inc/MantidAPI/AnalysisDataService.h
 	inc/MantidAPI/ArchiveSearchFactory.h
 	inc/MantidAPI/Axis.h
+	inc/MantidAPI/BinEdgeAxis.h
 	inc/MantidAPI/BoxController.h
 	inc/MantidAPI/CatalogFactory.h
+	inc/MantidAPI/CatalogManager.h
+	inc/MantidAPI/CatalogSession.h
 	inc/MantidAPI/ChopperModel.h
 	inc/MantidAPI/Column.h
 	inc/MantidAPI/ColumnFactory.h
+	inc/MantidAPI/CompositeCatalog.h
 	inc/MantidAPI/CompositeDomain.h
 	inc/MantidAPI/CompositeDomainMD.h
 	inc/MantidAPI/CompositeFunction.h
+	inc/MantidAPI/ConcretePeakTransformFactory.h
 	inc/MantidAPI/ConstraintFactory.h
 	inc/MantidAPI/CoordTransform.h
 	inc/MantidAPI/CostFunctionFactory.h
@@ -166,6 +183,8 @@ set ( INC_FILES
 	inc/MantidAPI/FunctionValues.h
 	inc/MantidAPI/GridDomain.h
 	inc/MantidAPI/GridDomain1D.h
+	inc/MantidAPI/HistoryItem.h
+	inc/MantidAPI/HistoryView.h
 	inc/MantidAPI/IAlgorithm.h
 	inc/MantidAPI/IArchiveSearch.h
 	inc/MantidAPI/IBackgroundFunction.h
@@ -174,7 +193,6 @@ set ( INC_FILES
 	inc/MantidAPI/ICatalogInfoService.h
 	inc/MantidAPI/IConstraint.h
 	inc/MantidAPI/ICostFunction.h
-	inc/MantidAPI/IDataItem.h
 	inc/MantidAPI/IDomainCreator.h
 	inc/MantidAPI/IEventList.h
 	inc/MantidAPI/IEventWorkspace.h
@@ -182,12 +200,11 @@ set ( INC_FILES
 	inc/MantidAPI/IFuncMinimizer.h
 	inc/MantidAPI/IFunction.h
 	inc/MantidAPI/IFunction1D.h
+	inc/MantidAPI/IFunction1DSpectrum.h
 	inc/MantidAPI/IFunctionMD.h
 	inc/MantidAPI/IFunctionMW.h
-	inc/MantidAPI/IFunctionValues.h
 	inc/MantidAPI/IFunctionWithLocation.h
 	inc/MantidAPI/ILiveListener.h
-	inc/MantidAPI/ILocatedData.h
 	inc/MantidAPI/IMDEventWorkspace.h
 	inc/MantidAPI/IMDHistoWorkspace.h
 	inc/MantidAPI/IMDIterator.h
@@ -217,8 +234,6 @@ set ( INC_FILES
 	inc/MantidAPI/JointDomain.h
 	inc/MantidAPI/LinearScale.h
 	inc/MantidAPI/LiveListenerFactory.h
-	inc/MantidAPI/LocatedDataRef.h
-	inc/MantidAPI/LocatedDataValue.h
 	inc/MantidAPI/LogManager.h
 	inc/MantidAPI/LogarithmScale.h
 	inc/MantidAPI/MDGeometry.h
@@ -229,6 +244,7 @@ set ( INC_FILES
 	inc/MantidAPI/ModeratorModel.h
 	inc/MantidAPI/MultiDomainFunction.h
 	inc/MantidAPI/MultiPeriodGroupAlgorithm.h
+	inc/MantidAPI/MultiPeriodGroupWorker.h
 	inc/MantidAPI/MultipleExperimentInfos.h
 	inc/MantidAPI/MultipleFileProperty.h
 	inc/MantidAPI/NullCoordTransform.h
@@ -236,6 +252,12 @@ set ( INC_FILES
 	inc/MantidAPI/ParamFunction.h
 	inc/MantidAPI/ParameterReference.h
 	inc/MantidAPI/ParameterTie.h
+	inc/MantidAPI/PeakTransform.h
+	inc/MantidAPI/PeakTransformFactory.h
+	inc/MantidAPI/PeakTransformHKL.h
+	inc/MantidAPI/PeakTransformQLab.h
+	inc/MantidAPI/PeakTransformQSample.h
+	inc/MantidAPI/PeakTransformSelector.h
 	inc/MantidAPI/Progress.h
 	inc/MantidAPI/PropertyManagerDataService.h
 	inc/MantidAPI/PropertyNexus.h
@@ -243,12 +265,13 @@ set ( INC_FILES
 	inc/MantidAPI/Run.h
 	inc/MantidAPI/Sample.h
 	inc/MantidAPI/SampleEnvironment.h
+	inc/MantidAPI/SampleShapeValidator.h
 	inc/MantidAPI/ScopedWorkspace.h
+	inc/MantidAPI/ScriptBuilder.h
 	inc/MantidAPI/ScriptRepository.h
 	inc/MantidAPI/ScriptRepositoryFactory.h
 	inc/MantidAPI/SingleValueParameter.h
 	inc/MantidAPI/SingleValueParameterParser.h
-	inc/MantidAPI/SpecialCoordinateSystem.h
 	inc/MantidAPI/SpectraAxis.h
 	inc/MantidAPI/SpectrumDetectorMapping.h
 	inc/MantidAPI/TableRow.h
@@ -260,8 +283,6 @@ set ( INC_FILES
 	inc/MantidAPI/WorkspaceFactory.h
 	inc/MantidAPI/WorkspaceGroup.h
 	inc/MantidAPI/WorkspaceHistory.h
-	inc/MantidAPI/WorkspaceIterator.h
-	inc/MantidAPI/WorkspaceIteratorCode.h
 	inc/MantidAPI/WorkspaceOpOverloads.h
 	inc/MantidAPI/WorkspaceProperty.h
 	inc/MantidAPI/WorkspaceValidators.h
@@ -278,6 +299,7 @@ set ( TEST_FILES
 	AlgorithmTest.h
 	AnalysisDataServiceTest.h
 	AsynchronousTest.h
+	BinEdgeAxisTest.h
 	BoxControllerTest.h
 	CompositeFunctionTest.h
 	CoordTransformTest.h
@@ -297,7 +319,10 @@ set ( TEST_FILES
 	FunctionPropertyTest.h
 	FunctionTest.h
 	FunctionValuesTest.h
+	HistoryItemTest.h
+	HistoryViewTest.h
 	IEventListTest.h
+	IFunction1DSpectrumTest.h
 	IFunction1DTest.h
 	IFunctionMDTest.h
 	ILiveListenerTest.h
@@ -316,18 +341,25 @@ set ( TEST_FILES
 	ModeratorModelTest.h
 	MultiDomainFunctionTest.h
 	MultiPeriodGroupAlgorithmTest.h
+	MultiPeriodGroupWorkerTest.h
 	MultipleExperimentInfosTest.h
 	MultipleFilePropertyTest.h
 	NumericAxisTest.h
 	ParamFunctionAttributeHolderTest.h
 	ParameterReferenceTest.h
 	ParameterTieTest.h
+	PeakTransformHKLTest.h
+	PeakTransformQLabTest.h
+	PeakTransformQSampleTest.h
+	PeakTransformSelectorTest.h
 	PropertyManagerDataServiceTest.h
 	PropertyNexusTest.h
 	RunTest.h
 	SampleEnvironmentTest.h
+	SampleShapeValidatorTest.h
 	SampleTest.h
 	ScopedWorkspaceTest.h
+	ScriptBuilderTest.h
 	SpectraAxisTest.h
 	SpectrumDetectorMappingTest.h
 	TextAxisTest.h
@@ -335,6 +367,7 @@ set ( TEST_FILES
 	VectorParameterTest.h
 	WorkspaceFactoryTest.h
 	WorkspaceGroupTest.h
+	WorkspaceHistoryIOTest.h
 	WorkspaceHistoryTest.h
 	WorkspaceOpOverloadsTest.h
 	WorkspacePropertyTest.h
@@ -364,6 +397,11 @@ add_library ( API ${SRC_FILES} ${INC_FILES})
 # Set the name of the generated library
 set_target_properties ( API PROPERTIES OUTPUT_NAME MantidAPI 
                                        COMPILE_DEFINITIONS IN_MANTID_API )
+
+if (OSX_VERSION VERSION_GREATER 10.8)
+  set_target_properties ( API PROPERTIES INSTALL_RPATH "@loader_path/../MacOS")
+endif ()
+
 # Add to the 'Framework' group in VS
 set_property ( TARGET API PROPERTY FOLDER "MantidFramework" )
 

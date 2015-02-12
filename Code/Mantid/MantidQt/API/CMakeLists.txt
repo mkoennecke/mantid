@@ -3,6 +3,7 @@ set ( SRC_FILES
   src/AlgorithmInputHistory.cpp
   src/AlgorithmPropertiesWidget.cpp
   src/AlgorithmRunner.cpp
+  src/BatchAlgorithmRunner.cpp
   src/BoolPropertyWidget.cpp
   src/FilePropertyWidget.cpp
   src/GenericDialog.cpp
@@ -12,15 +13,20 @@ set ( SRC_FILES
   src/ManageUserDirectories.cpp
   src/MantidColorMap.cpp
   src/MantidDialog.cpp
+  src/MantidHelpInterface.cpp
   src/MantidQwtIMDWorkspaceData.cpp
-  src/MantidQwtMatrixWorkspaceData.cpp
   src/MantidWidget.cpp
   src/Message.cpp
   src/OptionsPropertyWidget.cpp
+  src/PlotAxis.cpp
   src/PropertyWidget.cpp
   src/PropertyWidgetFactory.cpp
   src/PythonRunner.cpp
   src/QtSignalChannel.cpp
+  src/QwtRasterDataMD.cpp
+  src/QwtWorkspaceBinData.cpp
+  src/QwtWorkspaceSpectrumData.cpp
+  src/SignalRange.cpp
   src/ScriptRepositoryView.cpp
   src/RepoModel.cpp
   src/SyncedCheckboxes.cpp
@@ -35,11 +41,13 @@ set ( MOC_FILES
   inc/MantidQtAPI/AlgorithmDialog.h 
   inc/MantidQtAPI/AlgorithmRunner.h 
   inc/MantidQtAPI/AlgorithmPropertiesWidget.h
+  inc/MantidQtAPI/BatchAlgorithmRunner.h 
   inc/MantidQtAPI/BoolPropertyWidget.h
   inc/MantidQtAPI/FilePropertyWidget.h
   inc/MantidQtAPI/GenericDialog.h
   inc/MantidQtAPI/ManageUserDirectories.h
   inc/MantidQtAPI/MantidDialog.h
+  inc/MantidQtAPI/MantidHelpInterface.h
   inc/MantidQtAPI/MantidWidget.h
   inc/MantidQtAPI/OptionsPropertyWidget.h
   inc/MantidQtAPI/PropertyWidget.h
@@ -61,19 +69,24 @@ set ( INC_FILES
   ${MOC_FILES}
   inc/MantidQtAPI/AlgorithmInputHistory.h
   inc/MantidQtAPI/AlgorithmRunner.h
+  inc/MantidQtAPI/BatchAlgorithmRunner.h
   inc/MantidQtAPI/DllOption.h
   inc/MantidQtAPI/FileDialogHandler.h
   inc/MantidQtAPI/GraphOptions.h
   inc/MantidQtAPI/HelpWindow.h
   inc/MantidQtAPI/InterfaceFactory.h
   inc/MantidQtAPI/InterfaceManager.h
+  inc/MantidQtAPI/PlotAxis.h
   inc/MantidQtAPI/MantidColorMap.h
   inc/MantidQtAPI/MantidQwtIMDWorkspaceData.h
-  inc/MantidQtAPI/MantidQwtMatrixWorkspaceData.h
   inc/MantidQtAPI/MantidQwtWorkspaceData.h
   inc/MantidQtAPI/PropertyWidgetFactory.h
+  inc/MantidQtAPI/QwtRasterDataMD.h
+  inc/MantidQtAPI/QwtWorkspaceBinData.h
+  inc/MantidQtAPI/QwtWorkspaceSpectrumData.h
   inc/MantidQtAPI/ScriptRepositoryView.h
   inc/MantidQtAPI/SelectionNotificationService.h
+  inc/MantidQtAPI/SignalRange.h
 )
 
 set ( UI_FILES 
@@ -82,10 +95,14 @@ set ( UI_FILES
 )
 
 set( TEST_FILES
+   BatchAlgorithmRunnerTest.h
    InterfaceManagerTest.h
    MantidColorMapTest.h
-   MantidQwtMatrixWorkspaceDataTest.h
+   PlotAxisTest.h
+   QwtWorkspaceBinDataTest.h
+   QwtWorkspaceSpectrumDataTest.h
    SelectionNotificationServiceTest.h
+   SignalRangeTest.h
 )
 
 qt4_wrap_cpp ( MOCCED_FILES ${MOC_FILES} )
@@ -104,6 +121,10 @@ enable_precompiled_headers( inc/MantidQtAPI/PrecompiledHeader.h ALL_SRC )
 add_library ( MantidQtAPI ${ALL_SRC} ${INC_FILES} ${UI_HDRS} )
 
 set_target_properties ( MantidQtAPI PROPERTIES COMPILE_DEFINITIONS IN_MANTIDQT_API )
+
+if (OSX_VERSION VERSION_GREATER 10.8)
+  set_target_properties ( MantidQtAPI PROPERTIES INSTALL_RPATH "@loader_path/../MacOS")
+endif () 
 
 target_link_libraries ( MantidQtAPI ${CORE_MANTIDLIBS} ${QT_LIBRARIES} ${QWT_LIBRARIES} )
 

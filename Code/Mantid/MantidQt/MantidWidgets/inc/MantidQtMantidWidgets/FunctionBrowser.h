@@ -8,6 +8,8 @@
 #include <QWidget>
 #include <QMap>
 
+#include <boost/optional.hpp>
+
     /* Forward declarations */
 
 class QtTreePropertyBrowser;
@@ -78,7 +80,7 @@ public:
   };
 
   /// Constructor
-  FunctionBrowser(QWidget *parent = NULL);
+  FunctionBrowser(QWidget *parent = NULL, bool multi = false);
   /// Destructor
   ~FunctionBrowser();
   /// Clear the contents
@@ -91,6 +93,43 @@ public:
   QString getFunctionString();
   /// Return the function
   Mantid::API::IFunction_sptr getFunction(QtProperty* prop = NULL, bool attributesOnly = false);
+  /// Check if a function is set
+  bool hasFunction() const;
+  /// Get a list of names of global parameters
+  QStringList getGlobalParameters() const;
+  /// Get a list of names of local parameters
+  QStringList getLocalParameters() const;
+
+  /// Return a function with specified index
+  Mantid::API::IFunction_sptr getFunctionByIndex(const QString& index);
+
+  /// Return index of the current function, if one is selected
+  boost::optional<QString> currentFunctionIndex() { return m_currentFunctionIndex; }
+
+  /// Update the function parameter value
+  void setParameter(const QString& funcIndex, const QString& paramName, double value);
+  /// Get a value of a parameter
+  double getParameter(const QString& funcIndex, const QString& paramName) const;
+  /// Update the function parameter value
+  void setParameter(const QString& paramName, double value);
+  /// Get a value of a parameter
+  double getParameter(const QString& paramName) const;
+  /// Update parameter values in the browser to match those of a function.
+  void updateParameters(const Mantid::API::IFunction& fun);
+
+signals:
+  /// User selects a different function (or one of it's sub-properties)
+  void currentFunctionChanged();
+
+  /// Function parameter gets changed
+  /// @param funcIndex :: Index of the changed function
+  /// @param paramName :: Name of the changed parameter
+  void parameterChanged(const QString& funcIndex, const QString& paramName);
+
+  /// In multi-dataset context a button value editor was clicked
+  void localParameterButtonClicked(const QString& parName);
+
+  void functionStructureChanged();
 
 protected:
   /// Create the Qt property browser
@@ -118,7 +157,7 @@ protected:
   /// Update function index properties 
   void updateFunctionIndices(QtProperty* prop = NULL, QString index = "");
   /// Get property of the overall function
-  AProperty getFunctionProperty();
+  AProperty getFunctionProperty() const;
   /// Check if property is a function group
   bool isFunction(QtProperty* prop) const;
   /// Check if property is a function attribute
@@ -141,6 +180,10 @@ protected:
   bool isIndex(QtProperty* prop) const;
   /// Get the function index for a property
   QString getIndex(QtProperty* prop) const;
+  /// Get function property for the index
+  QtProperty* getFunctionProperty(const QString& index)const;
+  /// Split a qualified parameter name into function index and local parameter name.
+  QStringList splitParameterName(const QString& paramName) const;
 
   /// Add a tie property
   AProperty addTieProperty(QtProperty* prop, QString tie);
@@ -189,6 +232,8 @@ protected slots:
   void addConstraints50();
   /// Remove one of the constraints
   void removeConstraint();
+  /// Update current function index depending on currently selected item
+  void updateCurrentFunctionIndex();
 
   //   Property change slots
 
@@ -196,6 +241,9 @@ protected slots:
   void attributeChanged(QtProperty*);
   /// Called when a member of a vector attribute is changed
   void attributeVectorDoubleChanged(QtProperty*);
+  /// Called when a function parameter property is changed
+  void parameterChanged(QtProperty*);
+  void parameterButtonClicked(QtProperty*);
 
 protected:
   /// Manager for function group properties
@@ -216,8 +264,12 @@ protected:
   QtStringPropertyManager *m_tieManager;
   /// Manager for parameter constraint properties
   QtStringPropertyManager *m_constraintManager;
+  /// Manager for file name attributes
+  QtStringPropertyManager *m_filenameManager;
   /// Manager for Formula attributes
   QtStringPropertyManager *m_formulaManager;
+  /// Manager for Workspace attributes
+  QtStringPropertyManager *m_workspaceManager;
   /// Manager for vector attribute properties
   QtGroupPropertyManager *m_attributeVectorManager;
   /// Manager for vector attribute member properties
@@ -262,10 +314,15 @@ protected:
   /// Remove one constraints from current parameter
   QAction *m_actionRemoveConstraint;
 
+  /// Index of currently selected function. Gets updated in updateCurrentFunctionIndex()
+  boost::optional<QString> m_currentFunctionIndex;
+
+  /// Set true if the constructed function is intended to be used in a multi-dataset fit
+  bool m_multiDataset;
+
   friend class CreateAttributePropertyForFunctionBrowser;
   friend class SetAttributeFromProperty;
 };
-
 
 } // MantidWidgets
 

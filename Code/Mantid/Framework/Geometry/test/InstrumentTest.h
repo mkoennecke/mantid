@@ -45,7 +45,7 @@ public:
     instrument.markAsMonitor(det3);
 
     //instrument.setDefaultViewAxis("X-");
-    instrument.getLogfileCache().insert(std::make_pair(std::make_pair("apple",det3),boost::shared_ptr<XMLlogfile>()));
+    instrument.getLogfileCache().insert(std::make_pair(std::make_pair("apple",det3),boost::shared_ptr<XMLInstrumentParameter>()));
     instrument.getLogfileUnit()["banana"] = "yellow";
   }
 
@@ -454,9 +454,9 @@ public:
     TS_ASSERT_EQUALS( inst->getValidToDate(), validTo);
     // Try the parametrized copy constructor
     ParameterMap_sptr map(new ParameterMap());
-    Instrument * inst2 = new Instrument(boost::dynamic_pointer_cast<Instrument>(inst), map);
-    TS_ASSERT_EQUALS( inst2->getValidFromDate(), validFrom);
-    TS_ASSERT_EQUALS( inst2->getValidToDate(), validTo);
+    Instrument inst2(boost::dynamic_pointer_cast<Instrument>(inst), map);
+    TS_ASSERT_EQUALS( inst2.getValidFromDate(), validFrom);
+    TS_ASSERT_EQUALS( inst2.getValidToDate(), validTo);
   }
 
   void test_getMinMaxDetectorIDs()

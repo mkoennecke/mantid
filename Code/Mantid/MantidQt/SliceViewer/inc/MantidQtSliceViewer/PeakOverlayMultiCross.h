@@ -23,7 +23,7 @@ namespace SliceViewer
     
     @date 2013-06-10
 
-    Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+    Copyright &copy; 2011 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
     This file is part of Mantid.
 
@@ -61,7 +61,7 @@ namespace SliceViewer
     /// Update the view.
     virtual void updateView();
     /// Move the position of the peak, by using a different configuration of the existing origin indexes.
-    void movePosition(PeakTransform_sptr peakTransform);
+    void movePosition(Mantid::API::PeakTransform_sptr peakTransform);
     /// Change foreground colour
     virtual void changeForegroundColour(const QColor);
     /// Change background colour

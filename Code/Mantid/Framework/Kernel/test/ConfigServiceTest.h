@@ -33,7 +33,7 @@ public:
     Mantid::Kernel::Logger::setLevelForAll(Poco::Message::PRIO_NOTICE);
 
     //attempt some logging
-    Logger& log1 = Logger::get("logTest");
+    Logger log1("logTest");
 
     TS_ASSERT_THROWS_NOTHING(log1.debug("a debug string"));
     TS_ASSERT_THROWS_NOTHING(log1.information("an information string"));
@@ -66,7 +66,7 @@ public:
   void testEnabled()
   {
     //attempt some logging
-    Logger& log1 = Logger::get("logTestEnabled");
+    Logger log1("logTestEnabled");
     TS_ASSERT(log1.getEnabled());
     TS_ASSERT_THROWS_NOTHING(log1.fatal("a fatal string with enabled=true"));
     TS_ASSERT_THROWS_NOTHING(log1.fatal()<<"A fatal message from the stream operators with enabled=true " << 4.5 << std::endl;);
@@ -83,27 +83,10 @@ public:
 
   }
 
-  void testChangeName()
-  {
-    //attempt some logging
-    Logger& log1 = Logger::get("logTestName1");
-    TS_ASSERT_THROWS_NOTHING(log1.error("This should be from logTestName1"));
-    TS_ASSERT_THROWS_NOTHING(log1.error()<<"This should be from logTestName1 via a stream" << std::endl;);
-    
-    TS_ASSERT_THROWS_NOTHING(log1.setName("logTestName2"));
-    TS_ASSERT_THROWS_NOTHING(log1.error("This should be from logTestName2"));
-    TS_ASSERT_THROWS_NOTHING(log1.error()<<"This should be from logTestName2 via a stream" << std::endl;);
-    
-    TS_ASSERT_THROWS_NOTHING(log1.setName("logTestName1"));
-    TS_ASSERT_THROWS_NOTHING(log1.error("This should be from logTestName1"));
-    TS_ASSERT_THROWS_NOTHING(log1.error()<<"This should be from logTestName1 via a stream" << std::endl;);
-    
-  }
-
   void testLogLevelOffset()
   {
     //attempt some logging
-    Logger& log1 = Logger::get("logTestOffset");
+    Logger log1("logTestOffset");
     log1.setLevelOffset(0);
     TS_ASSERT_THROWS_NOTHING(log1.fatal("a fatal string with offset 0"));
     log1.setLevelOffset(-1);
@@ -200,29 +183,69 @@ public:
     TS_ASSERT_LESS_THAN(0, osArch.length()); //check that the string is not empty
     std::string osCompName = ConfigService::Instance().getComputerName();
     TS_ASSERT_LESS_THAN(0, osCompName.length()); //check that the string is not empty
+    std::string username = ConfigService::Instance().getUsername();
+    TS_ASSERT_LESS_THAN(0, username.length());
     TS_ASSERT_LESS_THAN(0, ConfigService::Instance().getOSVersion().length()); //check that the string is not empty
+    TS_ASSERT_LESS_THAN(
+        0, ConfigService::Instance().getOSVersionReadable().length());
     TS_ASSERT_LESS_THAN(0, ConfigService::Instance().getCurrentDir().length()); //check that the string is not empty
 //        TS_ASSERT_LESS_THAN(0, ConfigService::Instance().getHomeDir().length()); //check that the string is not empty
     TS_ASSERT_LESS_THAN(0, ConfigService::Instance().getTempDir().length()); //check that the string is not empty
+
+	  std::string appdataDir = ConfigService::Instance().getAppDataDir();
+	  TS_ASSERT_LESS_THAN(0, appdataDir.length());
+#ifdef _WIN32
+	  std::string::size_type index = appdataDir.find("\\AppData\\Roaming\\mantidproject\\mantid");
+	  TSM_ASSERT_LESS_THAN("Could not find correct path in getAppDataDir()",index,appdataDir.size());
+#else
+	  std::string::size_type index = appdataDir.find("/.mantid");
+	  TSM_ASSERT_LESS_THAN("Could not find correct path in getAppDataDir()",index,appdataDir.size());
+#endif
+
+  }
+
+  void TestInstrumentDirectory()
+  {
+	  
+    auto directories = ConfigService::Instance().getInstrumentDirectories();
+	  TS_ASSERT_LESS_THAN(1,directories.size());
+	  //the first entry should be the AppDataDir + instrument
+	  TSM_ASSERT_LESS_THAN("Could not find the appData directory in getInstrumentDirectories()[0]",directories[0].find(ConfigService::Instance().getAppDataDir()),directories[0].size());
+	  TSM_ASSERT_LESS_THAN("Could not find the 'instrument' directory in getInstrumentDirectories()[0]",directories[0].find("instrument"),directories[0].size());
+
+	  if (directories.size() == 3)
+	  {
+		  // The middle entry should be /etc/mantid/instrument
+		  TSM_ASSERT_LESS_THAN("Could not find /etc/mantid/instrument path in getInstrumentDirectories()[1]",directories[1].find("etc/mantid/instrument"),directories[1].size());
+	  }
+	  //Check that the last directory matches that returned by getInstrumentDirectory
+	  TS_ASSERT_EQUALS(directories[directories.size()-1],ConfigService::Instance().getInstrumentDirectory());
+
+	  //check all of the directory entries actually exist
+	  for (auto it = directories.begin(); it != directories.end(); ++it)
+	  {
+		  Poco::File directory(*it);
+		  TSM_ASSERT(*it + " does not exist", directory.exists());
+	  }
+
   }
 
   void TestCustomProperty()
   {
-    //Mantid.legs is defined in the properties script as 6
-    std::string countString = ConfigService::Instance().getString("ManagedWorkspace.DataBlockSize");
-    TS_ASSERT_EQUALS(countString, "4000");
+    std::string countString = ConfigService::Instance().getString("algorithms.retained");
+    TS_ASSERT_EQUALS(countString, "50");
   }
 
    void TestCustomPropertyAsValue()
   {
     //Mantid.legs is defined in the properties script as 6
     int value = 0;
-    ConfigService::Instance().getValue("ManagedWorkspace.DataBlockSize",value);
+    ConfigService::Instance().getValue("algorithms.retained",value);
     double dblValue = 0;
-    ConfigService::Instance().getValue("ManagedWorkspace.DataBlockSize",dblValue);
+    ConfigService::Instance().getValue("algorithms.retained",dblValue);
 
-    TS_ASSERT_EQUALS(value, 4000);
-    TS_ASSERT_EQUALS(dblValue, 4000.0);
+    TS_ASSERT_EQUALS(value, 50);
+    TS_ASSERT_EQUALS(dblValue, 50.0);
   }
 
   void TestMissingProperty()

@@ -17,11 +17,6 @@ class QLineEdit;
 class QCheckBox; 
 class QTextEdit;
 
-namespace Mantid{
-  namespace Kernel{
-    class Logger;
-  }
-}
 namespace MantidQt
 {
 namespace API
@@ -69,7 +64,7 @@ const QString DELETABLEENTRY = "deletable";
      This class should be constructed just once, and as so, the copy constructor and the assignment 
      will be make private to ensure this. 
     
-    Copyright &copy; 2013 ISIS Rutherford Appleton Laboratory & NScD Oak Ridge National Laboratory
+    Copyright &copy; 2013 ISIS Rutherford Appleton Laboratory, NScD Oak Ridge National Laboratory & European Spallation Source
 
     This file is part of Mantid.
 
@@ -229,8 +224,6 @@ private:
     RepoItem * getParent(const QString & folder, QList<RepoItem*>&parents);
 
     Q_DISABLE_COPY(RepoModel);
-    /// logger
-    static Mantid::Kernel::Logger & g_log;
     
     /// auxiliary method to deal with exceptions
     void handleExceptions(const Mantid::API::ScriptRepoException & ex, 

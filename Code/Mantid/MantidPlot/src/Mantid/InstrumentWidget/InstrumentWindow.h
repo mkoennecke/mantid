@@ -11,6 +11,7 @@
 #include "MantidQtAPI/WorkspaceObserver.h"
 #include "MantidAPI/AnalysisDataService.h"
 #include "MantidAPI/AlgorithmObserver.h"
+#include "Mantid/IProjectSerialisable.h"
 
 #include <string>
 #include <vector>
@@ -57,7 +58,7 @@ class QSettings;
   and needs to be updated whenever the instrument view functionality changes.
 
  */
-class InstrumentWindow : public MdiSubWindow, public MantidQt::API::WorkspaceObserver, public Mantid::API::AlgorithmObserver
+class InstrumentWindow : public MdiSubWindow, public MantidQt::API::WorkspaceObserver, public Mantid::API::AlgorithmObserver, public Mantid::IProjectSerialisable
 {
   Q_OBJECT
 
@@ -89,8 +90,6 @@ public:
   void selectComponent(const QString & name);
   void setScaleType(GraphOptions::ScaleType type);
   void setViewType(const QString& type);
-  /// for saving the instrument window  to mantid project
-  QString saveToString(const QString& geometry, bool saveAsTemplate= false);
   InstrumentActor* getInstrumentActor() const {return m_instrumentActor;}
   bool blocked()const{return m_blocked;}
   void selectTab(int tab);
@@ -104,9 +103,12 @@ public:
   /// Get a name for a instrument-specific settings group
   QString getInstrumentSettingsGroupName() const;
 
+  void loadFromProject(const std::string& lines, ApplicationWindow* app, const int fileVersion);
+  std::string saveToProject(ApplicationWindow* app);
+
 signals:
   void enableLighting(bool);
-  void plotSpectra(const QString&,const std::set<int>&);
+  void plot1D(const QString&,const std::set<int>&,bool);
   void createDetectorTable(const QString&,const std::vector<int>&,bool);
   void execMantidAlgorithm(const QString&,const QString&,Mantid::API::AlgorithmObserver*);
   void execMantidAlgorithm(Mantid::API::IAlgorithm_sptr);
@@ -133,9 +135,6 @@ protected:
 public slots:
   void tabChanged(int);
   void componentSelected(Mantid::Geometry::ComponentID id);
-  void spectraInfoDialog();
-  void plotSelectedSpectra();
-  void showDetectorTable();
   void executeAlgorithm(const QString&, const QString&);
   void executeAlgorithm(Mantid::API::IAlgorithm_sptr);
 
@@ -209,8 +208,6 @@ private:
   /// The simple widget to display the instrument
   SimpleWidget* m_simpleDisplay;
 
-  // Actions for the pick menu
-  QAction *mInfoAction, *mPlotAction, *mDetTableAction;
   // Context menu actions
   QAction *m_clearPeakOverlays;
 

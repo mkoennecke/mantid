@@ -3,37 +3,23 @@
 
 #include "isisraw.h"
 
-namespace Mantid
-{
-namespace Kernel
-{
-  class Logger;
-}
-}
-
 /// isis raw file.
 //  isis raw
-class ISISRAW2 : public ISISRAW
-{
+class ISISRAW2 : public ISISRAW {
 public:
-	ISISRAW2();
-	virtual ~ISISRAW2();
-	
-	virtual int ioRAW(FILE* file, bool from_file, bool do_data = true);
+  ISISRAW2();
+  virtual ~ISISRAW2();
 
-	void skipData(FILE* file, int i);
-	bool readData(FILE* file, int i);
-  void clear();  
+  virtual int ioRAW(FILE *file, bool from_file, bool do_data = true);
 
-	int ndes; ///<ndes
+  void skipData(FILE *file, int i);
+  bool readData(FILE *file, int i);
+  void clear();
+
+  int ndes; ///<ndes
 private:
-	char* outbuff;  ///<output buffer
+  char *outbuff; ///<output buffer
   int m_bufferSize;
-
-  /// Static reference to the logger class
-  Mantid::Kernel::Logger & g_log;
 };
-
-
 
 #endif /* ISISRAW2_H */

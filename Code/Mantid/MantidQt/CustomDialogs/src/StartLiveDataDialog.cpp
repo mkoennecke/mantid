@@ -71,7 +71,9 @@ namespace CustomDialogs
 //----------------------
 ///Constructor
 StartLiveDataDialog::StartLiveDataDialog(QWidget *parent) :
-  AlgorithmDialog(parent)
+  AlgorithmDialog(parent),
+  m_useProcessAlgo(false), m_useProcessScript(false),
+  m_usePostProcessAlgo(false), m_usePostProcessScript(false)
 {
   // Create the input history. This loads it too.
   LiveDataAlgInputHistory::Instance();
@@ -110,8 +112,8 @@ void StartLiveDataDialog::initLayout()
   tie(ui.chkPreserveEvents, "PreserveEvents");
   chkPreserveEventsToggled();
 
-  tie(ui.cmbEndRunBehavior, "EndRunBehavior");
-  fillAndSetComboBox("EndRunBehavior", ui.cmbEndRunBehavior);
+  tie(ui.cmbRunTransitionBehavior, "RunTransitionBehavior");
+  fillAndSetComboBox("RunTransitionBehavior", ui.cmbRunTransitionBehavior);
 
   tie(ui.editAccumulationWorkspace, "AccumulationWorkspace", ui.gridLayout);
   tie(ui.editOutputWorkspace, "OutputWorkspace", ui.gridLayout);
@@ -169,6 +171,10 @@ void StartLiveDataDialog::initLayout()
   radioPostProcessClicked();
   setDefaultAccumulationMethod( ui.cmbInstrument->currentText() );
 
+  //=========== Listener's properties =============
+
+  initListenerPropLayout(ui.cmbInstrument->currentText());
+
   //=========== SLOTS =============
   connect(ui.processingAlgo, SIGNAL(changedAlgorithm()), this, SLOT(changeProcessingAlgorithm()));
   connect(ui.postAlgo, SIGNAL(changedAlgorithm()), this, SLOT(changePostProcessingAlgorithm()));
@@ -188,6 +194,7 @@ void StartLiveDataDialog::initLayout()
   connect(ui.chkPreserveEvents, SIGNAL(toggled(bool)), this, SLOT(chkPreserveEventsToggled()));
 
   connect(ui.cmbInstrument,SIGNAL(currentIndexChanged(const QString&)),this,SLOT(setDefaultAccumulationMethod(const QString&)));
+  connect(ui.cmbInstrument,SIGNAL(currentIndexChanged(const QString&)),this,SLOT(initListenerPropLayout(const QString&)));
 
   QHBoxLayout * buttonLayout = this->createDefaultButtonLayout();
   ui.mainLayout->addLayout(buttonLayout);
@@ -331,11 +338,74 @@ void StartLiveDataDialog::setDefaultAccumulationMethod(const QString& inst)
 
 void StartLiveDataDialog::accept()
 {
-  AlgorithmDialog::accept();
   // Now manually set the StartTime property as there's a computation needed
   DateAndTime startTime = DateAndTime::getCurrentTime() - ui.dateTimeEdit->value()*60.0;
   m_algorithm->setPropertyValue("StartTime",startTime.toISO8601String());
+
+  AlgorithmDialog::accept(); // accept executes the algorithm
 }
+
+void StartLiveDataDialog::initListenerPropLayout(const QString& inst)
+{
+  // remove previous listener's properties
+  auto props = m_algorithm->getPropertiesInGroup("ListenerProperties");
+  for(auto prop = props.begin(); prop != props.end(); ++prop)
+  {
+    QString propName = QString::fromStdString((**prop).name());
+    if ( m_algProperties.contains( propName ) )
+    {
+      m_algProperties.remove( propName );
+    }
+  }
+
+  // update algorithm's properties
+  m_algorithm->setPropertyValue("Instrument", inst.toStdString());
+  // create or clear the layout
+  QLayout *layout = ui.listenerProps->layout();
+  if ( !layout )
+  {
+    QGridLayout *listenerPropLayout = new QGridLayout(ui.listenerProps);
+    layout = listenerPropLayout;
+  }
+  else
+  {
+    QLayoutItem *child;
+    while ((child = layout->takeAt(0)) != NULL)  
+    {
+      child->widget()->close();
+      delete child;
+    }
+  }
+
+  // find the listener's properties
+  props = m_algorithm->getPropertiesInGroup("ListenerProperties");
+
+  // no properties - don't show the box
+  if ( props.empty() )
+  {
+    ui.listenerProps->setVisible(false);
+    return;
+  }
+  
+  auto gridLayout = static_cast<QGridLayout*>( layout );
+  // add widgets for the listener's properties
+  for(auto prop = props.begin(); prop != props.end(); ++prop)
+  {
+    int row = static_cast<int>(std::distance( props.begin(), prop ));
+    QString propName = QString::fromStdString((**prop).name());
+    gridLayout->addWidget( new QLabel(propName), row, 0 );
+    QLineEdit *propWidget = new QLineEdit();
+    gridLayout->addWidget( propWidget, row, 1 );
+    if ( !m_algProperties.contains( propName ) )
+    {
+      m_algProperties.append( propName );
+    }
+    tie(propWidget, propName, gridLayout);
+  }
+  ui.listenerProps->setVisible(true);
+
+}
+
 
 }
 }

@@ -1,20 +1,24 @@
 """
-    ISIS-specific implementation of the SANS Reducer. 
-    
-    WARNING: I'm still playing around with the ISIS reduction to try to 
-    understand what's happening and how best to fit it in the Reducer design. 
-     
+    ISIS-specific implementation of the SANS Reducer.
+
+    WARNING: I'm still playing around with the ISIS reduction to try to
+    understand what's happening and how best to fit it in the Reducer design.
+
 """
-from reduction.instruments.sans.sans_reducer import SANSReducer
-import reduction.instruments.sans.sans_reduction_steps as sans_reduction_steps
+from reducer_singleton import Reducer
 import isis_reduction_steps
+from reduction_settings import get_settings_object
 from mantid.simpleapi import *
+from mantid.api import *
+from mantid.kernel import *
 from mantid.api import IEventWorkspace
 import SANSUtility as su
 import os
 import copy
 
 import sys
+
+logger = Logger("ISISReducer")
 
 ################################################################################
 # Avoid a bug with deepcopy in python 2.6, details and workaround here:
@@ -34,19 +38,19 @@ current_settings = None
 class Sample(object):
     ISSAMPLE = True
     def __init__(self):
-        #will contain a LoadSample() object that converts the run number into a file name and loads that file  
+        #will contain a LoadSample() object that converts the run number into a file name and loads that file
         self.loader = None
         #geometry that comes from the run and can be overridden by user settings
-        self.geometry = sans_reduction_steps.GetSampleGeom()
+        self.geometry = isis_reduction_steps.GetSampleGeom()
         #record options for the set_run
         self.run_option = None
         self.reload_option = None
         self.period_option = None
 
     def reload(self, reducer):
-        """ When changing the detector bank for LOQ, it may be necessary to reload the 
-        data file, so to move te detector bank to the center of the scattering beam pattern. 
-        The reload method, allows to reload the data, moving to the correct center, 
+        """ When changing the detector bank for LOQ, it may be necessary to reload the
+        data file, so to move te detector bank to the center of the scattering beam pattern.
+        The reload method, allows to reload the data, moving to the correct center,
         and applying the same inputs used in the creation of the `Sample` object.
         """
         if self.run_option is None:
@@ -57,7 +61,7 @@ class Sample(object):
         """
             Assigns and load the run
             @param run: the run in a number.raw|nxs format
-            @param reload: if this sample should be reloaded before the first reduction  
+            @param reload: if this sample should be reloaded before the first reduction
             @param period: the period within the sample to be analysed
         """
         self.run_option = str(run) #to self-guard against keeping reference to workspace
@@ -68,7 +72,7 @@ class Sample(object):
         self.loader.execute(reducer, self.ISSAMPLE)
         if self.ISSAMPLE:
             self.geometry.execute(None, self.get_wksp_name())
-        
+
     def get_wksp_name(self):
         return self.loader.wksp_name
 
@@ -83,7 +87,7 @@ class Sample(object):
             return __monitor
         else:
             return _ws
-    
+
     def get_periods_in_file(self):
         return self.loader.periods_in_file
 
@@ -93,7 +97,7 @@ class Sample(object):
 class Can(Sample):
     ISSAMPLE = False
     def set_run(self, run, reload, period, reducer):
-        
+
         super(Can, self).set_run(run, reload, period, reducer)
 
         # currently, no slices will be applied to Can #8535
@@ -101,21 +105,23 @@ class Can(Sample):
             self.loader.move2ws(period)
             name = self.loader.wksp_name
             if su.isEventWorkspace(name):
-                su.fromEvent2Histogram(mtd[name])
+                su.fromEvent2Histogram(mtd[name], self.get_monitor())
 
-class ISISReducer(SANSReducer):
+class ISISReducer(Reducer):
     """
         ISIS Reducer
 
-        Inside ISIS there are two detector banks (low-angle and high-angle) and this particularity is responsible for 
-        requiring a special class to deal with SANS data reduction inside ISIS. 
-        
-        For example, it requires the knowledge of the beam center inside the low-angle detector and the high-angle detector 
+        Inside ISIS there are two detector banks (low-angle and high-angle) and this particularity is responsible for
+        requiring a special class to deal with SANS data reduction inside ISIS.
+
+        For example, it requires the knowledge of the beam center inside the low-angle detector and the high-angle detector
         as well, and this cause to extend the method get_beam_center and set_beam_center to support both.
 
         TODO: need documentation for all the data member
         TODO: need to see whether all those data members really belong here
-    """    
+    """
+    ## Beam center finder ReductionStep object
+    _beam_finder = None
     _front_beam_finder = None
 
     QXY2 = None
@@ -125,7 +131,7 @@ class ISISReducer(SANSReducer):
     PHIMIN=-90.0
     PHIMAX=90.0
     PHIMIRROR=True
-    
+
     ## Path for user settings files
     _user_file_path = '.'
 
@@ -144,10 +150,10 @@ class ISISReducer(SANSReducer):
         proc_wav.append(self.geometry_correcter)
 
         self._can = [self._background_subtracter]
-        
+
 #        self._tidy = [self._zero_error_flags]
         self._tidy = [self._rem_nans]
-        
+
         #the last step in the list must be ConvertToQ or can processing wont work
         self._conv_Q = proc_TOF + proc_wav + [self.to_Q]
 
@@ -157,21 +163,22 @@ class ISISReducer(SANSReducer):
     def _init_steps(self):
         """
             Initialises the steps that are not initialised by (ISIS)CommandInterface.
-        """       
+        """
         #these steps are not executed by reduce
         self.user_settings =   None
         self._out_name =       isis_reduction_steps.GetOutputName()
 
         #except self.prep_normalize all the steps below are used by the reducer
+        self.event2hist =      isis_reduction_steps.SliceEvent()
         self.crop_detector =   isis_reduction_steps.CropDetBank()
-        self.mask =self._mask= isis_reduction_steps.Mask_ISIS()
+        self.mask = isis_reduction_steps.Mask_ISIS()
         self.to_wavelen =      isis_reduction_steps.UnitsConvert('Wavelength')
         self.norm_mon =        isis_reduction_steps.NormalizeToMonitor()
         self.transmission_calculator =\
                                isis_reduction_steps.TransmissionCalc(loader=None)
         self._corr_and_scale = isis_reduction_steps.AbsoluteUnitsISIS()
-        
-        # note CalculateNormISIS does not inherit from ReductionStep 
+
+        # note CalculateNormISIS does not inherit from ReductionStep
         # so currently do not understand why it is in isis_reduction_steps
         # Also the main purpose of this class is to use it as an input argument
         # to ConvertToQ below
@@ -181,27 +188,24 @@ class ISISReducer(SANSReducer):
         self.to_Q =            isis_reduction_steps.ConvertToQISIS(
                                                         self.prep_normalize)
         self._background_subtracter = isis_reduction_steps.CanSubtraction()
-        self.geometry_correcter =       sans_reduction_steps.SampleGeomCor()
+        self.geometry_correcter =       isis_reduction_steps.SampleGeomCor()
 #        self._zero_error_flags=isis_reduction_steps.ReplaceErrors()
-        self._rem_nans =      sans_reduction_steps.StripEndNans()
+        self._rem_nans =      isis_reduction_steps.StripEndNans()
 
         self.set_Q_output_type(self.to_Q.output_type)
         # keep information about event slicing
         self._slices_def = []
         self._slice_index = 0
 
-	
+
     def _clean_loaded_data(self):
         self._sample_run = Sample()
         self._can_run = Can()
         self.samp_trans_load = None
         self.can_trans_load = None
-        self.event2hist = isis_reduction_steps.SliceEvent()
-
 
     def __init__(self):
-        SANSReducer.__init__(self)
-        self._dark_current_subtracter_class = None
+        super(ISISReducer, self).__init__()
         self.output_wksp = None
         self.full_trans_wav = False
         self._monitor_set = False
@@ -210,16 +214,13 @@ class ISISReducer(SANSReducer):
         #the output workspaces created by a data analysis
         self._outputs = {}
         #all workspaces created by this reducer
-        self._workspace = [self._temporys, self._outputs] 
+        self._workspace = [self._temporys, self._outputs]
 
         self._clean_loaded_data()
         self._init_steps()
-        
-        #process the background (can) run instead of the sample 
+
+        #process the background (can) run instead of the sample
         self._process_can = False
-        # Python 2.4 has a problem deep copying the _resolution_calculator in
-        # the base class. ISIS don't need it so kill it off here
-        self._resolution_calculator = None
         #option to indicate if wide_angle_correction will be applied.
         self.wide_angle_correction = False
         # Due to the way that ISISReducer is used to the reduction of the Can
@@ -231,12 +232,25 @@ class ISISReducer(SANSReducer):
         # register the value of transmission can
         self.__transmission_can = ""
 
+        self.settings = get_settings_object()
+
+
+    def set_instrument(self, configuration):
+        """
+            Sets the instrument and put in the default beam center (usually the
+            center of the detector)
+            @param configuration: instrument object
+        """
+        super(ISISReducer, self).set_instrument(configuration)
+        center = self.instrument.get_default_beam_center()
+        self._beam_finder = isis_reduction_steps.BaseBeamFinder(center[0], center[1])
+
 
     def set_sample(self, run, reload, period):
         """
             Assigns and load the run that this reduction chain will analysis
             @param run: the run in a number.raw|nxs format
-            @param reload: if this sample should be reloaded before the first reduction  
+            @param reload: if this sample should be reloaded before the first reduction
             @param period: the period within the sample to be analysed
         """
         if not self.user_settings.executed:
@@ -245,14 +259,14 @@ class ISISReducer(SANSReducer):
         # ensure that when you set sample, you start with no can, transmission previously used.
         self._clean_loaded_data()
         self._sample_run.set_run(run, reload, period, self)
-        
+
     def set_can(self, run, reload, period):
         self._can_run.set_run(run, reload, period, self)
-        
+
 
     def get_sample(self):
         """
-            Gets information about the experimental run that is to be reduced 
+            Gets information about the experimental run that is to be reduced
             @return: the object with information about the sample
         """
         if not self._process_can:
@@ -281,7 +295,7 @@ class ISISReducer(SANSReducer):
     # for compatibility reason, previously, background_subtracter was used to
     # query if the can was provided and for the can reduction.
     background_subtracter = property(get_can, None, None, None)
-        
+
     def get_out_ws_name(self, show_period=True):
         """
             Returns name of the workspace that will be created by this reduction
@@ -294,7 +308,7 @@ class ISISReducer(SANSReducer):
         if show_period and (sample_obj.periods_in_file > 1 or sample_obj._period != -1):
             period = sample_obj.curr_period()
             name += 'p'+str(period)
-        
+
         name += self.instrument.cur_detector().name('short')
         name += '_' + self.to_Q.output_type
         name += '_' + self.to_wavelen.get_range()
@@ -318,12 +332,15 @@ class ISISReducer(SANSReducer):
         """
         global current_settings
         return copy.deepcopy(current_settings)
-    
+
     def remove_settings(self):
+        logger.debug("Clearing reducer settings.")
         global current_settings
         current_settings = None
-        
-    def settings(self):
+        self.settings.clear()
+        assert len(self.settings) == 0
+
+    def cur_settings(self):
         """
             Retrieves the state of the reducer after it was setup and before running or None
             if the reducer hasn't been setup
@@ -359,17 +376,17 @@ class ISISReducer(SANSReducer):
             if item:
                 item.execute(self, self.output_wksp)
 
-        #any clean up, possibly removing workspaces 
+        #any clean up, possibly removing workspaces
         if post:
             self.post_process()
-        
+
         return self.output_wksp
 
     def reduce_can(self, new_wksp=None, run_Q=True):
         """
             Apply the sample corrections to a can workspace. This reducer is deep copied
             and the output workspace name, transmission and monitor workspaces are changed.
-            Then the reduction is applied to the given workspace 
+            Then the reduction is applied to the given workspace
             @param new_wksp: the name of the workspace that will store the result
             @param run_Q: set to false to stop just before converting to Q, default is convert to Q
         """
@@ -378,9 +395,9 @@ class ISISReducer(SANSReducer):
         sample_trans_name = self.transmission_calculator.output_wksp
         # configure can
         self._process_can = True
-        # set the workspace that we've been setting up as the one to be processed 
+        # set the workspace that we've been setting up as the one to be processed
         self.output_wksp = new_wksp
-        
+
         can_steps = self._conv_Q
         if not run_Q:
             #the last step in the list must be ConvertToQ or this wont work
@@ -407,7 +424,21 @@ class ISISReducer(SANSReducer):
        self.to_Q.set_output_type(out_type)
 
     def pre_process(self):
-        super(ISISReducer, self).pre_process()
+        """
+            Reduction steps that are meant to be executed only once per set
+            of data files. After this is executed, all files will go through
+            the list of reduction steps.
+        """
+        if self.instrument is None:
+            raise RuntimeError, "ISISReducer: trying to run a reduction with no instrument specified"
+
+        if self._beam_finder is not None:
+            result = self._beam_finder.execute(self)
+            self.log_text += "%s\n" % str(result)
+
+        # Create the list of reduction steps
+        self._to_steps()
+
         self._out_name.execute(self)
         global current_settings
         current_settings = copy.deepcopy(self)
@@ -420,7 +451,7 @@ class ISISReducer(SANSReducer):
             user_file = self.user_settings.filename
         AddSampleLog(Workspace=self.output_wksp,LogName="UserFile", LogText=user_file)
 
-        # get the value of __transmission_sample from the transmission_calculator if it has 
+        # get the value of __transmission_sample from the transmission_calculator if it has
         if (not self.get_can()) and self.transmission_calculator.output_wksp:
             # it updates only if there was not can, because, when there is can, the __transmission_sample
             # is already correct and transmission_calculator.output_wksp points to the can transmission
@@ -434,7 +465,7 @@ class ISISReducer(SANSReducer):
             AddSampleLog(Workspace=self.output_wksp,LogName= "Transmission", LogText=self.__transmission_sample + str('_unfitted'))
         if self.__transmission_can:
             AddSampleLog(Workspace=self.output_wksp,LogName= "TransmissionCan", LogText=self.__transmission_can + str('_unfitted'))
-	
+
         # clean these values for subsequent executions
         self.__transmission_sample = ""
         self.__transmission_can = ""
@@ -458,12 +489,12 @@ class ISISReducer(SANSReducer):
 
     def get_user_path(self):
         return self._user_file_path
-    
+
     user_file_path = property(get_user_path, set_user_path, None, None)
 
     def set_trans_fit(self, lambda_min=None, lambda_max=None, fit_method="Log", selector='BOTH'):
         self.transmission_calculator.set_trans_fit(fit_method, lambda_min, lambda_max, override=True, selector=selector)
-        
+
     def set_trans_sample(self, sample, direct, reload=True, period_t = -1, period_d = -1):
         self.samp_trans_load = isis_reduction_steps.LoadTransmissions(reload=reload)
         self.samp_trans_load.set_trans(sample, period_t)
@@ -477,12 +508,12 @@ class ISISReducer(SANSReducer):
     def set_monitor_spectrum(self, specNum, interp=False, override=True):
         if override:
             self._monitor_set=True
-        
+
         self.instrument.set_interpolating_norm(interp)
-        
+
         if not self._monitor_set or override:
             self.instrument.set_incident_mon(specNum)
-                        
+
     def set_trans_spectrum(self, specNum, interp=False, override=True):
         self.instrument.incid_mon_4_trans_calc = int(specNum)
 
@@ -502,10 +533,10 @@ class ISISReducer(SANSReducer):
             calls shorter
         """
         return self.instrument
- 
-    #quicker to write than .instrument 
+
+    #quicker to write than .instrument
     inst = property(get_instrument, None, None, None)
- 
+
     def Q_string(self):
         return '    Q range: ' + self.to_Q.binning +'\n    QXY range: ' + self.QXY2+'-'+self.DQXY
 
@@ -514,7 +545,7 @@ class ISISReducer(SANSReducer):
             In MantidPlot this opens InstrumentView to display the masked
             detectors in the bank in a different colour
         """
-        self._mask.view(self.instrument)
+        self.mask.view(self.instrument)
 
     def reference(self):
         return self
@@ -524,7 +555,7 @@ class ISISReducer(SANSReducer):
 
 
     # override some functions from the Base Reduction
-    
+
     # set_beam_finder: override to accept the front detector
     def set_beam_finder(self, finder, det_bank='rear'):
         """
@@ -533,7 +564,7 @@ class ISISReducer(SANSReducer):
             @param finder: BaseBeamFinder object
             @param det_bank: two valid options: 'rear', 'front'
         """
-        if issubclass(finder.__class__, sans_reduction_steps.BaseBeamFinder) or finder is None:
+        if issubclass(finder.__class__, isis_reduction_steps.BaseBeamFinder) or finder is None:
             if det_bank == 'front':
               self._front_beam_finder = finder
             else:
@@ -543,16 +574,16 @@ class ISISReducer(SANSReducer):
 
     def get_beam_center(self, bank = None):
         """
-        Return the beam center position according to the 
+        Return the beam center position according to the
         bank detector current selected.
-        
-        From its instrument, this class is able to find what 
-        is the current selected detector, and them return the 
-        beam center according to this bank. 
 
-        Another possibility is to direct ask for the beam_center 
+        From its instrument, this class is able to find what
+        is the current selected detector, and them return the
+        beam center according to this bank.
+
+        Another possibility is to direct ask for the beam_center
         related to a specified detector bank.
-        @param bank: Optional : front 
+        @param bank: Optional : front
         """
         if bank is None:
             if self.instrument.lowAngDetSet or not self._front_beam_finder:
@@ -575,7 +606,7 @@ class ISISReducer(SANSReducer):
         # slices are defined only for event workspaces
         ws = mtd[self.get_sample().wksp_name]
         if not isinstance(ws, IEventWorkspace):
-            return 0        
+            return 0
         if not self._slices_def:
             return 0
         return len(self._slices_def)
@@ -585,20 +616,20 @@ class ISISReducer(SANSReducer):
             self._slice_index = index
         else:
             raise IndexError("Outside range")
-    
+
     def setSlicesLimits(self, str_def):
         self._slices_def = su.sliceParser(str_def)
         self._slice_index = 0
-    
-def deleteWorkspaces(workspaces):
-    """
+
+    def deleteWorkspaces(self, workspaces):
+        """
         Deletes a list of workspaces if they exist but ignores any errors
-    """
-    for wk in workspaces:
-        try:
-            if wk and wk in mtd:
-                DeleteWorkspace(Workspace=wk)
-        except:
-            #if the workspace can't be deleted this function does nothing
-            pass
+        """
+        for wk in workspaces:
+            try:
+                if wk and wk in mtd:
+                    DeleteWorkspace(Workspace=wk)
+            except:
+                #if the workspace can't be deleted this function does nothing
+                pass
 

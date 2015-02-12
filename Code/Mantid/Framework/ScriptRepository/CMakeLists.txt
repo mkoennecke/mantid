@@ -1,15 +1,15 @@
 # Mantid source
-set ( SRC_FILES 
-  src/ScriptRepositoryImpl.cpp
+set ( SRC_FILES
+	src/ScriptRepositoryImpl.cpp
 )
 
-set ( INC_FILES inc/MantidScriptRepository/ScriptRepositoryImpl.h
+set ( INC_FILES
+	inc/MantidScriptRepository/ScriptRepositoryImpl.h
 )
 
-#
 set ( TEST_FILES
-	ScriptRepositoryTestImpl.h)
-#        ScriptRepositoryFactoryTest.h)
+	ScriptRepositoryTestImpl.h
+)
 
 
 # Add the target for this directory
@@ -18,14 +18,18 @@ add_library ( ScriptRepository ${SRC_FILES} ${INC_FILES} )
 add_subdirectory ( test )
 # Set the name of the generated library
 set_target_properties ( ScriptRepository PROPERTIES OUTPUT_NAME MantidScriptRepository 
-                        COMPILE_DEFINITIONS IN_MANTID_SCRIPTREPO)
+                        COMPILE_DEFINITIONS IN_MANTID_SCRIPTREPO )
+
+if (OSX_VERSION VERSION_GREATER 10.8)
+  set_target_properties ( ScriptRepository PROPERTIES INSTALL_RPATH "@loader_path/../Contents/MacOS")
+endif ()
 
 set_property (TARGET ScriptRepository PROPERTY FOLDER "MantidFramework")
 
-include_directories(inc)
 set ( LIBS ${MANTIDLIBS} )
+
+include_directories(inc)
+
 target_link_libraries(ScriptRepository ${LIBS})
-if ( MSVC )
-target_link_libraries(ScriptRepository Winhttp)
-endif()
+
 install (TARGETS ScriptRepository ${SYSTEM_PACKAGE_TARGET} DESTINATION ${PLUGINS_DIR} )

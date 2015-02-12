@@ -36,6 +36,10 @@ if ( stdint )
   add_definitions ( -DHAVE_STDINT_H )
 endif ( stdint )
 
+# Configure a variable to hold the required test timeout value for all tests
+set ( TESTING_TIMEOUT 300 CACHE INTEGER
+      "Timeout in seconds for each test (default 300=5minutes)")
+
 ###########################################################################
 # Look for dependencies - bail out if any not found
 ###########################################################################
@@ -47,13 +51,15 @@ add_definitions ( -DBOOST_ALL_DYN_LINK )
 # Need this defined globally for our log time values
 add_definitions ( -DBOOST_DATE_TIME_POSIX_TIME_STD_CONFIG )
 
-find_package ( Poco REQUIRED )
+find_package ( Poco 1.4.2 REQUIRED )
 include_directories( SYSTEM ${POCO_INCLUDE_DIRS} )
 
-find_package ( Nexus 4.3.0 REQUIRED )
+find_package ( Nexus 4.3.1 REQUIRED )
 include_directories ( SYSTEM ${NEXUS_INCLUDE_DIR} )
 
 find_package ( MuParser REQUIRED )
+
+find_package ( JsonCPP REQUIRED )
 
 find_package ( Doxygen ) # optional
 
@@ -214,6 +220,14 @@ include ( VersionNumber )
 ###########################################################################
 
 find_package ( OpenMP )
+if ( OPENMP_FOUND )
+  set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}" )
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}" )
+  if ( NOT WIN32 )
+    set (CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${OpenMP_CXX_FLAGS}" )
+  endif ()
+endif ()
+
 
 ###########################################################################
 # Add linux-specific things
@@ -227,12 +241,22 @@ endif ()
 ###########################################################################
 if ( CMAKE_COMPILER_IS_GNUCXX )
   include ( GNUSetup )
+elseif ( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
+  # Remove once clang warnings have been fixed. 
+  if ( NOT APPLE)
+    include ( GNUSetup )
+  endif ()
 endif ()
 
 ###########################################################################
 # Setup cppcheck
 ###########################################################################
 include ( CppCheckSetup )
+
+###########################################################################
+# Setup pylint
+###########################################################################
+include ( PylintSetup )
 
 ###########################################################################
 # Set up the unit tests target
@@ -252,7 +276,7 @@ endif ()
 find_package ( GMock )
 
 if ( GMOCK_FOUND AND GTEST_FOUND )
-  message ( STATUS "GMock/GTest is available for unit tests." )
+  message ( STATUS "GMock/GTest (${GMOCK_VERSION}) is available for unit tests." )
 else ()
   message ( STATUS "GMock/GTest is not available. Some unit tests will not run." ) 
 endif()
@@ -275,6 +299,35 @@ if ( SQUISH_FOUND )
   message ( STATUS "Found Squish for GUI testing" )
 else()
   message ( STATUS "Could not find Squish - GUI testing not available. Try specifying your SQUISH_INSTALL_DIR cmake variable." )
+endif()
+
+###########################################################################
+# External Data for testing
+###########################################################################
+if ( CXXTEST_FOUND OR PYUNITTEST_FOUND )
+ include ( MantidExternalData )
+
+# None of our tests reference files directly as arguments so we have to manually
+# call ExternalData_Expand_Arguments to register the files with the ExternalData
+# mechanism
+get_filename_component ( EXTERNALDATATEST_SOURCE_DIR ${PROJECT_SOURCE_DIR} ABSOLUTE )
+file( GLOB_RECURSE doctest_content_links
+  RELATIVE "${EXTERNALDATATEST_SOURCE_DIR}" "Testing/Data/DocTest/*.md5" )
+file( GLOB_RECURSE unittest_content_links
+  RELATIVE "${EXTERNALDATATEST_SOURCE_DIR}" "Testing/Data/UnitTest/*.md5" )
+set ( content_links "${doctest_content_links};${unittest_content_links}" )
+foreach(link ${content_links})
+  string( REGEX REPLACE "\\.md5$" "" link ${link} )
+  ExternalData_Expand_Arguments( StandardTestData
+    link_location
+    DATA{${link}}
+    )
+endforeach()
+
+# Create target to download data from the StandardTestData group.  This must come after
+# all tests have been added that reference the group, so we put it last.
+ExternalData_Add_Target(StandardTestData)
+set_target_properties(StandardTestData PROPERTIES EXCLUDE_FROM_ALL TRUE)
 endif()
 
 ###########################################################################
