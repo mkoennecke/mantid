@@ -149,7 +149,6 @@ set ( TEST_FILES
 	PoldiSpectrumLinearBackgroundTest.h
 	PoldiTimeTransformerTest.h
 	PoldiTruncateDataTest.h
-	ProjectMDTest.h
 	SliceMDHistoTest.h
 	WaitCancelTest.h
 	UncertainValueTest.h
