@@ -88,7 +88,7 @@
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_6">
-     <item alignment="Qt::AlignLeft">
+     <item>
       <widget class="QCheckBox" name="chkRejectZero">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">

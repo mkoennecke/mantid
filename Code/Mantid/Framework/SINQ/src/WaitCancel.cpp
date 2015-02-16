@@ -44,9 +44,9 @@ namespace SINQ
 
   //----------------------------------------------------------------------------------------------
   /// Sets documentation strings for this algorithm
-  void WaitCancel::initDocs()
+  const std::string WaitCancel::summary() const
   {
-    this->setWikiSummary("Run until cancelled");
+    return std::string("Run until cancelled");
   }
 
   //----------------------------------------------------------------------------------------------

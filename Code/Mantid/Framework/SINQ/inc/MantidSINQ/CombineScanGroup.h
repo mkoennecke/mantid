@@ -43,9 +43,9 @@ namespace SINQ
     virtual const std::string name() const;
     virtual int version() const;
     virtual const std::string category() const;
+    virtual const std::string summary() const;
 
   private:
-    virtual void initDocs();
     void init();
     void exec();
 

@@ -35,7 +35,9 @@ class AMORSpectrum(PythonAlgorithm):
         self.declareProperty("ymin",0,"Lower Y summation limit",direction=Direction.Input)
         self.declareProperty("ymax",0,"Upper Y summation limit",direction=Direction.Input)
         self.declareProperty("Basename",'spec',"Basename of generated files",direction=Direction.Input)
-        self.setWikiSummary('Reduce AMOR 3D data to spectrum')
+    
+    def summary(self):
+        return 'Reduce AMOR 3D data to spectrum'
 
 
     def PyExec(self):

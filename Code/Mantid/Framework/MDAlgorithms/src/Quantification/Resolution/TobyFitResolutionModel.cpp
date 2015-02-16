@@ -43,7 +43,7 @@ Kernel::Logger g_log("TobyFitResolutionModel");
  * Default constructor
  */
 TobyFitResolutionModel::TobyFitResolutionModel()
-    : MDResolutionConvolution(), m_randomNumbers(1, NULL), m_mcLoopMin(100),
+    : MDResolutionConvolution(), m_randomNumbers(1, (Mantid::Kernel::NDRandomNumberGenerator *)NULL), m_mcLoopMin(100),
       m_mcLoopMax(1000), m_mcType(4), m_mcRelErrorTol(1e-5),
       m_foregroundOnly(false), m_mosaicActive(true), m_bmatrix(1), m_yvector(1),
       m_etaInPlane(1, 0.0), m_etaOutPlane(1, 0.0),
@@ -59,7 +59,7 @@ TobyFitResolutionModel::TobyFitResolutionModel()
 TobyFitResolutionModel::TobyFitResolutionModel(
     const API::IFunctionMD &fittedFunction, const std::string &fgModel)
     : MDResolutionConvolution(fittedFunction, fgModel),
-      m_randomNumbers(1, NULL), m_mcLoopMin(100), m_mcLoopMax(1000),
+      m_randomNumbers(1, (Mantid::Kernel::NDRandomNumberGenerator *)NULL), m_mcLoopMin(100), m_mcLoopMax(1000),
       m_mcType(4), m_mcRelErrorTol(1e-5), m_foregroundOnly(false),
       m_mosaicActive(true), m_bmatrix(1), m_yvector(1), m_etaInPlane(1, 0.0),
       m_etaOutPlane(1, 0.0), m_deltaQE(1, std::vector<double>(4, 0.0)),
@@ -534,7 +534,6 @@ void TobyFitResolutionModel::setUpForFit() {
   setupRandomNumberGenerator();
 }
 
-<<<<<<< HEAD
     /**
      * Sets up the function to cope with the given number of threads processing it at once
      * @param nthreads :: The maximum number of threads that will be used to evaluate the
@@ -552,31 +551,6 @@ void TobyFitResolutionModel::setUpForFit() {
       m_etaOutPlane = std::vector<double>(nthreads, 0.0);
       m_deltaQE = std::vector<std::vector<double> >(nthreads, std::vector<double>(4, 0.0));
     }
-=======
-/**
- * Sets up the function to cope with the given number of threads processing it
- * at once
- * @param nthreads :: The maximum number of threads that will be used to
- * evaluate the
- * function
- */
-void TobyFitResolutionModel::setNThreads(int nthreads) {
-  if (nthreads <= 0)
-    nthreads = 1; // Ensure we have a sensible number
-  if (nthreads == 1)
-    return; // done on construction
-
-  m_randomNumbers =
-      std::vector<Kernel::NDRandomNumberGenerator *>(nthreads, NULL);
-  m_bmatrix = std::vector<TobyFitBMatrix>(
-      nthreads, m_bmatrix[0]); // Initialize with copy of current
-  m_yvector = std::vector<TobyFitYVector>(nthreads, m_yvector[0]);
-  m_etaInPlane = std::vector<double>(nthreads, 0.0);
-  m_etaOutPlane = std::vector<double>(nthreads, 0.0);
-  m_deltaQE =
-      std::vector<std::vector<double>>(nthreads, std::vector<double>(4, 0.0));
-}
->>>>>>> ca6beab6e5ed39ba73afb104e05c5614b9860afb
 
 /**
  * Setup the random number generator based on the selected type

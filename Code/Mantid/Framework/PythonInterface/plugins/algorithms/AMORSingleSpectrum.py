@@ -34,7 +34,9 @@ class AMORSingleSpectrum(PythonAlgorithm):
                              "Choose single detetcor",direction=Direction.Input)
 
         self.declareProperty("Basename",'spec',"Basename of generated files",direction=Direction.Input)
-        self.setWikiSummary('Load AMOR single detector spectra')
+
+    def summary(self):
+        return 'Load AMOR single detector spectra'
 
 
     def PyExec(self):

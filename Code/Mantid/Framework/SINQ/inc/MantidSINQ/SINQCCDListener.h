@@ -57,6 +57,7 @@ public:
     boost::shared_ptr<Mantid::API::Workspace> extractData();
     bool isConnected();
     ILiveListener::RunStatus runStatus();
+    int runNumber() const { return 0; }
 
     void setSpectra(const std::vector<Mantid::specid_t>& specList);
 
@@ -75,8 +76,7 @@ private:
 
     unsigned int getImageCount();
 
-    static Kernel::Logger& g_log;
-
-};
+    Mantid::API::Algorithm *alg;
+ };
 
 #endif /* SINQCCDLISTENER_H_ */

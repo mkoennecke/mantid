@@ -254,7 +254,6 @@ void CorrectKiKf::execEvent() {
     double Efi = 0;
     // Now get the detector object for this histogram to check if monitor
     // or to get Ef for indirect geometry
-<<<<<<< HEAD
     if (emodeStr == "Indirect") 
     {
       if ( efixedProp != EMPTY_DBL()) Efi = efixedProp;
@@ -268,18 +267,6 @@ void CorrectKiKf::execEvent() {
               Parameter_sptr par = pmap.getRecursive(det.get(),"Efixed","");
               if (par)
               {
-=======
-    if (emodeStr == "Indirect") {
-      if (efixedProp != EMPTY_DBL())
-        Efi = efixedProp;
-      else
-        try {
-          IDetector_const_sptr det = inputWS->getDetector(i);
-          if (!det->isMonitor()) {
-            try {
-              Parameter_sptr par = pmap.getRecursive(det.get(), "Efixed");
-              if (par) {
->>>>>>> ca6beab6e5ed39ba73afb104e05c5614b9860afb
                 Efi = par->value<double>();
                 g_log.debug() << "Detector: " << det->getID()
                               << " EFixed: " << Efi << "\n";

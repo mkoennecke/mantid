@@ -214,7 +214,7 @@ void BackgroundHelper::initialize(const API::MatrixWorkspace_const_sptr &bkgWS,
   this->deleteUnitsConverters();
   // allocate the array of units converters to avoid units reallocation within a
   // loop
-  m_WSUnit.assign(nThreads, NULL);
+  m_WSUnit.assign(nThreads, (Unit *)NULL);
   for (int i = 0; i < nThreads; i++) {
     m_WSUnit[i] = WSUnit->clone();
   }

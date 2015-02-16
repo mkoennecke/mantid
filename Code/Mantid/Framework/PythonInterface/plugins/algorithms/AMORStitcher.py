@@ -36,7 +36,9 @@ class AMORStitcher(PythonAlgorithm):
         self.declareProperty(StringArrayProperty("WS to Stitch",values=[],direction=Direction.Input))
         self.declareProperty("OutputWS",'qall',"Name of WS for stitched result data",direction=Direction.Input)
 #        self.declareProperty(WorkspaceProperty("OutputWS", "", Direction.Output))
-        self.setWikiSummary('Join AMOR Q Spetra')
+
+    def summary(self):
+        return 'Join AMOR Q Spetra'
 
     def PyExec(self):
         wsnamelist =  self.getProperty('WS to Stitch').value

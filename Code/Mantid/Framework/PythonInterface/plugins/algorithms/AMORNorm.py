@@ -27,7 +27,9 @@ class AMORNorm(PythonAlgorithm):
         self.declareProperty(StringArrayProperty("DataWorkspaces",values=[],direction=Direction.Input))
         self.declareProperty(WorkspaceProperty("NormWorkspace", "", Direction.Input))
         self.declareProperty("OutputWorkspacePrefix", "", Direction.Input)
-        self.setWikiSummary('Normalize AMOR data')
+
+    def summary(self):
+        return 'Normalize AMOR data'
 
 
     def PyExec(self):

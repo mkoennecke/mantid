@@ -72,7 +72,7 @@ MantidDockWidget::MantidDockWidget(MantidUI *mui, ApplicationWindow *parent) :
   buttonLayout->addWidget(m_saveButton);
 
   m_workspaceFilter = new MantidQt::MantidWidgets::LineEditWithClear();
-  m_workspaceFilter->setPlaceholderText("Filter Workspaces");  
+  m_workspaceFilter->setText("Filter Workspaces");  
   m_workspaceFilter->setToolTip("Type here to filter the workspaces");  
 
   connect(m_workspaceFilter, SIGNAL(textChanged(const QString&)), this, SLOT(filterWorkspaceTree(const QString&)));

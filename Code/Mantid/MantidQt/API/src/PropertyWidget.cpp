@@ -14,6 +14,7 @@
 #include <algorithm>
 
 #include <QLineEdit>
+#include <QGridLayout>
 
 using namespace Mantid::Kernel;
 using namespace Mantid::API;
@@ -469,7 +470,7 @@ namespace API
    */
   void PropertyWidget::setFieldPlaceholderText(Mantid::Kernel::Property * prop, QLineEdit * field)
   {
-    field->setPlaceholderText(QString::fromStdString(createFieldPlaceholderText(prop)));
+    field->setText(QString::fromStdString(createFieldPlaceholderText(prop)));
   }
 
 } // namespace MantidQt

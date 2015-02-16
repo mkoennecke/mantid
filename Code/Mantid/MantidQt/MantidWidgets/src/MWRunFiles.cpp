@@ -1111,8 +1111,6 @@ void MWRunFiles::dragEnterEvent(QDragEnterEvent *de)
     auto listurl = mimeData->urls(); 
     if (listurl.empty())
       return;
-    if (!listurl[0].isLocalFile())
-      return;
     de->acceptProposedAction();
   }
   else if(mimeData->hasText()) 

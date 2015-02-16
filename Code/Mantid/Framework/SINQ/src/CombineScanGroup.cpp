@@ -56,9 +56,9 @@ namespace SINQ
 
   //----------------------------------------------------------------------------------------------
   /// Sets documentation strings for this algorithm
-  void CombineScanGroup::initDocs()
+  const std::string CombineScanGroup::summary() const
   {
-    this->setWikiSummary("Combines a group of scan images into a 3D dataset");
+    return std::string("Combines a group of scan images into a 3D dataset");
   }
 
   //----------------------------------------------------------------------------------------------

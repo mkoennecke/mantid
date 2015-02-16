@@ -158,7 +158,7 @@ public:
   /// Add to this
   virtual Property &operator+=(Property const *rhs) = 0;
   virtual void filterByTime(const Kernel::DateAndTime &start,
-                            const Kernel::DateAndTime &stop);
+                            const Kernel::DateAndTime &stop) {};
   virtual void splitByTime(std::vector<SplittingInterval> &splitter,
                            std::vector<Property *> outputs) const;
 

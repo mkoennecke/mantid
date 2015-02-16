@@ -32,7 +32,6 @@ using namespace Mantid::SINQ;
 
 DECLARE_LISTENER(SINQCCDListener)
 
-Kernel::Logger& SINQCCDListener::g_log = Kernel::Logger::get("SINQCCDListener");
 
 SINQCCDListener::SINQCCDListener() :ILiveListener(), httpcon(), response()
 {
@@ -45,16 +44,18 @@ SINQCCDListener::SINQCCDListener() :ILiveListener(), httpcon(), response()
 	if(wc.empty()){
 		waitCancels = API::AlgorithmManager::Instance().create("WaitCancel",-1,false);
 	    WaitCancel * waitCancel = dynamic_cast<WaitCancel*>(waitCancels.get());
+	    alg = dynamic_cast<Mantid::API::Algorithm *>(waitCancels.get());
 
 		if ( !waitCancel ) return;
-		waitCancel->initialize();
+
+	    waitCancel->initialize();
 		try
 		{
 			waitCancel->executeAsync();
 		}
 		catch (std::runtime_error&)
 		{
-			g_log.information("Unable to successfully run WaitCancel Child Algorithm");
+			alg->getLogger().information("Unable to successfully run WaitCancel Child Algorithm");
 		}
 	}
 
@@ -193,7 +194,7 @@ boost::shared_ptr<Workspace> SINQCCDListener::extractData()
 	ws->getExperimentInfo(0)->mutableRun().addProperty("Image-No",ImageNo, true);
 	ws->setTitle(std::string("Image-NO: ") + ImageNo);
 
-	g_log.information() << "Loaded SINQ CCD Live Image No " << imageNo << " imageCount " \
+	alg->getLogger().information() << "Loaded SINQ CCD Live Image No " << imageNo << " imageCount " \
 			    << imageCount << std::endl;
 
 	return ws;

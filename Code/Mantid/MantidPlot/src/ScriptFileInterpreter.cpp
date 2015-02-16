@@ -5,6 +5,7 @@
 #include <iostream>
 #include <QAction>
 #include <QFileInfo>
+#include <QFontDatabase>
 #include <QMessageBox>
 #include <QMenu>
 #include <QPushButton>

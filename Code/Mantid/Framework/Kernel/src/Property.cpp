@@ -204,13 +204,7 @@ void Property::setUnits(const std::string &unit) { m_units = unit; }
  * @param start :: the beginning time to filter from
  * @param stop :: the ending time to filter to
  * */
-void Property::filterByTime(const Kernel::DateAndTime &start,
-                            const Kernel::DateAndTime &stop) {
-  UNUSED_ARG(start);
-  UNUSED_ARG(stop);
-  // Do nothing in general
-  return;
-}
+/*
 void Property::filterByTime(Kernel::DateAndTime &start, Kernel::DateAndTime &stop)
 {
   UNUSED_ARG(start);
@@ -218,6 +212,7 @@ void Property::filterByTime(Kernel::DateAndTime &start, Kernel::DateAndTime &sto
   //Do nothing in general
   return;
 }
+*/
 
 //-----------------------------------------------------------------------------------------------
 /** Split a property by time. Will be overridden by TimeSeriesProperty (only)

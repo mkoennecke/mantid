@@ -21,8 +21,6 @@ class LoadSINQ(PythonAlgorithm):
     def category(self):
         return "DataHandling;PythonAlgorithms"
 
-    def summary(self):
-        return "SINQ data file loader"
 
     def PyInit(self):
         instruments=["AMOR","AMORS1","AMORS2","BOA","DMC","FOCUS","HRPT","MARSI","MARSE","POLDI",
@@ -33,8 +31,11 @@ class LoadSINQ(PythonAlgorithm):
         now = datetime.datetime.now()
         self.declareProperty("Year",now.year,"Choose year",direction=Direction.Input)
         self.declareProperty('Numor',0,'Choose file number',direction=Direction.Input)
-        self.setWikiSummary("SINQ data file loader")
         self.declareProperty(WorkspaceProperty("OutputWorkspace","",direction=Direction.Output))
+
+    def summary(self):
+        return "SINQ data file loader"
+
 
     def PyExec(self):
         inst=self.getProperty('Instrument').value
@@ -62,11 +63,6 @@ class LoadSINQ(PythonAlgorithm):
         hun=math.floor(num/1000.)
         filename= '%03d/%s%04dn%06d.hdf' % (hun,instmap[inst],year,num)
         fullpath= '%s/%04d/%s/%s' % (datapath,year,instmap[inst],filename)
-<<<<<<< HEAD
-=======
-        wname = "__tmp" #hidden
-        ws = None # Holds the workspace later
->>>>>>> ca6beab6e5ed39ba73afb104e05c5614b9860afb
         if os.path.exists(fullpath):
             mantid.simpleapi.LoadSINQFile(fullpath,inst,out)
         else:
@@ -75,18 +71,9 @@ class LoadSINQ(PythonAlgorithm):
             for entry in searchDirs:
                 fullpath = '%s/%s' % (entry, filename)
                 if os.path.exists(fullpath):
-<<<<<<< HEAD
                     mantid.simpleapi.LoadSINQFile(fullpath,inst,out)
                     return
             raise Exception('File %s NOT found!' % filename)
-=======
-                    ws = mantid.simpleapi.LoadSINQFile(fullpath,inst,OutputWorkspace=wname)
-                    break
-
-            # If ws is still "None" at this point, the file was not found.
-            if ws is None:
-                raise Exception('File %s NOT found!' % filename)
->>>>>>> ca6beab6e5ed39ba73afb104e05c5614b9860afb
 
 
 #---------- register with Mantid

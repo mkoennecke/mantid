@@ -247,12 +247,10 @@ API::IMDNode *MDEventFactory::createBox(
 
 /// static vector, conaining the pointers to the functions creating MD boxes
 std::vector<MDEventFactory::fpCreateBox> MDEventFactory::boxCreatorFP(
-    MDEventFactory::NumBoxTypes *(MDEventFactory::MAX_MD_DIMENSIONS_NUM + 1),
-    NULL);
+    MDEventFactory::NumBoxTypes *(MDEventFactory::MAX_MD_DIMENSIONS_NUM + 1));
 // static vector, conaining the pointers to the functions creating MD Workspaces
 std::vector<MDEventFactory::fpCreateMDWS>
-    MDEventFactory::wsCreatorFP(MDEventFactory::MAX_MD_DIMENSIONS_NUM + 1,
-                                NULL);
+    MDEventFactory::wsCreatorFP(MDEventFactory::MAX_MD_DIMENSIONS_NUM + 1);
 
 //########### Teplate methaprogrammed CODE SOURCE start:
 //-------------------------------------
