@@ -32,6 +32,10 @@ using namespace Mantid::SINQ;
 
 DECLARE_LISTENER(SINQCCDListener)
 
+namespace {
+/// static logger
+Kernel::Logger g_log("ISISHistoDataListener");
+}
 
 SINQCCDListener::SINQCCDListener() :ILiveListener(), httpcon(), response()
 {
@@ -44,7 +48,6 @@ SINQCCDListener::SINQCCDListener() :ILiveListener(), httpcon(), response()
 	if(wc.empty()){
 		waitCancels = API::AlgorithmManager::Instance().create("WaitCancel",-1,false);
 	    WaitCancel * waitCancel = dynamic_cast<WaitCancel*>(waitCancels.get());
-	    alg = dynamic_cast<Mantid::API::Algorithm *>(waitCancels.get());
 
 		if ( !waitCancel ) return;
 
@@ -55,7 +58,7 @@ SINQCCDListener::SINQCCDListener() :ILiveListener(), httpcon(), response()
 		}
 		catch (std::runtime_error&)
 		{
-			alg->getLogger().information("Unable to successfully run WaitCancel Child Algorithm");
+			g_log.information("Unable to successfully run WaitCancel Child Algorithm");
 		}
 	}
 
@@ -103,7 +106,6 @@ unsigned int SINQCCDListener::getImageCount()
 	req.setKeepAlive(true);
 	HTTPBasicCredentials cred("spy","007");
 	cred.authenticate(req);
-	httpcon.reset();
 	httpcon.sendRequest(req);
 	std::istream& istr = httpcon.receiveResponse(response);
 	if(response.getStatus() != HTTPResponse::HTTP_OK){
@@ -118,26 +120,25 @@ unsigned int SINQCCDListener::getImageCount()
 
 boost::shared_ptr<Workspace> SINQCCDListener::extractData()
 {
-	int dim[2], imNo = -2;
+	int dim[2], imNo = -2, imTmp;
 	char *dimNames[] = {"x","y"};
 	char request[132];
 	Poco::Timespan polli(0,0,0,0,10);
 
 	printf("Executing SINQCCDListener::extractData with %d\n", imageCount);
 
-	while(getImageCount() == imageCount){
+	while((imTmp = getImageCount()) == imageCount){
 		std::vector<IAlgorithm_const_sptr> wc = AlgorithmManager::Instance().runningInstancesOf("WaitCancel");
 		if(wc.empty()){
 			throw std::runtime_error("SINQCCDListener Execution interrupted");
 		}
 		usleep(50);
 	}
-	printf("Detected new image %d versus %d\n", imageCount, getImageCount());
+	printf("Detected new image %d versus %d\n", imageCount, imTmp);
 
 	snprintf(request,sizeof(request),"/ccd/waitdata?imageCount=%d", imageCount);
 	HTTPRequest req(HTTPRequest::HTTP_GET,request, HTTPMessage::HTTP_1_1);
 	req.setKeepAlive(true);
-	httpcon.reset();
 	HTTPBasicCredentials cred("spy","007");
 	cred.authenticate(req);
 	httpcon.sendRequest(req);
@@ -194,8 +195,8 @@ boost::shared_ptr<Workspace> SINQCCDListener::extractData()
 	ws->getExperimentInfo(0)->mutableRun().addProperty("Image-No",ImageNo, true);
 	ws->setTitle(std::string("Image-NO: ") + ImageNo);
 
-	alg->getLogger().information() << "Loaded SINQ CCD Live Image No " << imageNo << " imageCount " \
-			    << imageCount << std::endl;
+	g_log.information() << "Loaded SINQ CCD Live Image No " << imageNo << " imageCount " \
+			<< imageCount << std::endl;
 
 	return ws;
 

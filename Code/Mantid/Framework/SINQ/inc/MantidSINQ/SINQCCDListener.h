@@ -76,7 +76,6 @@ private:
 
     unsigned int getImageCount();
 
-    Mantid::API::Algorithm *alg;
- };
+  };
 
 #endif /* SINQCCDLISTENER_H_ */
