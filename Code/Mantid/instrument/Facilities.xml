@@ -514,7 +514,12 @@
 
   <instrument name="BOA">
     <technique>Neutron Imaging</technique>
-    <livedata address="boaccd:8080" listener="SINQCCDListener" />
+    <livedata address="mpc1691:80" listener="SINQCCDListener" />
+  </instrument>
+
+  <instrument name="BOAEP">
+    <technique>Neutron Imaging</technique>
+    <livedata address="boa:80" listener="EPICSCCDListener" />
   </instrument>
 
   <instrument name="BOAE">

@@ -51,6 +51,7 @@ set ( SRC_FILES
 	src/SINQTranspose3D.cpp
 	src/SliceMDHisto.cpp
 	src/WaitCancel.cpp
+	src/EPICSCCDListener.cpp
 )
 
 set ( INC_FILES
@@ -111,6 +112,7 @@ set ( INC_FILES
 	inc/MantidSINQ/SINQTranspose3D.h
 	inc/MantidSINQ/SliceMDHisto.h
 	inc/MantidSINQ/WaitCancel.h
+	inc/MantidSINQ/EPICSCCDListener.h
 )
 
 set ( TEST_FILES
@@ -170,9 +172,9 @@ endif ()
 # Add to the 'Framework' group in VS
 set_property ( TARGET SINQ PROPERTY FOLDER "MantidFramework" )
 
-include_directories ( inc ../MDEvents/inc )
+include_directories ( inc ../MDEvents/inc /usr/local/epics/include /usr/local/epics/include/os/Linux)
 
-target_link_libraries ( SINQ ${MANTIDLIBS} MDEvents )
+target_link_libraries ( SINQ ${MANTIDLIBS} MDEvents /usr/local/epics/lib/linux-x86-debug/libca.so /usr/local/epics/lib/linux-x86-debug/libCom.so)
 
 # Add the unit tests directory
 add_subdirectory ( test )
